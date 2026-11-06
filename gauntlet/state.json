@@ -95,13 +95,13 @@
       "id": "WO-09a",
       "title": "Connect the fal MCP server and document reconnection",
       "file": "gauntlet/work-orders/WO-09a-mcp-connect.md",
-      "status": "pending",
-      "round": 2,
+      "status": "escalated",
+      "round": 3,
       "dependsOn": [
         "WO-04"
       ],
-      "lastVerdict": "escalate",
-      "note": "Reopened by human at round 2: search_models is now enabled in the editor tool settings and both health-check queries return results. Round 3 is the final round (maxRounds 3). Previous note: criterion 1 unmet because search_models was disabled; all other criteria passed."
+      "lastVerdict": "fail",
+      "note": "round 3 FAIL: evidence block self-contradictory — (1) table records limit:5 but reports 7 models; (2) documented second call omits the query argument that was actually sent; (3) 'named fal account' unsupported by output. Doc/reconnect/no-key/README/model.json all pass. Also: search_models became disabled again mid-session."
     },
     {
       "id": "WO-09b",
