@@ -70,8 +70,9 @@ npm run art:atlas                   # repack the game assets
 
 Twenty fixed slots × 4 attempts average = 80. Full rules in
 [`pipeline/BUDGET.md`](pipeline/BUDGET.md); the visual contract in
-[`docs/ART_BIBLE.md`](docs/ART_BIBLE.md). Connecting to fal and recovering an expired
-editor session: [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md).
+[`docs/ART_BIBLE.md`](docs/ART_BIBLE.md).
+
+fal MCP connection and token recovery: [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md).
 
 **The game is fully playable with zero generated art.** `src/art/placeholders.ts` draws
 palette-correct stand-ins, so a failed image slot degrades quality, never features.

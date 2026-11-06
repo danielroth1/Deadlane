@@ -1,5 +1,12 @@
 # WO-09a — Connect the fal MCP server and document reconnection
 
+> **Amended 2026-11-06 (human decision, twice).** Criterion 1 originally required
+> `search_models`. That tool was observed disabled in this editor's tool picker during
+> rounds 2-3, so the order was amended to name **`browse_models`**. `search_models` is now
+> callable and answered both queries, so the order is restored to **`search_models`** as
+> the health check. `browse_models` stays documented as the fallback for when the tool is
+> disabled again. Do not claim any call that was not actually made.
+
 ## Goal
 
 Prove the `fal` MCP server in `.vscode/mcp.json` authenticates and answers a read-only
@@ -26,7 +33,7 @@ separately. WO-09b does the pricing and schema work.
 
 1. Start the `fal` server from `.vscode/mcp.json`, complete the OAuth browser sign-in, and
    enable its tools. Do not paste any token or key into a file or a chat message.
-2. Call `search_models` with `query: "flux-3"` and once more with
+2. Call `search_models` twice: once with `query: "flux-3"`, and once with
    `category: "text-to-image"`. A non-empty result set is the connection check. Do **not**
    call `run_model`.
 3. Write `docs/MCP_SETUP.md` covering:
@@ -39,9 +46,12 @@ separately. WO-09b does the pricing and schema work.
 
 ## Acceptance criteria
 
-- [ ] `search_models` returns results for both calls, and `npm run art:status` still shows `0/80`.
+- [ ] `search_models` returns non-empty results for both calls, and `npm run art:status`
+      still shows `0/80`.
 - [ ] `docs/MCP_SETUP.md` exists and answers: reconnect after expiry, verify with
       `search_models` only, no API key required.
+- [ ] The evidence table's recorded arguments match the recorded results exactly — no
+      `limit: N` against a result set of a different size.
 - [ ] `README.md` links to `docs/MCP_SETUP.md`.
 - [ ] No file touched by this order contains a credential, token, or OAuth code.
 - [ ] `pipeline/registry/model.json` is unchanged and still `unresolved`.

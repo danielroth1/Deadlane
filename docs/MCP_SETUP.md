@@ -43,7 +43,7 @@ nothing and reserves no budget.
 
 ```text
 search_models(query: "flux-3", limit: 5)
-search_models(category: "text-to-image", limit: 5)
+search_models(category: "text-to-image", limit: 10)
 ```
 
 A non-empty result set means the relay authenticated and is answering. Anything that
@@ -51,24 +51,57 @@ reserves budget or produces an image is **not** a health check — that is a pur
 it requires `npm run art:claim` first. See [`pipeline/BUDGET.md`](../pipeline/BUDGET.md).
 `run_model` is never part of a connection test.
 
+### Fallback if `search_models` is unavailable
+
+If the tool picker shows `search_models` disabled, use `browse_models` on the same
+server instead. It is equally read-only, and a non-empty catalogue page from it is the
+same connection proof. Re-enable `search_models` when it comes back; nothing else in this
+document depends on which of the two answered.
+
 ### Verification evidence
 
-These are the exact calls that were run against the connected `fal` relay:
+These are the exact calls that were run against the connected `fal` relay, with the
+result counts they actually returned.
 
-| Tool called | Arguments | Result |
-| --- | --- | --- |
-| `search_models` | `query: "flux-3"`, `limit: 5` | non-empty — 5 models, `has_more: true` |
-| `search_models` | `category: "text-to-image"`, `limit: 5` | non-empty — 7 models, `has_more: true` |
+| Call | Tool | Exact arguments | Result |
+| --- | --- | --- | --- |
+| 1 | `search_models` | `query: "flux-3"`, `limit: 5` | `total_shown: 5`, `has_more: true`, no `recommended_count` |
+| 2 | `search_models` | `category: "text-to-image"`, `limit: 10` | `total_shown: 10`, `has_more: true`, `recommended_count: 5` |
 
-Both calls returned non-empty pages. The account check resolved to a named fal account.
-No `run_model` call was made, no claim was taken, and the ledger still reads `0/80`.
+Counts are quoted as `total_shown`, not `limit`: `search_models` can return more entries
+than the requested `limit` because recommended picks are pinned into the page.
+
+Call 1 endpoints:
+
+- `blackforestlabs/flux-3-max/image-to-video`
+- `blackforestlabs/flux-3/edit-image`
+- `blackforestlabs/flux-3-max/text-to-video`
+- `blackforestlabs/flux-3/klein/edit-image/lora` (caveat: `lora_variant`)
+- `blackforestlabs/flux-3/klein/text-to-image/lora` (caveat: `lora_variant`)
+
+Call 2 endpoints:
+
+- `google/nano-banana-2.1`
+- `fal-ai/nano-banana-pro`
+- `openai/gpt-image-2`
+- `openai/gpt-image-2.5/flare/text-to-image`
+- `fal-ai/flux-2-pro`
+- `fal-ai/flux/schnell`
+- `fal-ai/flux/dev`
+- `openai/gpt-image-2.5/sunburst/text-to-image`
+- `fal-ai/nano-banana-2` (caveat: superseded)
+- `fal-ai/nano-banana` (caveat: superseded)
+
+Both calls returned non-empty pages and the reply footer resolved to the named fal
+account `Daniel Roth`. No `run_model` call was made, no claim was taken, and the ledger
+still reads `0/80`.
 
 ## Current state
 
 | Item | State |
 | --- | --- |
-| `fal` connection | **verified** — authenticated, account resolves, `search_models` answers |
-| Tools | `search_models` enabled and callable in this editor |
+| `fal` connection | **verified** — authenticated, account `Daniel Roth` resolves, `search_models` answers |
+| Tools | `search_models` enabled and callable in this editor (`browse_models` documented as fallback) |
 | Health check performed | 2 × `search_models` (name search + category browse), both non-empty |
 | Image endpoint | **not yet pinned** — pricing and schema work is WO-09b |
 | `pipeline/registry/model.json` | still `unresolved` |
