@@ -1,0 +1,35 @@
+{
+  "$comment": "Challenges are windows over the level. Each has a completion predicate evaluated by ChallengeSystem against gameplay events.",
+  "challenges": [
+    {
+      "kind": "reach",
+      "label": "REACH {metres} m",
+      "description": "Survive to the end of the section.",
+      "reward": 200
+    },
+    {
+      "kind": "destroy",
+      "label": "DESTROY {count} {target}",
+      "description": "Score kills on a specific hostile unit.",
+      "reward": 400
+    },
+    {
+      "kind": "clean",
+      "label": "NO CIVILIAN CONTACT",
+      "description": "Complete the section without hitting a civilian vehicle.",
+      "reward": 500
+    },
+    {
+      "kind": "collect",
+      "label": "COLLECT {count} PICKUPS",
+      "description": "Pick up roadside equipment.",
+      "reward": 300
+    },
+    {
+      "kind": "survive",
+      "label": "SURVIVE {seconds}s",
+      "description": "Stay alive for a fixed time window.",
+      "reward": 250
+    }
+  ]
+}

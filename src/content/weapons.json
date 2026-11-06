@@ -1,0 +1,35 @@
+{
+  "$comment": "Player equipment. Cooldowns are in milliseconds. Oil and smoke are dropped behind the car and persist on the road for a while.",
+  "weapons": [
+    {
+      "id": "gun",
+      "label": "MACHINE GUN",
+      "slot": "primary",
+      "cooldown": 180,
+      "ammo": "infinite",
+      "damage": 1,
+      "projectileSpeed": 640,
+      "description": "Twin forward guns. The only weapon that works at range."
+    },
+    {
+      "id": "oil",
+      "label": "OIL SLICK",
+      "slot": "rear",
+      "cooldown": 900,
+      "ammo": "oil",
+      "damage": 2,
+      "duration": 7000,
+      "description": "Drops a slick behind the car. Pursuers that hit it lose control."
+    },
+    {
+      "id": "smoke",
+      "label": "SMOKE SCREEN",
+      "slot": "rear",
+      "cooldown": 1400,
+      "ammo": "smoke",
+      "damage": 0,
+      "duration": 4500,
+      "description": "Blocks pursuit vision. Hostiles behind the cloud stop firing."
+    }
+  ]
+}

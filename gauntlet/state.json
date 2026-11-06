@@ -1,0 +1,172 @@
+{
+  "version": 1,
+  "maxRounds": 3,
+  "orders": [
+    {
+      "id": "WO-01",
+      "title": "Scaffold project",
+      "file": "gauntlet/work-orders/WO-01-scaffold.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-02",
+      "title": "Naming, config, and palette contract",
+      "file": "gauntlet/work-orders/WO-02-naming.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-01"
+      ]
+    },
+    {
+      "id": "WO-03",
+      "title": "Gauntlet harness and agent definitions",
+      "file": "gauntlet/work-orders/WO-03-gauntlet.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-01"
+      ]
+    },
+    {
+      "id": "WO-04",
+      "title": "Image budget governor",
+      "file": "gauntlet/work-orders/WO-04-budget.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-02"
+      ]
+    },
+    {
+      "id": "WO-05",
+      "title": "Deterministic image chain",
+      "file": "gauntlet/work-orders/WO-05-image-chain.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-04"
+      ]
+    },
+    {
+      "id": "WO-06",
+      "title": "Atlas build and validation gate",
+      "file": "gauntlet/work-orders/WO-06-atlas.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-05"
+      ]
+    },
+    {
+      "id": "WO-07",
+      "title": "Game shell, road, player, weapons",
+      "file": "gauntlet/work-orders/WO-07-game-shell.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-02"
+      ]
+    },
+    {
+      "id": "WO-08",
+      "title": "Procedural level generators and validation matrix",
+      "file": "gauntlet/work-orders/WO-08-levels.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-07"
+      ]
+    },
+    {
+      "id": "WO-09",
+      "title": "Connect fal MCP and pin the image model",
+      "file": "gauntlet/work-orders/WO-09-mcp-model.md",
+      "status": "blocked",
+      "round": 0,
+      "dependsOn": [
+        "WO-04"
+      ],
+      "note": "Oversized: 5 files, 2 deliverables. Split into WO-09a (connection + docs) and WO-09b (pin endpoint + schema)."
+    },
+    {
+      "id": "WO-09a",
+      "title": "Connect the fal MCP server and document reconnection",
+      "file": "gauntlet/work-orders/WO-09a-mcp-connect.md",
+      "status": "pending",
+      "round": 2,
+      "dependsOn": [
+        "WO-04"
+      ],
+      "lastVerdict": "escalate",
+      "note": "Reopened by human at round 2: search_models is now enabled in the editor tool settings and both health-check queries return results. Round 3 is the final round (maxRounds 3). Previous note: criterion 1 unmet because search_models was disabled; all other criteria passed."
+    },
+    {
+      "id": "WO-09b",
+      "title": "Pin the image model and capture its schema",
+      "file": "gauntlet/work-orders/WO-09b-mcp-pin.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-09a"
+      ]
+    },
+    {
+      "id": "WO-10",
+      "title": "Art slot 01: style anchor",
+      "file": "gauntlet/work-orders/WO-10-style-anchor.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-09b"
+      ]
+    },
+    {
+      "id": "WO-11",
+      "title": "Art slot 02: player vehicle sheet (go/no-go gate)",
+      "file": "gauntlet/work-orders/WO-11-player-vehicle.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-10"
+      ]
+    },
+    {
+      "id": "WO-12",
+      "title": "Build the attempt review gallery",
+      "file": "gauntlet/work-orders/WO-12-gallery.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-05"
+      ],
+      "lastVerdict": "pass",
+      "note": "offline HTML gallery, empty state verified"
+    },
+    {
+      "id": "WO-13",
+      "title": "Remaining art slots 03-20",
+      "file": "gauntlet/work-orders/WO-13-art-batch.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-11",
+        "WO-12"
+      ]
+    },
+    {
+      "id": "WO-14",
+      "title": "End-to-end test and GitHub Pages deploy",
+      "file": "gauntlet/work-orders/WO-14-ship.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-08"
+      ],
+      "lastVerdict": "pass",
+      "note": "3 Playwright smoke tests green; CI + Pages workflows added"
+    }
+  ]
+}

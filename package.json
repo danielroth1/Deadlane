@@ -1,0 +1,52 @@
+{
+  "name": "deadlane",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DEADLANE - a top-down pixel-art highway intercept game for the browser.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "art:init": "tsx pipeline/cli/init.ts",
+    "art:status": "tsx pipeline/cli/status.ts",
+    "art:claim": "tsx pipeline/cli/claim.ts",
+    "art:release": "tsx pipeline/cli/release.ts",
+    "art:model": "tsx pipeline/cli/model.ts",
+    "art:pull": "tsx pipeline/cli/pull.ts",
+    "art:process": "tsx pipeline/cli/process.ts",
+    "art:select": "tsx pipeline/cli/select.ts",
+    "art:atlas": "tsx pipeline/cli/atlas.ts",
+    "art:validate": "tsx pipeline/cli/validate.ts",
+    "art:gallery": "tsx pipeline/cli/gallery.ts",
+    "gauntlet:next": "tsx scripts/gauntlet/next.ts",
+    "gauntlet:record": "tsx scripts/gauntlet/record.ts",
+    "gauntlet:status": "tsx scripts/gauntlet/status.ts"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.56.0",
+    "@types/node": "^24.0.0",
+    "ajv": "^8.17.1",
+    "eslint": "^9.30.0",
+    "prettier": "^3.6.0",
+    "sharp": "^0.34.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0",
+    "typescript-eslint": "^8.40.0",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.0"
+  }
+}

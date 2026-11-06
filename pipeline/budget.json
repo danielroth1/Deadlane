@@ -1,0 +1,108 @@
+{
+  "version": 1,
+  "limit": 80,
+  "perSlotLimit": 6,
+  "createdAt": "2026-11-06T20:00:35.336Z",
+  "slots": {
+    "art-01-style-anchor": {
+      "id": "art-01-style-anchor",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-02-player-vehicle": {
+      "id": "art-02-player-vehicle",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-03-enemy-ground-a": {
+      "id": "art-03-enemy-ground-a",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-04-enemy-ground-b": {
+      "id": "art-04-enemy-ground-b",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-05-enemy-air": {
+      "id": "art-05-enemy-air",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-06-enemy-sea": {
+      "id": "art-06-enemy-sea",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-07-boss": {
+      "id": "art-07-boss",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-08-civilians": {
+      "id": "art-08-civilians",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-09-weapons-pickups": {
+      "id": "art-09-weapons-pickups",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-10-fx": {
+      "id": "art-10-fx",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-11-props-a": {
+      "id": "art-11-props-a",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-12-props-b": {
+      "id": "art-12-props-b",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-13-tiles-highway": {
+      "id": "art-13-tiles-highway",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-14-tiles-canyon": {
+      "id": "art-14-tiles-canyon",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-15-tiles-water": {
+      "id": "art-15-tiles-water",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-16-tiles-city": {
+      "id": "art-16-tiles-city",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-17-tiles-tunnel": {
+      "id": "art-17-tiles-tunnel",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-18-tiles-transition": {
+      "id": "art-18-tiles-transition",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-19-ui-icons": {
+      "id": "art-19-ui-icons",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-20-ui-chrome": {
+      "id": "art-20-ui-chrome",
+      "attempts": [],
+      "status": "open"
+    }
+  }
+}

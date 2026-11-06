@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0d10" />
+    <meta
+      name="description"
+      content="DEADLANE - a top-down pixel-art highway intercept game. Outrun the Division, hunt the convoy, survive the road."
+    />
+    <title>DEADLANE — Highway Intercept</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --dl-bg: #0b0d10;
+        --dl-ink: #d8e0e8;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        background: var(--dl-bg);
+        overflow: hidden;
+        font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
+        color: var(--dl-ink);
+      }
+
+      #dl-root {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+      }
+
+      #dl-root canvas {
+        image-rendering: pixelated;
+        image-rendering: crisp-edges;
+        display: block;
+        touch-action: none;
+      }
+
+      #dl-boot {
+        position: fixed;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        letter-spacing: 0.35em;
+        font-size: 12px;
+        text-transform: uppercase;
+        opacity: 0.55;
+        pointer-events: none;
+        transition: opacity 200ms ease-out;
+      }
+
+      #dl-boot[hidden] {
+        opacity: 0;
+        display: grid;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="dl-root"></div>
+    <div id="dl-boot" role="status" aria-live="polite">deadlane division</div>
+    <noscript>DEADLANE requires JavaScript to run.</noscript>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

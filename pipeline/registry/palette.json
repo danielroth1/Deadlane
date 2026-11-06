@@ -1,0 +1,26 @@
+{
+  "$comment": "Locked 16-colour palette. Mirrors docs/ART_BIBLE.md section 3. Every generated sprite is quantised to exactly these values by pipeline/steps/quantize.ts. Editing this file changes every asset in the game, so treat it as a breaking change.",
+  "version": 1,
+  "colors": [
+    { "index": 0, "hex": "#0b0d10", "name": "void", "role": "outline" },
+    { "index": 1, "hex": "#161a21", "name": "asphalt", "role": "road base" },
+    { "index": 2, "hex": "#232a34", "name": "asphalt-light", "role": "road grain" },
+    { "index": 3, "hex": "#3d4753", "name": "steel", "role": "metal shadow" },
+    { "index": 4, "hex": "#7a8794", "name": "steel-light", "role": "metal highlight" },
+    { "index": 5, "hex": "#c8d2dc", "name": "bone", "role": "markings" },
+    { "index": 6, "hex": "#f2f6f9", "name": "white", "role": "light source" },
+    { "index": 7, "hex": "#7a2f2f", "name": "rust", "role": "damage, dry terrain" },
+    { "index": 8, "hex": "#b8452f", "name": "signal-red", "role": "hostile accent" },
+    { "index": 9, "hex": "#e0762a", "name": "amber", "role": "fire, explosions" },
+    { "index": 10, "hex": "#e8c15a", "name": "sand", "role": "desert" },
+    { "index": 11, "hex": "#4e7a3f", "name": "olive", "role": "vegetation" },
+    { "index": 12, "hex": "#2f6f6a", "name": "teal", "role": "water, glass" },
+    { "index": 13, "hex": "#2b4c7e", "name": "deep-blue", "role": "water shadow" },
+    { "index": 14, "hex": "#6a4fa3", "name": "violet", "role": "enemy faction, boss" },
+    { "index": 15, "hex": "#ff2e63", "name": "hot-pink", "role": "player accent only" }
+  ],
+  "reserved": {
+    "playerAccent": "#ff2e63",
+    "transparentKey": "#ff00ff"
+  }
+}

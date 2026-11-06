@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# CI never touches the fal API and needs no credentials: art is generated on a
+# developer machine, committed as processed atlases, and only validated here.
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm run test
+
+      - name: Validate generated art
+        run: npm run art:validate
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: End-to-end smoke
+        run: npm run test:e2e
+
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report
+          retention-days: 7
+
+  guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Budget ledger must stay inside its ceiling
+        run: |
+          node -e "
+            const ledger = require('./pipeline/budget.json');
+            const used = Object.values(ledger.slots)
+              .flatMap(s => s.attempts)
+              .filter(a => a.state !== 'released').length;
+            if (used > ledger.limit) {
+              console.error('Budget exceeded: ' + used + '/' + ledger.limit);
+              process.exit(1);
+            }
+            for (const [id, slot] of Object.entries(ledger.slots)) {
+              if (slot.attempts.length > ledger.perSlotLimit) {
+                console.error(id + ' used ' + slot.attempts.length + ' of ' + ledger.perSlotLimit);
+                process.exit(1);
+              }
+            }
+            console.log('Budget OK: ' + used + '/' + ledger.limit);
+          "
+
+      - name: No credentials committed
+        run: |
+          if git grep -nEI '(fal[_-]?key|FAL_KEY\s*=|Authorization:\s*Key\s+[a-f0-9])' \
+               -- . ':!*.md' ':!package-lock.json'; then
+            echo "::error::A credential-like string was found in the repository."
+            exit 1
+          fi
+          echo "No credentials found."

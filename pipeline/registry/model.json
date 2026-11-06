@@ -1,0 +1,19 @@
+{
+  "$comment": "Pinned by `npm run art:model` after the fal MCP server reports a verified, priced endpoint. Do not guess or hand-edit: an unresolved registry blocks all generation on purpose.",
+  "status": "unresolved",
+  "requested": "flux-3-small (cheapest text-to-image)",
+  "endpointId": null,
+  "params": {
+    "count": "num_images",
+    "seed": "seed",
+    "imageSize": "image_size"
+  },
+  "pricing": null,
+  "schemaPath": null,
+  "resolvedAt": null,
+  "notes": [
+    "Resolution procedure: fal MCP search_models(\"flux-3\") → get_pricing on the candidates → get_model_schema on the cheapest.",
+    "Record with: npm run art:model -- --endpoint <id> --count-param num_images --seed-param seed --size-param image_size --unit-price <usd-per-image>",
+    "Only one endpoint is ever pinned. Switching models mid-project invalidates the style anchor."
+  ]
+}

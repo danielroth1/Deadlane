@@ -1,0 +1,35 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Test output
+test-results/
+playwright-report/
+coverage/
+.vitest/
+
+# AI asset pipeline
+pipeline/raw/
+pipeline/cache/
+pipeline/ui/gallery.generated/
+pipeline/**/*.tmp.png
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editors / OS
+.DS_Store
+.idea/
+*.swp
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
