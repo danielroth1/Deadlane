@@ -77,7 +77,20 @@ npm run gauntlet:record -- --id <ID> --verdict fail --note "<criteria that faile
 On `fail`, run step 3 again with a **fresh** implementer and the reviewer's numbered
 issues appended to the work order block. Do not reuse the previous implementer's context.
 
-## 6. Report
+## 6. Commit
+
+Commit the round as one commit — the round's diff, `gauntlet/state.json`, and the new
+verdict file:
+
+```bash
+git add -A && git status --short
+git commit -m "<ID> <verdict>: <one line>"
+```
+
+If nothing changes in the round, still commit the state and verdict file. Never commit a
+credential.
+
+## 7. Report
 
 Four lines maximum:
 

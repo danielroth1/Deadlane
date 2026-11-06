@@ -41,6 +41,9 @@ works offline once loaded.
 
 6. **No `any`. No non-null assertions to silence the compiler.** Fix the type.
 
+7. **Commit every round.** The repo is under git. A round that is not committed did not
+   happen. See [Commits](#commits).
+
 ## The gauntlet loop
 
 All work is dispatched as work orders in `gauntlet/work-orders/`. A single order is
@@ -70,6 +73,24 @@ npm run gauntlet:next              # print the next dispatchable order + context
 npm run gauntlet:record -- --id 07 --verdict pass --note "shipped"
 npm run gauntlet:status            # queue, rounds used, escalations
 ```
+
+## Commits
+
+`main` is the trunk and history is linear — no long-lived branches per work order. Commit
+as work lands; do not batch a day of work into one drop.
+
+- **One commit per gauntlet round**, made immediately after the verdict is recorded. It
+  contains the round's diff, `gauntlet/state.json`, and the new
+  `gauntlet/verdicts/<ID>.round-<n>.md`.
+- **Subject format:** `<ID> <verdict>: <one line>` — e.g. `WO-13 pass: art slots 03-08`,
+  `WO-09a fail: evidence table self-contradictory`.
+- **Infrastructure commits** that are not a work order use a conventional prefix:
+  `chore:`, `docs:`, `fix:`.
+- **Check before staging.** Read `git status` first. Never `git add -A` on a tree you have
+  not looked at.
+- **Generated artefacts:** `public/assets/atlas/*` and `pipeline/budget.json` are committed
+  because they *are* the deliverable. `pipeline/raw/` is never committed.
+- **Never commit a credential or a token.** See rule 2.
 
 ## Repository map
 
