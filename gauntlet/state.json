@@ -122,10 +122,12 @@
       "status": "pending",
       "round": 1,
       "dependsOn": [
-        "WO-09b"
+        "WO-09b",
+        "WO-15",
+        "WO-16"
       ],
       "lastVerdict": "fail",
-      "note": "perspective axis 1: pseudo-3D vanishing point, no top-down frame; silhouette 2; no 1px outlines (full-bleed scene gives chromaKey nothing to key)"
+      "note": "perspective axis 1: pseudo-3D vanishing point, no top-down frame; silhouette 2; no 1px outlines (full-bleed scene gives chromaKey nothing to key). Round 2 needs art:reopen (WO-15) and a top-down house style (WO-16), plus a model switch to fal-ai/flux-2/turbo authorised by the human."
     },
     {
       "id": "WO-11",
@@ -171,6 +173,24 @@
       ],
       "lastVerdict": "pass",
       "note": "3 Playwright smoke tests green; CI + Pages workflows added"
+    },
+    {
+      "id": "WO-15",
+      "title": "Reopen an approved art slot",
+      "file": "gauntlet/work-orders/WO-15-reopen.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "art:reopen ships; approved slot returns to open with attempts intact"
+    },
+    {
+      "id": "WO-16",
+      "title": "Force a strict overhead camera in the house style",
+      "file": "gauntlet/work-orders/WO-16-prompt-topdown.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
     }
   ]
 }

@@ -28,8 +28,7 @@
           "costUsd": 0.0031
         }
       ],
-      "status": "approved",
-      "selected": 2
+      "status": "open"
     },
     "art-02-player-vehicle": {
       "id": "art-02-player-vehicle",

@@ -21,6 +21,7 @@
     "art:status": "tsx pipeline/cli/status.ts",
     "art:claim": "tsx pipeline/cli/claim.ts",
     "art:release": "tsx pipeline/cli/release.ts",
+    "art:reopen": "tsx pipeline/cli/reopen.ts",
     "art:model": "tsx pipeline/cli/model.ts",
     "art:pull": "tsx pipeline/cli/pull.ts",
     "art:process": "tsx pipeline/cli/process.ts",

@@ -247,6 +247,28 @@ export function markSlotStatus(ledger: Ledger, slotId: string, status: SlotRecor
   return { ...ledger, slots: { ...ledger.slots, [slotId]: { ...slot, status } } };
 }
 
+/**
+ * Return a slot to `open` so a rejected selection can be retried.
+ *
+ * `selectAttempt` locks a slot to `approved`, which `claimAttempt` refuses, so a FAIL on
+ * the selected attempt would otherwise leave the slot permanently unretryable. This
+ * clears the status and the selection but keeps every attempt intact — seeds, request
+ * ids, urls and costs stay in the ledger for auditability, and no image is returned to or
+ * taken from the budget.
+ */
+export function reopenSlot(ledger: Ledger, slotId: string): Ledger {
+  const slot = requireSlotRecord(ledger, slotId);
+  if (slot.status === 'open') {
+    throw new BudgetError(`Slot "${slotId}" is already open; there is nothing to reopen.`);
+  }
+  const reopened: SlotRecord = {
+    id: slot.id,
+    attempts: [...slot.attempts],
+    status: 'open',
+  };
+  return { ...ledger, slots: { ...ledger.slots, [slotId]: reopened } };
+}
+
 function requireSlotRecord(ledger: Ledger, slotId: string): SlotRecord {
   const slot = ledger.slots[slotId];
   if (!slot) throw new BudgetError(`Unknown slot "${slotId}".`);

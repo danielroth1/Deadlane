@@ -2,7 +2,7 @@
   "$comment": "Pinned by `npm run art:model` after the fal MCP server reports a verified, priced endpoint. Do not guess or hand-edit: an unresolved registry blocks all generation on purpose.",
   "status": "resolved",
   "requested": "flux-3-small (cheapest text-to-image)",
-  "endpointId": "fal-ai/flux-1/schnell",
+  "endpointId": "fal-ai/flux-2/turbo",
   "params": {
     "count": "num_images",
     "seed": "seed",
@@ -10,10 +10,10 @@
   },
   "pricing": {
     "unit": "image",
-    "amountUsd": 0.0031
+    "amountUsd": 0.0084
   },
   "schemaPath": "pipeline/registry/schema.json",
-  "resolvedAt": "2026-11-07T19:42:12.919Z",
+  "resolvedAt": "2026-11-07T20:34:57.855Z",
   "notes": [
     "Resolution procedure: fal MCP search_models(\"flux-3\") → get_pricing on the candidates → get_model_schema on the cheapest.",
     "Record with: npm run art:model -- --endpoint <id> --count-param num_images --seed-param seed --size-param image_size --unit-price <usd-per-image>",
