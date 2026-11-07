@@ -66,8 +66,8 @@ Hot pink is reserved for the player and must never appear on an enemy.
 
 ### Approved palette order
 
-Recorded from the approved style anchor (`art-01-style-anchor`, attempt 4, seed
-`313021788`):
+Recorded from the approved style anchor (`art-01-style-anchor`, attempt 5, seed
+`86616007`):
 
 `0 void · 1 asphalt · 2 asphalt-light · 3 steel · 4 steel-light · 5 bone · 6 white ·
 7 rust · 8 signal-red · 9 amber · 10 sand · 11 olive · 12 teal · 13 deep-blue ·
@@ -79,10 +79,14 @@ approximation of perceived difference); the index order above only breaks ties, 
 the lowest index wins when two entries are equally close. See `quantize()` in
 `pipeline/lib/image.ts`.
 
-The approved attempt uses 15 of the 16 indices — it does not draw `14 violet` — and
-contains no colour outside this table. The per-index pixel counts behind that statement are
-recorded in `pipeline/work/art-01-style-anchor/attempt-4/palette-usage.json`; later sheets
-are judged against this palette, not against this anchor's exact index usage.
+The approved attempt uses 14 of the 16 indices — it does not draw `6 white` or
+`14 violet` — and contains no colour outside this table. The per-index pixel counts behind
+that statement are recorded in `pipeline/work/art-01-style-anchor/attempt-5/palette-usage.json`.
+Most of the `15 hot-pink` count (172,213 of 361,201 opaque pixels) is not sprite pigment:
+attempt 5's flat backdrop is `#ee0466`, which is 174 away from the `#ff00ff` key under
+`chromaKey()`'s tolerance of 90, so the key removed no pixels and the backdrop quantised to
+`15 hot-pink`. Later sheets are judged against this palette, not against this anchor's
+exact index usage.
 
 ## 4. Iconography of the factions
 

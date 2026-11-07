@@ -107,28 +107,95 @@ export function crop(raster: Raster, box: Box): Raster {
  * Turn the flat generation background into transparency.
  *
  * Magenta is used because it is provably absent from the locked palette, so a chroma key
- * can never eat a legitimate sprite pixel. Pure white is accepted as a fallback for models
- * that ignore the background instruction, but it is a review failure if it happens often.
+ * should never eat a legitimate sprite pixel. Pure white is accepted as a fallback for
+ * models that ignore the background instruction, but it is a review failure if it happens
+ * often.
+ *
+ * The model does not always render the exact key colour: attempt 5 of the style anchor came
+ * back with a `#ee0466` plate, which sits 174 away from `#ff00ff` in Manhattan distance and
+ * so survived a key matched at `tolerance = 90`. Loosening the tolerance is not an option,
+ * because palette colour 15 (`hot-pink`, `#ff2e63`) is only 202 away from the key and would
+ * be eaten alongside it.
+ *
+ * The backdrop is therefore identified by geometry rather than by colour alone: it is the
+ * flat region that touches the image border. Only border-connected pixels within
+ * `tolerance * 2` of the key are cleared, so an enclosed pixel survives however close its
+ * colour is to magenta. The flood fill is 4-connected and iterative, so a full-size sheet
+ * cannot blow the call stack.
  */
 export function chromaKey(raster: Raster, keyHex: string, tolerance = 90): Raster {
   const key = hexToRgb(keyHex);
-  const out = Buffer.from(raster.data);
+  const { width, height } = raster;
+  const source = raster.data;
+  const out = Buffer.from(source);
+  const limit = tolerance * 2;
 
+  // Unchanged fallback: a pure white plate means the model ignored the background
+  // instruction entirely.
   for (let i = 0; i < out.length; i += 4) {
-    const r = out[i]!;
-    const g = out[i + 1]!;
-    const b = out[i + 2]!;
-    const dKey = Math.abs(r - key[0]) + Math.abs(g - key[1]) + Math.abs(b - key[2]);
-    const dWhite = Math.abs(r - 255) + Math.abs(g - 255) + Math.abs(b - 255);
+    const dWhite =
+      Math.abs(out.readUInt8(i) - 255) +
+      Math.abs(out.readUInt8(i + 1) - 255) +
+      Math.abs(out.readUInt8(i + 2) - 255);
 
-    if (dKey < tolerance || dWhite < 24) {
+    if (dWhite < 24) {
       out[i] = 0;
       out[i + 1] = 0;
       out[i + 2] = 0;
       out[i + 3] = 0;
     }
   }
-  return { width: raster.width, height: raster.height, data: out };
+
+  const isKeyFamily = (pixel: number): boolean => {
+    const i = pixel * 4;
+    const distance =
+      Math.abs(source.readUInt8(i) - key[0]) +
+      Math.abs(source.readUInt8(i + 1) - key[1]) +
+      Math.abs(source.readUInt8(i + 2) - key[2]);
+    return distance < limit;
+  };
+
+  const seen = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  let tail = 0;
+
+  const visit = (x: number, y: number): void => {
+    const pixel = y * width + x;
+    if (seen.at(pixel) === 1) return;
+    seen[pixel] = 1;
+    if (!isKeyFamily(pixel)) return;
+    queue[tail] = pixel;
+    tail += 1;
+  };
+
+  for (let x = 0; x < width; x += 1) {
+    visit(x, 0);
+    visit(x, height - 1);
+  }
+  for (let y = 0; y < height; y += 1) {
+    visit(0, y);
+    visit(width - 1, y);
+  }
+
+  for (let head = 0; head < tail; head += 1) {
+    const pixel = queue.at(head);
+    if (pixel === undefined) break;
+
+    const i = pixel * 4;
+    out[i] = 0;
+    out[i + 1] = 0;
+    out[i + 2] = 0;
+    out[i + 3] = 0;
+
+    const x = pixel % width;
+    const y = (pixel - x) / width;
+    if (x > 0) visit(x - 1, y);
+    if (x < width - 1) visit(x + 1, y);
+    if (y > 0) visit(x, y - 1);
+    if (y < height - 1) visit(x, y + 1);
+  }
+
+  return { width, height, data: out };
 }
 
 /** Tight box around pixels above an alpha threshold, or null when the cell is empty. */

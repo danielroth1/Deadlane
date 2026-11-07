@@ -46,10 +46,20 @@
           "requestId": "01a1b7c4-ca98-7500-a7f5-12a73ad94499",
           "url": "https://v3b.fal.media/files/b/0ab18e41/gNtWc13oq54FrsKk1UTUP_N1Ce4bHj.png",
           "costUsd": 0.0084
+        },
+        {
+          "attempt": 5,
+          "seed": 86616007,
+          "promptHash": "b88bc2a04b0e03c2",
+          "state": "generated",
+          "claimedAt": "2026-11-07T21:00:09.326Z",
+          "requestId": "01a1b7cf-f6da-7c13-8474-4b910feda65c",
+          "url": "https://v3b.fal.media/files/b/0ab18e8f/PmvU2zk8j6cv0eMuuWLwO_QtaSR4mO.png",
+          "costUsd": 0.0084
         }
       ],
       "status": "approved",
-      "selected": 4
+      "selected": 5
     },
     "art-02-player-vehicle": {
       "id": "art-02-player-vehicle",

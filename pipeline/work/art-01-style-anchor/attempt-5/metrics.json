@@ -1,0 +1,32 @@
+{
+  "slotId": "art-01-style-anchor",
+  "attempt": 5,
+  "sourcePath": "pipeline/raw/art-01-style-anchor/attempt-5.png",
+  "processedAt": "2026-11-07T21:01:55.366Z",
+  "grid": {
+    "cols": 1,
+    "rows": 1
+  },
+  "finalSize": 640,
+  "cells": [
+    {
+      "index": 0,
+      "name": null,
+      "empty": false,
+      "fill": 0.88183837890625,
+      "meanPaletteDistance": 62.60526296013013,
+      "distinctColors": 14,
+      "symmetry": 0.9966777408637874
+    }
+  ],
+  "summary": {
+    "totalCells": 1,
+    "usableCells": 1,
+    "meanPaletteDistance": 62.60526296013013,
+    "sizeVariance": 0,
+    "meanSymmetry": 0.9966777408637874,
+    "meanSeamError": 0,
+    "meanDistinctColors": 14,
+    "score": 88.52
+  }
+}

@@ -203,6 +203,16 @@
       "dependsOn": [],
       "lastVerdict": "pass",
       "note": "anchor subject drops light pool and smoke; flat night ambient light"
+    },
+    {
+      "id": "WO-18",
+      "title": "Key the magenta backdrop by flood fill, not an exact colour",
+      "file": "gauntlet/work-orders/WO-18-chroma-floodfill.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "chromaKey keys border-connected magenta family; enclosed hot-pink preserved"
     }
   ]
 }
