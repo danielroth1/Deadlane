@@ -1,0 +1,16 @@
+{
+  "slot": "art-01-style-anchor",
+  "code": "style-anchor",
+  "cellSize": 640,
+  "cols": 1,
+  "rows": 1,
+  "image": "assets/sheets/art-01-style-anchor.png",
+  "frames": {
+    "style-anchor/cell-0": {
+      "x": 0,
+      "y": 0,
+      "w": 640,
+      "h": 640
+    }
+  }
+}

@@ -6,8 +6,30 @@
   "slots": {
     "art-01-style-anchor": {
       "id": "art-01-style-anchor",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 885673699,
+          "promptHash": "9fa04a1d886de213",
+          "state": "generated",
+          "claimedAt": "2026-11-07T20:16:38.635Z",
+          "requestId": "01a1b7a8-06cd-7cd2-bde7-c78db3642285",
+          "url": "https://v3b.fal.media/files/b/0ab18d84/2v5297Y1zZLifuN2qafVg.jpg",
+          "costUsd": 0.0031
+        },
+        {
+          "attempt": 2,
+          "seed": 940334707,
+          "promptHash": "1b9b985ff6512190",
+          "state": "generated",
+          "claimedAt": "2026-11-07T20:17:23.371Z",
+          "requestId": "01a1b7a8-b261-77c1-9005-1f45d03cae41",
+          "url": "https://v3b.fal.media/files/b/0ab18d88/tH8wV_uKXK7MGfORARbwr.jpg",
+          "costUsd": 0.0031
+        }
+      ],
+      "status": "approved",
+      "selected": 2
     },
     "art-02-player-vehicle": {
       "id": "art-02-player-vehicle",

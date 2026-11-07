@@ -120,10 +120,12 @@
       "title": "Art slot 01: style anchor",
       "file": "gauntlet/work-orders/WO-10-style-anchor.md",
       "status": "pending",
-      "round": 0,
+      "round": 1,
       "dependsOn": [
         "WO-09b"
-      ]
+      ],
+      "lastVerdict": "fail",
+      "note": "perspective axis 1: pseudo-3D vanishing point, no top-down frame; silhouette 2; no 1px outlines (full-bleed scene gives chromaKey nothing to key)"
     },
     {
       "id": "WO-11",
