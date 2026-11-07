@@ -193,6 +193,16 @@
       "dependsOn": [],
       "lastVerdict": "pass",
       "note": "house style + anchor subject now demand strict overhead orthographic, no horizon"
+    },
+    {
+      "id": "WO-17",
+      "title": "Remove the light pool and tyre smoke from the anchor subject",
+      "file": "gauntlet/work-orders/WO-17-anchor-subject-flat.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "anchor subject drops light pool and smoke; flat night ambient light"
     }
   ]
 }
