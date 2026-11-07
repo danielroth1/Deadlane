@@ -62,6 +62,12 @@ orchestrator  →  implementer (fresh)  →  reviewer (fresh, read-only)  →  v
 - Maximum **3 rounds**. Then the order is escalated to the human.
 - The **orchestrator** never reads source files. It reads `gauntlet/state.json` and
   verdict summaries only.
+- **The orchestrator is the only agent with fal tools.** Subagents do not have them. For an
+  art order the orchestrator runs `npm run art:claim`, makes the single `run_model` call,
+  and writes the raw result plus a short evidence file to `/tmp/` as the implementer's
+  reference. The implementer then continues at `art:pull`.
+- **One command runs the whole queue.** `/gauntlet` in the orchestrator loops
+  implement → review → record → commit until the queue drains or an order escalates.
 
 Rationale: agent context grows with the number of verdicts, not with the size of the
 codebase, so the loop survives a project of this size.
