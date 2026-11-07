@@ -287,11 +287,13 @@
       "id": "WO-25",
       "title": "Pipeline: trim guard and nose-up orientation for 2x2 enemy cells",
       "file": "gauntlet/work-orders/WO-25-trim-and-orientation.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-23"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "subject-bounds trim guard + declared cell rotation; 80 tests green, cell-2 symmetry 79-98%"
     },
     {
       "id": "WO-26",

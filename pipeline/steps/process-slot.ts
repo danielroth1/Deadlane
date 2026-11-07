@@ -4,7 +4,6 @@ import { join, resolve } from 'node:path';
 import { REPO_ROOT } from '../lib/ledger.js';
 import type { SlotSpec } from '../registry/slots.js';
 import {
-  alphaBounds,
   chromaKey,
   crop,
   decode,
@@ -14,9 +13,35 @@ import {
   mirrorSymmetry,
   outline,
   quantize,
+  rotate180,
   seamError,
+  subjectBounds,
   type Raster,
 } from '../lib/image.js';
+
+/**
+ * Cell orientation corrections, declared per slot and per cell.
+ *
+ * Some sheets come back with individual vehicles drawn nose-down. Which cells are wrong
+ * is a property of the generated image, not something the pipeline can infer reliably —
+ * auto-detecting "is this a front or a rear" is exactly the kind of heuristic that fails
+ * on the one asset nobody looks at. So the fix is declared here as reviewable data, and
+ * the default for every cell of every slot is 0°: no rotation unless someone wrote it
+ * down.
+ *
+ * Values are row-major, matching `SlotSpec.cells`.
+ */
+const CELL_ROTATION_DEGREES: Readonly<Record<string, readonly (0 | 180)[]>> = {
+  // WO-25: prow, lamps and blade sat at the bottom of every cell.
+  'art-03-enemy-ground-a': [180, 180, 180, 180],
+  // WO-25: cells 0 and 2 were nose-down; cells 1 and 3 already pointed up.
+  'art-04-enemy-ground-b': [180, 0, 180, 0],
+};
+
+/** Declared rotation for one cell, defaulting to upright. */
+export function cellRotationDegrees(slotId: string, index: number): 0 | 180 {
+  return CELL_ROTATION_DEGREES[slotId]?.[index] ?? 0;
+}
 
 /**
  * Slice → key → fit → quantise → outline → measure.
@@ -96,14 +121,18 @@ export async function processSlot(
     const col = index % cols;
     const row = Math.floor(index / cols);
 
-    const region = crop(keyed, {
+    const sliced = crop(keyed, {
       left: col * cellW,
       top: row * cellH,
       width: cellW,
       height: cellH,
     });
 
-    const bounds = alphaBounds(region);
+    // Rotate before measuring so the trim box, the fit and the metrics all describe the
+    // sprite the game will actually draw.
+    const region = cellRotationDegrees(slot.id, index) === 180 ? rotate180(sliced) : sliced;
+
+    const bounds = subjectBounds(region);
     const name = slot.cells?.[index] ?? null;
 
     if (!bounds) {

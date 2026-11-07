@@ -2,7 +2,7 @@
   "slotId": "art-04-enemy-ground-b",
   "attempt": 1,
   "sourcePath": "pipeline/raw/art-04-enemy-ground-b/attempt-1.png",
-  "processedAt": "2026-11-07T22:58:15.268Z",
+  "processedAt": "2026-11-07T23:23:04.040Z",
   "grid": {
     "cols": 2,
     "rows": 2
@@ -13,10 +13,10 @@
       "index": 0,
       "name": "hauler armoured truck",
       "empty": false,
-      "fill": 0.47705078125,
-      "meanPaletteDistance": 38.78755409835812,
-      "distinctColors": 11,
-      "symmetry": 0.96727913415555
+      "fill": 0.47882080078125,
+      "meanPaletteDistance": 38.86636834102042,
+      "distinctColors": 12,
+      "symmetry": 0.9588014981273408
     },
     {
       "index": 1,
@@ -31,10 +31,10 @@
       "index": 2,
       "name": "ram bulldozer",
       "empty": false,
-      "fill": 0.2867431640625,
-      "meanPaletteDistance": 51.410125817652755,
-      "distinctColors": 11,
-      "symmetry": 0.1293269230769231
+      "fill": 0.5267333984375,
+      "meanPaletteDistance": 51.61285958086547,
+      "distinctColors": 12,
+      "symmetry": 0.9498418436511523
     },
     {
       "index": 3,
@@ -49,11 +49,11 @@
   "summary": {
     "totalCells": 4,
     "usableCells": 4,
-    "meanPaletteDistance": 40.27672634805173,
-    "sizeVariance": 0.11177735602533499,
-    "meanSymmetry": 0.732729643863703,
+    "meanPaletteDistance": 40.347113349520484,
+    "sizeVariance": 0.031933680952353695,
+    "meanSymmetry": 0.9357389650002079,
     "meanSeamError": 0,
-    "meanDistinctColors": 12,
-    "score": 86.77
+    "meanDistinctColors": 12.5,
+    "score": 91.13
   }
 }

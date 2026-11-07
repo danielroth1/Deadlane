@@ -2,7 +2,7 @@
   "slotId": "art-05-enemy-air",
   "attempt": 1,
   "sourcePath": "pipeline/raw/art-05-enemy-air/attempt-1.png",
-  "processedAt": "2026-11-07T22:58:16.370Z",
+  "processedAt": "2026-11-07T23:23:05.099Z",
   "grid": {
     "cols": 2,
     "rows": 2
@@ -31,10 +31,10 @@
       "index": 2,
       "name": "hunter drone",
       "empty": false,
-      "fill": 0.16162109375,
-      "meanPaletteDistance": 53.70570104319242,
+      "fill": 0.281005859375,
+      "meanPaletteDistance": 52.15472965084912,
       "distinctColors": 14,
-      "symmetry": 0.17375886524822695
+      "symmetry": 0.8284352660841938
     },
     {
       "index": 3,
@@ -49,11 +49,11 @@
   "summary": {
     "totalCells": 4,
     "usableCells": 4,
-    "meanPaletteDistance": 49.96227726337797,
-    "sizeVariance": 0.0897713686513163,
-    "meanSymmetry": 0.7328490188975709,
+    "meanPaletteDistance": 49.57453441529215,
+    "sizeVariance": 0.04493431650641776,
+    "meanSymmetry": 0.8965181191065628,
     "meanSeamError": 0,
     "meanDistinctColors": 13.75,
-    "score": 85.31
+    "score": 88.63
   }
 }

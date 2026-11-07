@@ -2,7 +2,7 @@
   "slotId": "art-06-enemy-sea",
   "attempt": 1,
   "sourcePath": "pipeline/raw/art-06-enemy-sea/attempt-1.png",
-  "processedAt": "2026-11-07T22:58:17.400Z",
+  "processedAt": "2026-11-07T23:23:06.158Z",
   "grid": {
     "cols": 2,
     "rows": 2
@@ -31,10 +31,10 @@
       "index": 2,
       "name": "hovercraft",
       "empty": false,
-      "fill": 0.25567626953125,
-      "meanPaletteDistance": 37.52940350655302,
-      "distinctColors": 13,
-      "symmetry": 0.16587809629835792
+      "fill": 0.41192626953125,
+      "meanPaletteDistance": 38.065052560672484,
+      "distinctColors": 11,
+      "symmetry": 0.9682123067949839
     },
     {
       "index": 3,
@@ -49,11 +49,11 @@
   "summary": {
     "totalCells": 4,
     "usableCells": 4,
-    "meanPaletteDistance": 43.44924578518052,
-    "sizeVariance": 0.08528918962897898,
-    "meanSymmetry": 0.5915741094846332,
+    "meanPaletteDistance": 43.58315804871039,
+    "sizeVariance": 0.033791414254482816,
+    "meanSymmetry": 0.7921576621087897,
     "meanSeamError": 0,
-    "meanDistinctColors": 13.25,
-    "score": 84.31
+    "meanDistinctColors": 12.75,
+    "score": 88.21
   }
 }

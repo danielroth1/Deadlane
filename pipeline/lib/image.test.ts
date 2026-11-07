@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chromaKey, hexToRgb, type Raster } from './image';
+import { alphaBounds, chromaKey, hexToRgb, rotate180, subjectBounds, type Raster } from './image';
 
 /**
  * The chroma key is the one step that decides whether a generated sheet becomes transparent
@@ -204,5 +204,120 @@ describe('chromaKey', () => {
 
     expect(opaqueCount(keyed)).toBe(0);
     expect(pixelAt(keyed, 4, 4)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+  });
+});
+
+/**
+ * The trim box is what sets a cell's scale and its centring, so a stray pixel on the cell
+ * border costs a whole sprite: WO-24 shipped four sheets whose cell 2 was stretched to the
+ * full quadrant by 1–3 px of plate residue at `x = 0`, `y = max`. These tests pin the rule
+ * that fixes it — components below an area floor are not part of the subject — and, just as
+ * importantly, that a subject which genuinely reaches the border is still trimmed to it.
+ */
+function makeEmpty(width: number, height: number): Raster {
+  return { width, height, data: Buffer.alloc(width * height * 4) };
+}
+
+describe('subjectBounds', () => {
+  it('ignores a 2 px speck on the left cell edge', () => {
+    const cell = makeEmpty(32, 32);
+    fillRect(cell, 10, 8, 21, 27, PLATE);
+    fillRect(cell, 0, 5, 0, 6, PLATE);
+
+    // The literal box still sees the speck, which is why this needs its own function.
+    expect(alphaBounds(cell)).toEqual({ left: 0, top: 5, width: 22, height: 23 });
+    expect(subjectBounds(cell)).toEqual({ left: 10, top: 8, width: 12, height: 20 });
+  });
+
+  it('ignores a 2 px speck on the bottom cell edge', () => {
+    const cell = makeEmpty(32, 32);
+    fillRect(cell, 9, 6, 20, 25, PLATE);
+    fillRect(cell, 3, 31, 4, 31, PLATE);
+
+    expect(alphaBounds(cell)).toEqual({ left: 3, top: 6, width: 18, height: 26 });
+    expect(subjectBounds(cell)).toEqual({ left: 9, top: 6, width: 12, height: 20 });
+  });
+
+  it('ignores a speck enclosed in the empty background', () => {
+    const cell = makeEmpty(32, 32);
+    fillRect(cell, 4, 4, 15, 19, PLATE);
+    // Not on an edge at all: position must not matter, only size.
+    fillRect(cell, 26, 26, 27, 26, PLATE);
+
+    expect(subjectBounds(cell)).toEqual({ left: 4, top: 4, width: 12, height: 16 });
+  });
+
+  it('keeps a subject that genuinely touches the cell edge', () => {
+    const cell = makeEmpty(32, 32);
+    fillRect(cell, 0, 11, 23, 30, PLATE);
+
+    expect(subjectBounds(cell)).toEqual({ left: 0, top: 11, width: 24, height: 20 });
+  });
+
+  it('keeps a subject that fills the cell corner to corner', () => {
+    const cell = makeEmpty(24, 24);
+    fillRect(cell, 0, 0, 23, 23, PLATE);
+
+    expect(subjectBounds(cell)).toEqual({ left: 0, top: 0, width: 24, height: 24 });
+  });
+
+  it('unions separate large components of one sprite', () => {
+    const cell = makeEmpty(40, 40);
+    fillRect(cell, 4, 4, 15, 15, PLATE);
+    fillRect(cell, 24, 24, 35, 35, PLATE);
+
+    expect(subjectBounds(cell)).toEqual({ left: 4, top: 4, width: 32, height: 32 });
+  });
+
+  it('falls back to the largest component when nothing clears the floor', () => {
+    const cell = makeEmpty(32, 32);
+    fillRect(cell, 2, 2, 3, 3, PLATE);
+    fillRect(cell, 20, 20, 24, 21, PLATE);
+
+    expect(subjectBounds(cell)).toEqual({ left: 20, top: 20, width: 5, height: 2 });
+  });
+
+  it('returns null for an empty cell', () => {
+    expect(subjectBounds(makeEmpty(16, 16))).toBeNull();
+  });
+});
+
+describe('rotate180', () => {
+  it('maps every pixel to its opposite corner without resampling', () => {
+    const cell = makeEmpty(4, 3);
+    fillRect(cell, 0, 0, 0, 0, '#ff0000');
+    fillRect(cell, 3, 2, 3, 2, GREEN);
+    fillRect(cell, 1, 1, 2, 1, PLATE);
+
+    const rotated = rotate180(cell);
+
+    expect(rotated.width).toBe(4);
+    expect(rotated.height).toBe(3);
+    expect(pixelAt(rotated, 3, 2)).toEqual({ r: 255, g: 0, b: 0, a: 255 });
+    expect(pixelAt(rotated, 0, 0)).toEqual({ r: 0, g: 255, b: 0, a: 255 });
+    expect(pixelAt(rotated, 1, 1)).toEqual(pixelAt(cell, 2, 1));
+    expect(pixelAt(rotated, 2, 1)).toEqual(pixelAt(cell, 1, 1));
+  });
+
+  it('is its own inverse and does not mutate the source', () => {
+    const cell = makeRaster(6, 5, BACKDROP);
+    fillRect(cell, 1, 1, 2, 3, PLATE);
+    const before = Buffer.from(cell.data);
+
+    const rotated = rotate180(rotate180(cell));
+
+    expect(rotated.data.equals(before)).toBe(true);
+    expect(cell.data.equals(before)).toBe(true);
+  });
+
+  it('moves an edge speck to the opposite edge without giving it weight', () => {
+    const cell = makeEmpty(32, 32);
+    fillRect(cell, 6, 6, 25, 25, PLATE);
+    fillRect(cell, 0, 31, 0, 31, PLATE);
+
+    const rotated = rotate180(cell);
+
+    expect(pixelAt(rotated, 31, 0).a).toBe(255);
+    expect(subjectBounds(rotated)).toEqual({ left: 6, top: 6, width: 20, height: 20 });
   });
 });

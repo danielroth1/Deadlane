@@ -265,7 +265,12 @@ export function chromaKey(raster: Raster, keyHex: string, tolerance = 90): Raste
   return { width, height, data: out };
 }
 
-/** Tight box around pixels above an alpha threshold, or null when the cell is empty. */
+/**
+ * Tight box around every pixel above an alpha threshold, or null when the cell is empty.
+ *
+ * This is the literal box: a single stray pixel on the cell border drags it across the
+ * whole cell. Use {@link subjectBounds} when the box is going to be used to trim a sprite.
+ */
 export function alphaBounds(raster: Raster, threshold = 8): Box | null {
   let minX = raster.width;
   let minY = raster.height;
@@ -285,6 +290,135 @@ export function alphaBounds(raster: Raster, threshold = 8): Box | null {
 
   if (maxX < 0) return null;
   return { left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+}
+
+/**
+ * Smallest 4-connected group of opaque pixels that counts as part of a sprite.
+ *
+ * Generated sheets carry 1–3 px specks where the flat plate meets a cell seam, and a
+ * speck sitting on the cell border is catastrophic for trimming: it stretches the trim
+ * box to the full cell, so the sprite is scaled down and pushed off-centre. At 512 px per
+ * cell a 16 px component is 0.006% of the cell area — orders of magnitude below the
+ * smallest legitimate sprite detail — so an area floor separates specks from subject
+ * without any guesswork about colour or position.
+ */
+export const MIN_SUBJECT_COMPONENT_AREA = 16;
+
+/**
+ * Trim box for a sprite: like {@link alphaBounds}, but each 4-connected component is
+ * measured first and components smaller than `minComponentArea` are ignored.
+ *
+ * Connectivity is 4-way on purpose. An 8-way fill would join a speck that merely touches
+ * the subject diagonally onto the subject component, which is exactly the case the area
+ * floor is meant to reject.
+ *
+ * If *every* component is below the floor, the largest one is still returned: a cell is
+ * never reported empty merely because its content is small, and the pipeline degrades to
+ * the old behaviour rather than discarding a cell.
+ */
+export function subjectBounds(
+  raster: Raster,
+  threshold = 8,
+  minComponentArea = MIN_SUBJECT_COMPONENT_AREA,
+): Box | null {
+  const { width, height, data } = raster;
+  const seen = new Uint8Array(width * height);
+  const stack = new Int32Array(width * height);
+  const neighbours = new Int32Array(4);
+  let left = width;
+  let top = height;
+  let right = -1;
+  let bottom = -1;
+  let kept = false;
+
+  let largestArea = 0;
+  let largestBox: Box | null = null;
+
+  for (let start = 0; start < width * height; start += 1) {
+    if (seen[start] === 1) continue;
+    seen[start] = 1;
+    if (data[start * 4 + 3]! <= threshold) continue;
+
+    let area = 0;
+    let minX = width;
+    let minY = height;
+    let maxX = -1;
+    let maxY = -1;
+
+    let sp = 0;
+    stack[sp] = start;
+    sp += 1;
+
+    while (sp > 0) {
+      sp -= 1;
+      const pixel = stack[sp]!;
+      const x = pixel % width;
+      const y = (pixel - x) / width;
+
+      area += 1;
+      if (x < minX) minX = x;
+      if (y < minY) minY = y;
+      if (x > maxX) maxX = x;
+      if (y > maxY) maxY = y;
+
+      neighbours[0] = x > 0 ? pixel - 1 : -1;
+      neighbours[1] = x < width - 1 ? pixel + 1 : -1;
+      neighbours[2] = y > 0 ? pixel - width : -1;
+      neighbours[3] = y < height - 1 ? pixel + width : -1;
+
+      for (let n = 0; n < 4; n += 1) {
+        const next = neighbours[n]!;
+        if (next < 0 || seen[next] === 1) continue;
+        seen[next] = 1;
+        if (data[next * 4 + 3]! > threshold) {
+          stack[sp] = next;
+          sp += 1;
+        }
+      }
+    }
+
+    const box: Box = { left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
+
+    if (area > largestArea) {
+      largestArea = area;
+      largestBox = box;
+    }
+
+    if (area < minComponentArea) continue;
+
+    kept = true;
+    if (minX < left) left = minX;
+    if (minY < top) top = minY;
+    if (maxX > right) right = maxX;
+    if (maxY > bottom) bottom = maxY;
+  }
+
+  if (!kept) return largestBox;
+  return { left, top, width: right - left + 1, height: bottom - top + 1 };
+}
+
+/**
+ * Rotate a raster by 180°.
+ *
+ * Exact, not resampled: destination pixel `(width-1-x, height-1-y)` gets source pixel
+ * `(x, y)`, so every colour and alpha value survives untouched. Used to bring a cell the
+ * model drew nose-down back to the game's nose-up convention.
+ */
+export function rotate180(raster: Raster): Raster {
+  const { width, height, data } = raster;
+  const out = Buffer.alloc(data.length);
+  const last = width * height - 1;
+
+  for (let pixel = 0; pixel <= last; pixel += 1) {
+    const si = pixel * 4;
+    const di = (last - pixel) * 4;
+    out[di] = data[si]!;
+    out[di + 1] = data[si + 1]!;
+    out[di + 2] = data[si + 2]!;
+    out[di + 3] = data[si + 3]!;
+  }
+
+  return { width, height, data: out };
 }
 
 /**
