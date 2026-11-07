@@ -1,0 +1,167 @@
+{
+  "slotId": "art-02-player-vehicle",
+  "attempt": 1,
+  "sourcePath": "pipeline/raw/art-02-player-vehicle/attempt-1.png",
+  "processedAt": "2026-11-07T21:30:57.030Z",
+  "grid": {
+    "cols": 4,
+    "rows": 4
+  },
+  "finalSize": 64,
+  "cells": [
+    {
+      "index": 0,
+      "name": "interceptor clean",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 78.20698707095386,
+      "distinctColors": 12,
+      "symmetry": 1
+    },
+    {
+      "index": 1,
+      "name": "interceptor damaged 1",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 77.89924329340684,
+      "distinctColors": 15,
+      "symmetry": 1
+    },
+    {
+      "index": 2,
+      "name": "interceptor damaged 2",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 79.51680769168966,
+      "distinctColors": 12,
+      "symmetry": 1
+    },
+    {
+      "index": 3,
+      "name": "interceptor wrecked",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 70.25918252946731,
+      "distinctColors": 13,
+      "symmetry": 1
+    },
+    {
+      "index": 4,
+      "name": "interceptor headlights on",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 78.48905888479096,
+      "distinctColors": 13,
+      "symmetry": 1
+    },
+    {
+      "index": 5,
+      "name": "interceptor shield active",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 78.90819208242323,
+      "distinctColors": 14,
+      "symmetry": 1
+    },
+    {
+      "index": 6,
+      "name": "interceptor oil pod fitted",
+      "empty": false,
+      "fill": 0.87158203125,
+      "meanPaletteDistance": 76.63047282158992,
+      "distinctColors": 12,
+      "symmetry": 0.9833333333333333
+    },
+    {
+      "index": 7,
+      "name": "interceptor smoke pod fitted",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 76.29864751298648,
+      "distinctColors": 13,
+      "symmetry": 1
+    },
+    {
+      "index": 8,
+      "name": "speedboat clean",
+      "empty": false,
+      "fill": 0.878662109375,
+      "meanPaletteDistance": 80.22347530545422,
+      "distinctColors": 11,
+      "symmetry": 0.9994444444444445
+    },
+    {
+      "index": 9,
+      "name": "speedboat damaged",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 80.02196925765897,
+      "distinctColors": 15,
+      "symmetry": 1
+    },
+    {
+      "index": 10,
+      "name": "speedboat wrecked",
+      "empty": false,
+      "fill": 0.8779296875,
+      "meanPaletteDistance": 80.38775298734966,
+      "distinctColors": 13,
+      "symmetry": 0.9977777777777778
+    },
+    {
+      "index": 11,
+      "name": "hover interceptor",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 78.1531644646637,
+      "distinctColors": 14,
+      "symmetry": 1
+    },
+    {
+      "index": 12,
+      "name": "interceptor trailing exhaust",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 79.55827306921024,
+      "distinctColors": 12,
+      "symmetry": 1
+    },
+    {
+      "index": 13,
+      "name": "interceptor banking left",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 78.03586504801966,
+      "distinctColors": 12,
+      "symmetry": 1
+    },
+    {
+      "index": 14,
+      "name": "interceptor banking right",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 84.01969903578043,
+      "distinctColors": 13,
+      "symmetry": 1
+    },
+    {
+      "index": 15,
+      "name": "interceptor airborne",
+      "empty": false,
+      "fill": 0.87890625,
+      "meanPaletteDistance": 77.02825760585878,
+      "distinctColors": 11,
+      "symmetry": 1
+    }
+  ],
+  "summary": {
+    "totalCells": 16,
+    "usableCells": 16,
+    "meanPaletteDistance": 78.35231554133149,
+    "sizeVariance": 0,
+    "meanSymmetry": 0.9987847222222223,
+    "meanSeamError": 0,
+    "meanDistinctColors": 12.8125,
+    "score": 85.62
+  }
+}

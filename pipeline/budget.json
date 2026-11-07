@@ -63,7 +63,18 @@
     },
     "art-02-player-vehicle": {
       "id": "art-02-player-vehicle",
-      "attempts": [],
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 944511190,
+          "promptHash": "4f7cced9243d5930",
+          "state": "generated",
+          "claimedAt": "2026-11-07T21:29:39.887Z",
+          "requestId": "01a1b7eb-01f2-7f50-bc17-9e7e82b96520",
+          "url": "https://v3b.fal.media/files/b/0ab18f3b/XLVLLenooecPmSQhESbem_9qWEbKHa.png",
+          "costUsd": 0.0084
+        }
+      ],
       "status": "open"
     },
     "art-03-enemy-ground-a": {

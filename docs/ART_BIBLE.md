@@ -66,8 +66,8 @@ Hot pink is reserved for the player and must never appear on an enemy.
 
 ### Approved palette order
 
-Recorded from the approved style anchor (`art-01-style-anchor`, attempt 5, seed
-`86616007`):
+Recorded from the approved style anchor (`art-01-style-anchor`, attempt 4, seed
+`313021788`):
 
 `0 void · 1 asphalt · 2 asphalt-light · 3 steel · 4 steel-light · 5 bone · 6 white ·
 7 rust · 8 signal-red · 9 amber · 10 sand · 11 olive · 12 teal · 13 deep-blue ·
@@ -79,19 +79,15 @@ approximation of perceived difference); the index order above only breaks ties, 
 the lowest index wins when two entries are equally close. See `quantize()` in
 `pipeline/lib/image.ts`.
 
-The approved attempt uses 14 of the 16 indices — it does not draw `6 white` or
-`14 violet` — and contains no colour outside this table after quantisation. The per-index
-pixel counts behind that statement are recorded in
-`pipeline/work/art-01-style-anchor/attempt-5/palette-usage.json`.
+The approved attempt uses 15 of the 16 indices — it does not draw `14 violet` — and
+contains no colour outside this table after quantisation. The per-index pixel counts behind
+that statement are recorded in
+`pipeline/work/art-01-style-anchor/attempt-4/palette-usage.json`.
 
-Of the 409,600 pixels in the 640 × 640 cell, 188,609 are opaque and 220,991 (53.9%) are
-transparent. Attempt 5's backdrop is `#ee0466`, which is 174 away from the `#ff00ff` key —
-outside `chromaKey()`'s single-colour tolerance — but it is the flat region touching the
-image border, so the border-connected flood fill keys it anyway. Only 123 `15 hot-pink`
-pixels survive, and none of them is sprite pigment: 109 sit on stray marks to the left of
-the plate (x 20–34, all outside the plate) and 14 form two thin vertical ticks on the
-plate's right edge at x = 532. Later sheets are judged against this palette, not against
-this anchor's exact index usage.
+Attempt 4 is a full-bleed scene with no keyed background, so the whole 640 × 640 cell is
+image content: 361,187 pixels are opaque and 48,413 (11.8%) are transparent after
+processing. It draws 10 `15 hot-pink` pixels. Later sheets are judged against this
+palette, not against this anchor's exact index usage.
 
 ## 4. Iconography of the factions
 
@@ -127,13 +123,38 @@ Required sheet properties — this is the prompt spec, not a suggestion:
 - Exactly 4 columns, 4 rows, equal cell size, no grid lines.
 - Every sprite centred in its cell, un-rotated, un-angled, top-down.
 - Flat solid `#FF00FF` background — magenta is never in the palette, so background removal
-  is a pure chroma-key with zero risk of eating a sprite pixel.
+  is a pure chroma-key with zero risk of eating a sprite pixel. The key must be exact:
+  `chromaKey()`'s border-connected tolerance is 180 Manhattan, and the model's real
+  backdrops have landed at 174 (`#ee0466`, attempt 5) and 201 (`#df0b61`, WO-11).
 - No text, no labels, no numbers, no borders, no drop shadows outside the sprite.
 - Consistent scale across the sheet: one vehicle occupies the same footprint in every cell.
 - Empty cells are acceptable; the slicer discards them and they cost nothing.
 
 Sheets are sliced, quantised, outlined and re-packed by `pipeline/steps/`. Model output is
 never shipped.
+
+### Gate: are 4 × 4 sheets viable for `fal-ai/flux-2/turbo`? (WO-11)
+
+Measured on `art-02-player-vehicle` attempt 1 (seed `944511190`, `fal-ai/flux-2/turbo`).
+
+- `art:process` reports **16/16 usable cells**. That number is a false positive. The model
+  rendered its magenta field as `#df0b61`, which is 201 (Manhattan) from the `#ff00ff` key
+  and outside `chromaKey()`'s 180 border-connected limit, so none of it was removed. Every
+  "usable" cell is a fully opaque 60 × 60 plate of palette `15 hot-pink` (3,600 of 4,096
+  pixels); cell 0's corner pixel is `#ff2e63`. As the pipeline actually ships it, the yield
+  is **0/16 usable sprites**.
+- Re-slicing the same image with the backdrop keyed by geometry and colour leaves at most
+  **4/16** cells whose content is inset from the cell edges. The other 12 carry baked-in
+  white lane markings or wake that run to the boundary, so the slicer either clips them or
+  lets them dominate the trimmed bounds and shrink the car.
+- Of those 4 inset cells, the row-3 `speedboat` cells are drawn horizontally rather than
+  axis-aligned pointing up, and two of the remaining player cells are rotated (banking).
+  Only one cell is both clean and pointing up.
+
+**Decision: packed sheets are not viable for this model.** The reported gate number is not
+trustworthy for this endpoint, and the underlying sheet is below the 6/16 threshold once
+keying and framing are accounted for. Do not spend the remaining images on 4 × 4 sheets
+until the key and the sheet framing are fixed and a fresh gate image passes.
 
 ## 6. Motion
 
