@@ -1,0 +1,59 @@
+{
+  "slotId": "art-03-enemy-ground-a",
+  "attempt": 2,
+  "sourcePath": "pipeline/raw/art-03-enemy-ground-a/attempt-2.png",
+  "processedAt": "2026-11-07T22:58:14.155Z",
+  "grid": {
+    "cols": 2,
+    "rows": 2
+  },
+  "finalSize": 128,
+  "cells": [
+    {
+      "index": 0,
+      "name": "enforcer motorcycle",
+      "empty": false,
+      "fill": 0.2548828125,
+      "meanPaletteDistance": 35.83978214954503,
+      "distinctColors": 14,
+      "symmetry": 0.9791469194312796
+    },
+    {
+      "index": 1,
+      "name": "switchblade interceptor",
+      "empty": false,
+      "fill": 0.38525390625,
+      "meanPaletteDistance": 38.975110323068314,
+      "distinctColors": 14,
+      "symmetry": 0.9911671924290221
+    },
+    {
+      "index": 2,
+      "name": "road lord heavy",
+      "empty": false,
+      "fill": 0.25726318359375,
+      "meanPaletteDistance": 35.149436984648815,
+      "distinctColors": 14,
+      "symmetry": 0.048507462686567165
+    },
+    {
+      "index": 3,
+      "name": "division sports coupe",
+      "empty": false,
+      "fill": 0.446044921875,
+      "meanPaletteDistance": 51.62360716672014,
+      "distinctColors": 13,
+      "symmetry": 0.9788789601949635
+    }
+  ],
+  "summary": {
+    "totalCells": 4,
+    "usableCells": 4,
+    "meanPaletteDistance": 40.396984155995575,
+    "sizeVariance": 0.11585421442726006,
+    "meanSymmetry": 0.749425133685458,
+    "meanSeamError": 0,
+    "meanDistinctColors": 13.75,
+    "score": 86.96
+  }
+}

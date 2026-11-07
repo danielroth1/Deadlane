@@ -1,0 +1,59 @@
+{
+  "slotId": "art-06-enemy-sea",
+  "attempt": 1,
+  "sourcePath": "pipeline/raw/art-06-enemy-sea/attempt-1.png",
+  "processedAt": "2026-11-07T22:58:17.400Z",
+  "grid": {
+    "cols": 2,
+    "rows": 2
+  },
+  "finalSize": 128,
+  "cells": [
+    {
+      "index": 0,
+      "name": "gunboat",
+      "empty": false,
+      "fill": 0.2735595703125,
+      "meanPaletteDistance": 36.43310703393289,
+      "distinctColors": 10,
+      "symmetry": 0.9461571862787668
+    },
+    {
+      "index": 1,
+      "name": "speedboat hostile",
+      "empty": false,
+      "fill": 0.29681396484375,
+      "meanPaletteDistance": 56.57982966148756,
+      "distinctColors": 16,
+      "symmetry": 0.8462414578587699
+    },
+    {
+      "index": 2,
+      "name": "hovercraft",
+      "empty": false,
+      "fill": 0.25567626953125,
+      "meanPaletteDistance": 37.52940350655302,
+      "distinctColors": 13,
+      "symmetry": 0.16587809629835792
+    },
+    {
+      "index": 3,
+      "name": "torpedo boat",
+      "empty": false,
+      "fill": 0.24432373046875,
+      "meanPaletteDistance": 43.25464293874863,
+      "distinctColors": 14,
+      "symmetry": 0.40801969750263806
+    }
+  ],
+  "summary": {
+    "totalCells": 4,
+    "usableCells": 4,
+    "meanPaletteDistance": 43.44924578518052,
+    "sizeVariance": 0.08528918962897898,
+    "meanSymmetry": 0.5915741094846332,
+    "meanSeamError": 0,
+    "meanDistinctColors": 13.25,
+    "score": 84.31
+  }
+}

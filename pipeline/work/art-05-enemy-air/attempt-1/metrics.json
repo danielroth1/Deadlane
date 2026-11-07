@@ -1,0 +1,59 @@
+{
+  "slotId": "art-05-enemy-air",
+  "attempt": 1,
+  "sourcePath": "pipeline/raw/art-05-enemy-air/attempt-1.png",
+  "processedAt": "2026-11-07T22:58:16.370Z",
+  "grid": {
+    "cols": 2,
+    "rows": 2
+  },
+  "finalSize": 128,
+  "cells": [
+    {
+      "index": 0,
+      "name": "attack helicopter",
+      "empty": false,
+      "fill": 0.3343505859375,
+      "meanPaletteDistance": 46.60408232384886,
+      "distinctColors": 12,
+      "symmetry": 0.8456873315363881
+    },
+    {
+      "index": 1,
+      "name": "gunship large",
+      "empty": false,
+      "fill": 0.29058837890625,
+      "meanPaletteDistance": 42.5230551727619,
+      "distinctColors": 14,
+      "symmetry": 0.9504301515772224
+    },
+    {
+      "index": 2,
+      "name": "hunter drone",
+      "empty": false,
+      "fill": 0.16162109375,
+      "meanPaletteDistance": 53.70570104319242,
+      "distinctColors": 14,
+      "symmetry": 0.17375886524822695
+    },
+    {
+      "index": 3,
+      "name": "jet fighter",
+      "empty": false,
+      "fill": 0.24578857421875,
+      "meanPaletteDistance": 57.01627051370871,
+      "distinctColors": 15,
+      "symmetry": 0.9615197272284461
+    }
+  ],
+  "summary": {
+    "totalCells": 4,
+    "usableCells": 4,
+    "meanPaletteDistance": 49.96227726337797,
+    "sizeVariance": 0.0897713686513163,
+    "meanSymmetry": 0.7328490188975709,
+    "meanSeamError": 0,
+    "meanDistinctColors": 13.75,
+    "score": 85.31
+  }
+}

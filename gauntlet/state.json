@@ -276,10 +276,12 @@
       "title": "Enemy sheets 03-06 at 2x2",
       "file": "gauntlet/work-orders/WO-24-enemy-sheets.md",
       "status": "pending",
-      "round": 0,
+      "round": 1,
       "dependsOn": [
         "WO-23"
-      ]
+      ],
+      "lastVerdict": "fail",
+      "note": "nose-down cells, hot-pink rotor fan on art-05, three-quarter boat on art-06, and cell-2 trim collapse from stray sheet-edge pixels"
     }
   ]
 }

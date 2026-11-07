@@ -1,0 +1,59 @@
+{
+  "slotId": "art-04-enemy-ground-b",
+  "attempt": 1,
+  "sourcePath": "pipeline/raw/art-04-enemy-ground-b/attempt-1.png",
+  "processedAt": "2026-11-07T22:58:15.268Z",
+  "grid": {
+    "cols": 2,
+    "rows": 2
+  },
+  "finalSize": 128,
+  "cells": [
+    {
+      "index": 0,
+      "name": "hauler armoured truck",
+      "empty": false,
+      "fill": 0.47705078125,
+      "meanPaletteDistance": 38.78755409835812,
+      "distinctColors": 11,
+      "symmetry": 0.96727913415555
+    },
+    {
+      "index": 1,
+      "name": "turret rig",
+      "empty": false,
+      "fill": 0.46142578125,
+      "meanPaletteDistance": 30.64939312987221,
+      "distinctColors": 13,
+      "symmetry": 0.8928392588883325
+    },
+    {
+      "index": 2,
+      "name": "ram bulldozer",
+      "empty": false,
+      "fill": 0.2867431640625,
+      "meanPaletteDistance": 51.410125817652755,
+      "distinctColors": 11,
+      "symmetry": 0.1293269230769231
+    },
+    {
+      "index": 3,
+      "name": "missile trailer",
+      "empty": false,
+      "fill": 0.352294921875,
+      "meanPaletteDistance": 40.259832346323826,
+      "distinctColors": 13,
+      "symmetry": 0.941473259334006
+    }
+  ],
+  "summary": {
+    "totalCells": 4,
+    "usableCells": 4,
+    "meanPaletteDistance": 40.27672634805173,
+    "sizeVariance": 0.11177735602533499,
+    "meanSymmetry": 0.732729643863703,
+    "meanSeamError": 0,
+    "meanDistinctColors": 12,
+    "score": 86.77
+  }
+}

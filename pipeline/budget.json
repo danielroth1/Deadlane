@@ -90,23 +90,81 @@
     },
     "art-03-enemy-ground-a": {
       "id": "art-03-enemy-ground-a",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 770607702,
+          "promptHash": "3977a886e0e3a2e5",
+          "state": "generated",
+          "claimedAt": "2026-11-07T22:50:58.073Z",
+          "requestId": "01a1b835-5445-79d2-b209-c6df4a9fc9c4",
+          "url": "https://v3b.fal.media/files/b/0ab19122/cu0XdguteQd6s0L9ay9Wh_81as1tGw.png",
+          "costUsd": 0.0084
+        },
+        {
+          "attempt": 2,
+          "seed": 673772911,
+          "promptHash": "db022160658579a4",
+          "state": "generated",
+          "claimedAt": "2026-11-07T22:51:20.615Z",
+          "requestId": "01a1b835-a6bb-77e0-830c-d298da08393c",
+          "url": "https://v3b.fal.media/files/b/0ab19126/cGNWNaWSUi634uPATqTzk_39qv09eU.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 2
     },
     "art-04-enemy-ground-b": {
       "id": "art-04-enemy-ground-b",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1472777606,
+          "promptHash": "2a5eb0881ae0df6d",
+          "state": "generated",
+          "claimedAt": "2026-11-07T22:51:53.682Z",
+          "requestId": "01a1b836-288d-74a2-bf56-218537fa2713",
+          "url": "https://v3b.fal.media/files/b/0ab19128/i5lM984nf7AZxjCngcTkN_jPq54AmC.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-05-enemy-air": {
       "id": "art-05-enemy-air",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 701217366,
+          "promptHash": "f0c4d16bb6d39a7b",
+          "state": "generated",
+          "claimedAt": "2026-11-07T22:52:13.722Z",
+          "requestId": "01a1b836-7984-7961-961b-d5bae4f0f1d6",
+          "url": "https://v3b.fal.media/files/b/0ab1912a/p1y7JtEM__meeUgUGmL25_94OjSNm9.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-06-enemy-sea": {
       "id": "art-06-enemy-sea",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1262471897,
+          "promptHash": "29f0fb6c3039ffd6",
+          "state": "generated",
+          "claimedAt": "2026-11-07T22:52:34.823Z",
+          "requestId": "01a1b836-c94c-7380-ac7a-f2395c334730",
+          "url": "https://v3b.fal.media/files/b/0ab1912c/z-ugf_etI1rnZzPG8OUIS_r89Perji.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-07-boss": {
       "id": "art-07-boss",

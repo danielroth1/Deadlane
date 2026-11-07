@@ -1,0 +1,34 @@
+{
+  "slot": "art-03-enemy-ground-a",
+  "code": "enemy-ground-a",
+  "cellSize": 128,
+  "cols": 2,
+  "rows": 2,
+  "image": "assets/sheets/art-03-enemy-ground-a.png",
+  "frames": {
+    "enemy-ground-a/enforcer-motorcycle": {
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-a/switchblade-interceptor": {
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-a/road-lord-heavy": {
+      "x": 0,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-a/division-sports-coupe": {
+      "x": 128,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    }
+  }
+}

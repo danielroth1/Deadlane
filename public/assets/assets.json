@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T22:37:06.207Z",
+  "generatedAt": "2026-11-07T22:58:22.361Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -50,6 +50,142 @@
           "h": 128
         }
       }
+    },
+    "art-03-enemy-ground-a": {
+      "slot": "art-03-enemy-ground-a",
+      "code": "enemy-ground-a",
+      "cellSize": 128,
+      "cols": 2,
+      "rows": 2,
+      "image": "assets/sheets/art-03-enemy-ground-a.png",
+      "frames": {
+        "enemy-ground-a/enforcer-motorcycle": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-ground-a/switchblade-interceptor": {
+          "x": 128,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-ground-a/road-lord-heavy": {
+          "x": 0,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-ground-a/division-sports-coupe": {
+          "x": 128,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        }
+      }
+    },
+    "art-04-enemy-ground-b": {
+      "slot": "art-04-enemy-ground-b",
+      "code": "enemy-ground-b",
+      "cellSize": 128,
+      "cols": 2,
+      "rows": 2,
+      "image": "assets/sheets/art-04-enemy-ground-b.png",
+      "frames": {
+        "enemy-ground-b/hauler-armoured-truck": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-ground-b/turret-rig": {
+          "x": 128,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-ground-b/ram-bulldozer": {
+          "x": 0,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-ground-b/missile-trailer": {
+          "x": 128,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        }
+      }
+    },
+    "art-05-enemy-air": {
+      "slot": "art-05-enemy-air",
+      "code": "enemy-air",
+      "cellSize": 128,
+      "cols": 2,
+      "rows": 2,
+      "image": "assets/sheets/art-05-enemy-air.png",
+      "frames": {
+        "enemy-air/attack-helicopter": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-air/gunship-large": {
+          "x": 128,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-air/hunter-drone": {
+          "x": 0,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-air/jet-fighter": {
+          "x": 128,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        }
+      }
+    },
+    "art-06-enemy-sea": {
+      "slot": "art-06-enemy-sea",
+      "code": "enemy-sea",
+      "cellSize": 128,
+      "cols": 2,
+      "rows": 2,
+      "image": "assets/sheets/art-06-enemy-sea.png",
+      "frames": {
+        "enemy-sea/gunboat": {
+          "x": 0,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-sea/speedboat-hostile": {
+          "x": 128,
+          "y": 0,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-sea/hovercraft": {
+          "x": 0,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        },
+        "enemy-sea/torpedo-boat": {
+          "x": 128,
+          "y": 128,
+          "w": 128,
+          "h": 128
+        }
+      }
     }
   },
   "sprites": {
@@ -83,6 +219,118 @@
     },
     "player-vehicle/hover-interceptor": {
       "sheet": "art-02-player-vehicle",
+      "x": 128,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-a/enforcer-motorcycle": {
+      "sheet": "art-03-enemy-ground-a",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-a/switchblade-interceptor": {
+      "sheet": "art-03-enemy-ground-a",
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-a/road-lord-heavy": {
+      "sheet": "art-03-enemy-ground-a",
+      "x": 0,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-a/division-sports-coupe": {
+      "sheet": "art-03-enemy-ground-a",
+      "x": 128,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-b/hauler-armoured-truck": {
+      "sheet": "art-04-enemy-ground-b",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-b/turret-rig": {
+      "sheet": "art-04-enemy-ground-b",
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-b/ram-bulldozer": {
+      "sheet": "art-04-enemy-ground-b",
+      "x": 0,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-ground-b/missile-trailer": {
+      "sheet": "art-04-enemy-ground-b",
+      "x": 128,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-air/attack-helicopter": {
+      "sheet": "art-05-enemy-air",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-air/gunship-large": {
+      "sheet": "art-05-enemy-air",
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-air/hunter-drone": {
+      "sheet": "art-05-enemy-air",
+      "x": 0,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-air/jet-fighter": {
+      "sheet": "art-05-enemy-air",
+      "x": 128,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-sea/gunboat": {
+      "sheet": "art-06-enemy-sea",
+      "x": 0,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-sea/speedboat-hostile": {
+      "sheet": "art-06-enemy-sea",
+      "x": 128,
+      "y": 0,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-sea/hovercraft": {
+      "sheet": "art-06-enemy-sea",
+      "x": 0,
+      "y": 128,
+      "w": 128,
+      "h": 128
+    },
+    "enemy-sea/torpedo-boat": {
+      "sheet": "art-06-enemy-sea",
       "x": 128,
       "y": 128,
       "w": 128,
