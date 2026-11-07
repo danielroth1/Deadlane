@@ -12,7 +12,7 @@ import type { SlotSpec } from './slots.js';
 export const HOUSE_STYLE = [
   'retro 2D pixel art game still, strict top-down orthographic view from directly overhead',
   'camera perpendicular to the ground plane, flat map-like framing, no horizon, no sky, no vanishing point',
-  'flat hard-edged colours, exactly one pixel dark outline around every element in the frame, including every car, every lane marking and every guardrail',
+  'flat hard-edged colours, exactly one pixel dark outline around every shape of every subject in the frame',
   'limited 16-colour palette of cold steel greys, matte black, bone white, signal red, amber, teal and olive',
   'top-left key light, no gradients, no glow, no bloom, no soft shadows, no anti-aliasing',
   'crisp chunky pixels, readable silhouette at small size',
