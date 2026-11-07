@@ -26,9 +26,30 @@
           "requestId": "01a1b7a8-b261-77c1-9005-1f45d03cae41",
           "url": "https://v3b.fal.media/files/b/0ab18d88/tH8wV_uKXK7MGfORARbwr.jpg",
           "costUsd": 0.0031
+        },
+        {
+          "attempt": 3,
+          "seed": 1885155570,
+          "promptHash": "d165caf884570b08",
+          "state": "generated",
+          "claimedAt": "2026-11-07T20:40:03.789Z",
+          "requestId": "01a1b7bd-8c66-73a3-82cf-b53d8c630dd3",
+          "url": "https://v3b.fal.media/files/b/0ab18e11/xebdFhtvGs_jmHOF41rtU_cpVD8WR7.png",
+          "costUsd": 0.0084
+        },
+        {
+          "attempt": 4,
+          "seed": 313021788,
+          "promptHash": "f538c5183245b961",
+          "state": "generated",
+          "claimedAt": "2026-11-07T20:47:58.716Z",
+          "requestId": "01a1b7c4-ca98-7500-a7f5-12a73ad94499",
+          "url": "https://v3b.fal.media/files/b/0ab18e41/gNtWc13oq54FrsKk1UTUP_N1Ce4bHj.png",
+          "costUsd": 0.0084
         }
       ],
-      "status": "open"
+      "status": "approved",
+      "selected": 4
     },
     "art-02-player-vehicle": {
       "id": "art-02-player-vehicle",

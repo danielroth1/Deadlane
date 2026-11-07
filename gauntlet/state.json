@@ -120,14 +120,14 @@
       "title": "Art slot 01: style anchor",
       "file": "gauntlet/work-orders/WO-10-style-anchor.md",
       "status": "pending",
-      "round": 1,
+      "round": 2,
       "dependsOn": [
         "WO-09b",
         "WO-15",
         "WO-16"
       ],
       "lastVerdict": "fail",
-      "note": "perspective axis 1: pseudo-3D vanishing point, no top-down frame; silhouette 2; no 1px outlines (full-bleed scene gives chromaKey nothing to key). Round 2 needs art:reopen (WO-15) and a top-down house style (WO-16), plus a model switch to fal-ai/flux-2/turbo authorised by the human."
+      "note": "palette axis 2: olive light cone/glow, dither speckle, soft translucent smoke, no single 1px outline"
     },
     {
       "id": "WO-11",

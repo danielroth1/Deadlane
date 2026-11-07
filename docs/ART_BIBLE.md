@@ -64,6 +64,26 @@ table and every sprite is quantised to it.
 **Usage ratios:** roughly 60% neutrals (0–6), 25% one accent family, 15% everything else.
 Hot pink is reserved for the player and must never appear on an enemy.
 
+### Approved palette order
+
+Recorded from the approved style anchor (`art-01-style-anchor`, attempt 4, seed
+`313021788`):
+
+`0 void · 1 asphalt · 2 asphalt-light · 3 steel · 4 steel-light · 5 bone · 6 white ·
+7 rust · 8 signal-red · 9 amber · 10 sand · 11 olive · 12 teal · 13 deep-blue ·
+14 violet · 15 hot-pink`
+
+Quantisation does not walk this order. For each opaque pixel `quantize()` chooses the
+palette entry with the smallest weighted RGB distance (`2R² + 4G² + 3B²`, a cheap
+approximation of perceived difference); the index order above only breaks ties, because
+the lowest index wins when two entries are equally close. See `quantize()` in
+`pipeline/lib/image.ts`.
+
+The approved attempt uses 15 of the 16 indices — it does not draw `14 violet` — and
+contains no colour outside this table. The per-index pixel counts behind that statement are
+recorded in `pipeline/work/art-01-style-anchor/attempt-4/palette-usage.json`; later sheets
+are judged against this palette, not against this anchor's exact index usage.
+
 ## 4. Iconography of the factions
 
 The game must be readable in a single glance at 60fps. Silhouette carries the meaning.

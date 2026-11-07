@@ -42,7 +42,10 @@ refuses duplicate seeds on purpose. Maximum 6 attempts, then `art:select` the be
 - [ ] The road markings and the car silhouette are legible at 320px wide.
 - [ ] `pipeline/budget.json` shows exactly the number of images you actually used.
 - [ ] `npm run art:validate` passes.
-- [ ] The game still builds and the title screen shows `ART 1 sprites · 1 sheets`.
+- [ ] The game still builds and the title screen renders exactly one sprite and one sheet.
+      The scene's literal format is `ART 1 SPRITES / 1 SHEETS` (`src/scenes/TitleScene.ts`);
+      confirm it from the rendered page (or from an equivalent assertion), not inferred from
+      a passing build.
 
 ## Verification
 
@@ -50,6 +53,7 @@ refuses duplicate seeds on purpose. Maximum 6 attempts, then `art:select` the be
 npm run art:status
 npm run art:atlas && npm run art:validate
 npm run test && npm run typecheck && npm run build
+npm run test:e2e
 ```
 
 ## Reviewer rubric

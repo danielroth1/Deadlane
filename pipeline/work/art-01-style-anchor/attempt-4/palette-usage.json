@@ -1,0 +1,129 @@
+{
+  "slotId": "art-01-style-anchor",
+  "attempt": 4,
+  "image": "pipeline/work/art-01-style-anchor/attempt-4/cell-0.png",
+  "size": {
+    "width": 640,
+    "height": 640
+  },
+  "opaquePixels": 361187,
+  "usedIndices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    15
+  ],
+  "unusedIndices": [
+    14
+  ],
+  "colors": [
+    {
+      "index": 0,
+      "name": "void",
+      "hex": "#0b0d10",
+      "pixels": 6395
+    },
+    {
+      "index": 1,
+      "name": "asphalt",
+      "hex": "#161a21",
+      "pixels": 32360
+    },
+    {
+      "index": 2,
+      "name": "asphalt-light",
+      "hex": "#232a34",
+      "pixels": 141096
+    },
+    {
+      "index": 3,
+      "name": "steel",
+      "hex": "#3d4753",
+      "pixels": 138590
+    },
+    {
+      "index": 4,
+      "name": "steel-light",
+      "hex": "#7a8794",
+      "pixels": 13914
+    },
+    {
+      "index": 5,
+      "name": "bone",
+      "hex": "#c8d2dc",
+      "pixels": 140
+    },
+    {
+      "index": 6,
+      "name": "white",
+      "hex": "#f2f6f9",
+      "pixels": 57
+    },
+    {
+      "index": 7,
+      "name": "rust",
+      "hex": "#7a2f2f",
+      "pixels": 977
+    },
+    {
+      "index": 8,
+      "name": "signal-red",
+      "hex": "#b8452f",
+      "pixels": 346
+    },
+    {
+      "index": 9,
+      "name": "amber",
+      "hex": "#e0762a",
+      "pixels": 955
+    },
+    {
+      "index": 10,
+      "name": "sand",
+      "hex": "#e8c15a",
+      "pixels": 2911
+    },
+    {
+      "index": 11,
+      "name": "olive",
+      "hex": "#4e7a3f",
+      "pixels": 18590
+    },
+    {
+      "index": 12,
+      "name": "teal",
+      "hex": "#2f6f6a",
+      "pixels": 4845
+    },
+    {
+      "index": 13,
+      "name": "deep-blue",
+      "hex": "#2b4c7e",
+      "pixels": 1
+    },
+    {
+      "index": 14,
+      "name": "violet",
+      "hex": "#6a4fa3",
+      "pixels": 0
+    },
+    {
+      "index": 15,
+      "name": "hot-pink",
+      "hex": "#ff2e63",
+      "pixels": 10
+    }
+  ],
+  "offPalette": []
+}
