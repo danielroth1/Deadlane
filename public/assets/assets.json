@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T22:30:39.477Z",
+  "generatedAt": "2026-11-07T22:37:06.207Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -31,13 +31,13 @@
           "w": 128,
           "h": 128
         },
-        "player-vehicle/interceptor-damaged": {
+        "player-vehicle/interceptor-wrecked": {
           "x": 128,
           "y": 0,
           "w": 128,
           "h": 128
         },
-        "player-vehicle/interceptor-wrecked": {
+        "player-vehicle/interceptor-damaged": {
           "x": 0,
           "y": 128,
           "w": 128,
@@ -67,14 +67,14 @@
       "w": 128,
       "h": 128
     },
-    "player-vehicle/interceptor-damaged": {
+    "player-vehicle/interceptor-wrecked": {
       "sheet": "art-02-player-vehicle",
       "x": 128,
       "y": 0,
       "w": 128,
       "h": 128
     },
-    "player-vehicle/interceptor-wrecked": {
+    "player-vehicle/interceptor-damaged": {
       "sheet": "art-02-player-vehicle",
       "x": 0,
       "y": 128,

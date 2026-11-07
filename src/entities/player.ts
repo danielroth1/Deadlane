@@ -17,6 +17,22 @@ const ART_CANDIDATES = [
   'player-vehicle/clean',
 ];
 
+/** Collision half-width as a fraction of the displayed sprite width. */
+export const HALF_WIDTH_RATIO = 0.36;
+/** Collision half-height as a fraction of the displayed sprite height. */
+export const HALF_HEIGHT_RATIO = 0.42;
+
+/**
+ * Scale that draws a native frame at the target on-screen footprint.
+ *
+ * The art sheet is 128 px per cell and the placeholder is 64 px, so the factor differs
+ * per source. A zero-sized texture (a frame that failed to load) falls back to 1 rather
+ * than dividing by zero.
+ */
+export function displayScale(nativeSize: number, targetSize: number = PLAYER.spriteSize): number {
+  return nativeSize > 0 ? targetSize / nativeSize : 1;
+}
+
 export class PlayerVehicle {
   readonly sprite: Phaser.GameObjects.Image;
 
@@ -43,6 +59,11 @@ export class PlayerVehicle {
       faction: 'player',
       size: 64,
     }));
+    // Draw at a fixed on-screen footprint regardless of the source frame size: the art
+    // sheet is 128 px per cell, the procedural placeholder is 64 px, and both must read
+    // as one lane wide.
+    const nativeSize = Math.max(this.sprite.width, this.sprite.height);
+    this.sprite.setScale(displayScale(nativeSize));
     this.sprite.setDepth(50);
   }
 
@@ -60,11 +81,11 @@ export class PlayerVehicle {
 
   /** Half-extents used for collision against other vehicles. */
   get halfWidth(): number {
-    return this.sprite.displayWidth * 0.36;
+    return this.sprite.displayWidth * HALF_WIDTH_RATIO;
   }
 
   get halfHeight(): number {
-    return this.sprite.displayHeight * 0.42;
+    return this.sprite.displayHeight * HALF_HEIGHT_RATIO;
   }
 
   /** Steering with a speed-dependent lean, plus a constant engine jitter. */

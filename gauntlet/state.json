@@ -145,9 +145,11 @@
       "id": "WO-22",
       "title": "Draw the generated player sprite at 64 px and unswap its frames",
       "file": "gauntlet/work-orders/WO-22-player-scale.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "player drawn at 64px from a 128px frame; damaged/wrecked labels corrected; 10 new tests"
     },
     {
       "id": "WO-12",

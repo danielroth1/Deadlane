@@ -22,7 +22,9 @@ the wrong pictures.
 
 - `src/config.ts`
 - `src/entities/player.ts`
+- `src/entities/player.test.ts` (new)
 - `pipeline/registry/slots.ts`
+- `docs/ART_BIBLE.md` (only to correct the damaged/wrecked cell mapping sentence)
 - `public/assets/**` (via `npm run art:atlas` only)
 
 ## Steps

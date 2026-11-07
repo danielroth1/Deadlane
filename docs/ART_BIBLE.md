@@ -185,9 +185,9 @@ Measured on `art-02-player-vehicle` attempt 2 (seed `1475577038`, `fal-ai/flux-2
   `meanDistinctColors 11.75`, `score 89.25`.
 - Shipped: `public/assets/assets.json` carries `player-vehicle/interceptor-clean` (the id
   `src/entities/player.ts` asks for first) and the sheet packs **4 frames** at 128 × 128:
-  `interceptor-clean`, `interceptor-damaged`, `interceptor-wrecked`,
-  `hover-interceptor`. Frames follow cell order, so `interceptor-damaged` is the
-  wrecked-looking cell (index 1) and `interceptor-wrecked` is the second clean cell
+  `interceptor-clean`, `interceptor-wrecked`, `interceptor-damaged`,
+  `hover-interceptor`. Frames follow cell order, so `interceptor-wrecked` is the
+  wrecked-looking cell (index 1) and `interceptor-damaged` is the second clean cell
   (index 2).
 
 **Gate outcome (WO-11, amended target ≥3 of 4 usable cells): 4 of 4 cells are whole,

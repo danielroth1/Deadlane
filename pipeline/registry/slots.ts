@@ -67,8 +67,8 @@ export const SLOTS: readonly SlotSpec[] = [
       'four separate matte-black interceptor cars seen from directly above: one whole car per cell, every car drawn at the same scale and in the same nose-up pose, centred in its own cell — the hero car clean, the same car lightly damaged, the same car burnt out and wrecked, and a hover variant of the same car',
     cells: padCells([
       'interceptor clean',
-      'interceptor damaged',
       'interceptor wrecked',
+      'interceptor damaged',
       'hover interceptor',
     ]),
     emphasis: [

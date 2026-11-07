@@ -26,6 +26,13 @@ export const ROAD = {
 export const PLAYER = {
   /** Pixels per second of lateral movement at full tilt. */
   lateralSpeed: 260,
+  /**
+   * On-screen footprint of the player car, in pixels.
+   *
+   * Deliberately independent of the art sheet's `finalSize`: the sheet may be 128 px per
+   * cell for detail, but the car must still occupy one lane (64 px) on the road.
+   */
+  spriteSize: 64,
   /** Forward bias: the player sits above the bottom edge to see oncoming traffic. */
   y: GAME.height - 72,
   startArmor: 3,
