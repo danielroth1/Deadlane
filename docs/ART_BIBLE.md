@@ -80,13 +80,18 @@ the lowest index wins when two entries are equally close. See `quantize()` in
 `pipeline/lib/image.ts`.
 
 The approved attempt uses 14 of the 16 indices — it does not draw `6 white` or
-`14 violet` — and contains no colour outside this table. The per-index pixel counts behind
-that statement are recorded in `pipeline/work/art-01-style-anchor/attempt-5/palette-usage.json`.
-Most of the `15 hot-pink` count (172,213 of 361,201 opaque pixels) is not sprite pigment:
-attempt 5's flat backdrop is `#ee0466`, which is 174 away from the `#ff00ff` key under
-`chromaKey()`'s tolerance of 90, so the key removed no pixels and the backdrop quantised to
-`15 hot-pink`. Later sheets are judged against this palette, not against this anchor's
-exact index usage.
+`14 violet` — and contains no colour outside this table after quantisation. The per-index
+pixel counts behind that statement are recorded in
+`pipeline/work/art-01-style-anchor/attempt-5/palette-usage.json`.
+
+Of the 409,600 pixels in the 640 × 640 cell, 188,609 are opaque and 220,991 (53.9%) are
+transparent. Attempt 5's backdrop is `#ee0466`, which is 174 away from the `#ff00ff` key —
+outside `chromaKey()`'s single-colour tolerance — but it is the flat region touching the
+image border, so the border-connected flood fill keys it anyway. Only 123 `15 hot-pink`
+pixels survive, and none of them is sprite pigment: 109 sit on stray marks to the left of
+the plate (x 20–34, all outside the plate) and 14 form two thin vertical ticks on the
+plate's right edge at x = 532. Later sheets are judged against this palette, not against
+this anchor's exact index usage.
 
 ## 4. Iconography of the factions
 

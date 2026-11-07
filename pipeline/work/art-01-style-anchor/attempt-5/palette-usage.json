@@ -6,7 +6,8 @@
     "width": 640,
     "height": 640
   },
-  "opaquePixels": 361201,
+  "opaquePixels": 188609,
+  "transparentPixels": 220991,
   "usedIndices": [
     0,
     1,
@@ -32,13 +33,13 @@
       "index": 0,
       "name": "void",
       "hex": "#0b0d10",
-      "pixels": 14650
+      "pixels": 15403
     },
     {
       "index": 1,
       "name": "asphalt",
       "hex": "#161a21",
-      "pixels": 13002
+      "pixels": 12186
     },
     {
       "index": 2,
@@ -74,7 +75,7 @@
       "index": 7,
       "name": "rust",
       "hex": "#7a2f2f",
-      "pixels": 947
+      "pixels": 508
     },
     {
       "index": 8,
@@ -122,7 +123,7 @@
       "index": 15,
       "name": "hot-pink",
       "hex": "#ff2e63",
-      "pixels": 172213
+      "pixels": 123
     }
   ],
   "offPalette": []

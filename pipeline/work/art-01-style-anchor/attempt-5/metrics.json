@@ -2,7 +2,7 @@
   "slotId": "art-01-style-anchor",
   "attempt": 5,
   "sourcePath": "pipeline/raw/art-01-style-anchor/attempt-5.png",
-  "processedAt": "2026-11-07T21:01:55.366Z",
+  "processedAt": "2026-11-07T21:10:45.636Z",
   "grid": {
     "cols": 1,
     "rows": 1
@@ -13,20 +13,20 @@
       "index": 0,
       "name": null,
       "empty": false,
-      "fill": 0.88183837890625,
-      "meanPaletteDistance": 62.60526296013013,
+      "fill": 0.46047119140625,
+      "meanPaletteDistance": 37.34620353890163,
       "distinctColors": 14,
-      "symmetry": 0.9966777408637874
+      "symmetry": 0.981415919906712
     }
   ],
   "summary": {
     "totalCells": 1,
     "usableCells": 1,
-    "meanPaletteDistance": 62.60526296013013,
+    "meanPaletteDistance": 37.34620353890163,
     "sizeVariance": 0,
-    "meanSymmetry": 0.9966777408637874,
+    "meanSymmetry": 0.981415919906712,
     "meanSeamError": 0,
     "meanDistinctColors": 14,
-    "score": 88.52
+    "score": 93.15
   }
 }

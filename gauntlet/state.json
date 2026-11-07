@@ -119,15 +119,15 @@
       "id": "WO-10",
       "title": "Art slot 01: style anchor",
       "file": "gauntlet/work-orders/WO-10-style-anchor.md",
-      "status": "pending",
-      "round": 2,
+      "status": "escalated",
+      "round": 3,
       "dependsOn": [
         "WO-09b",
         "WO-15",
         "WO-16"
       ],
       "lastVerdict": "fail",
-      "note": "palette axis 2: olive light cone/glow, dither speckle, soft translucent smoke, no single 1px outline"
+      "note": "palette 2 / consistency 2 / background 1: stray debris + bloom + speckle; third round used"
     },
     {
       "id": "WO-11",
