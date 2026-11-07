@@ -123,9 +123,15 @@ Required sheet properties — this is the prompt spec, not a suggestion:
 - Exactly 4 columns, 4 rows, equal cell size, no grid lines.
 - Every sprite centred in its cell, un-rotated, un-angled, top-down.
 - Flat solid `#FF00FF` background — magenta is never in the palette, so background removal
-  is a pure chroma-key with zero risk of eating a sprite pixel. The key must be exact:
-  `chromaKey()`'s border-connected tolerance is 180 Manhattan, and the model's real
-  backdrops have landed at 174 (`#ee0466`, attempt 5) and 201 (`#df0b61`, WO-11).
+  is a pure chroma-key with zero risk of eating a sprite pixel. The key is a
+  **hue-and-saturation** predicate, not a distance from one hex: a pixel is backdrop when
+  its brightest channel is ≥ 90, its saturation is ≥ 0.55, and its hue sits in
+  287.5°–357.5° (the key's 300° drifted 22.5° warm, widened by `tolerance / 12`), and it
+  is **4-connected to the image border**. Measured plates on this endpoint land at `#df0b63`
+  (335.1° at 0.95 saturation) and `#c60756`, which are 194–236 away from `#ff00ff` in
+  Manhattan distance — a radius test cannot separate them from palette `15 hot-pink`
+  (`#ff2e63`, 345°, 0.82), which survives only because it never touches the border. Pale
+  lane paint the model draws has saturation 0.18–0.30 and is therefore kept, by design.
 - No text, no labels, no numbers, no borders, no drop shadows outside the sprite.
 - Consistent scale across the sheet: one vehicle occupies the same footprint in every cell.
 - Empty cells are acceptable; the slicer discards them and they cost nothing.
@@ -135,26 +141,44 @@ never shipped.
 
 ### Gate: are 4 × 4 sheets viable for `fal-ai/flux-2/turbo`? (WO-11)
 
-Measured on `art-02-player-vehicle` attempt 1 (seed `944511190`, `fal-ai/flux-2/turbo`).
+Measured on `art-02-player-vehicle` attempt 1 (seed `944511190`, `fal-ai/flux-2/turbo`),
+re-processed with the hue/saturation key introduced by WO-19. No second image was spent.
 
-- `art:process` reports **16/16 usable cells**. That number is a false positive. The model
-  rendered its magenta field as `#df0b61`, which is 201 (Manhattan) from the `#ff00ff` key
-  and outside `chromaKey()`'s 180 border-connected limit, so none of it was removed. Every
-  "usable" cell is a fully opaque 60 × 60 plate of palette `15 hot-pink` (3,600 of 4,096
-  pixels); cell 0's corner pixel is `#ff2e63`. As the pipeline actually ships it, the yield
-  is **0/16 usable sprites**.
-- Re-slicing the same image with the backdrop keyed by geometry and colour leaves at most
-  **4/16** cells whose content is inset from the cell edges. The other 12 carry baked-in
-  white lane markings or wake that run to the boundary, so the slicer either clips them or
-  lets them dominate the trimmed bounds and shrink the car.
-- Of those 4 inset cells, the row-3 `speedboat` cells are drawn horizontally rather than
-  axis-aligned pointing up, and two of the remaining player cells are rotated (banking).
-  Only one cell is both clean and pointing up.
+- **The key now works on this endpoint.** The sheet is **79.9% transparent** after
+  `chromaKey()` (211,277 of 1,048,576 pixels opaque), against 0% in round 1. Per cell the
+  plate drops to **65.0–86.5% transparent**, and un-keyed plate residue is 0.00–1.11% of a
+  cell. The old 0/16 result was a measurement bug, not a bad sheet.
+- **`art:process` reports `usableCells 16/16` — still not the gate.** It counts non-empty
+  cells. Checked cell by cell against the four conditions (background removed, subject
+  whole, not straddling a boundary, pointing up) the real yield is **9/16**: cells 0, 1, 2,
+  3, 4, 5, 7, 12 and 15.
+- **The other seven are off-contract in orientation.** Cells 8–11 (speedboat clean,
+  damaged, wrecked, and the hover craft) are drawn **horizontally facing right**; cells 13
+  and 14 are banked on a diagonal; cell 6 reads as a white pod overlay rather than a car
+  with an oil pod fitted.
+- **No cell straddles a boundary.** Every cell-boundary column and row is fully transparent
+  (checked at x = 255/256 and 511/512, y = 255/256), so no car was cut in two. Cell 11's
+  flames reach within ~2 px of its left boundary and cell 15's plume is clipped by the
+  sheet's bottom edge — clipped content, not a split car.
+- **Lane paint survives, correctly.** The model painted white lane markings with magenta
+  bloom (`#e5bbc3`, `#dc95aa`; saturation 0.18–0.30 — not backdrop). In cells 0, 2 and 12
+  those hairlines run the full cell height and therefore set the trim box, shrinking the
+  car to a **19 × 34 px** footprint inside the 64 px canvas (fill 0.17 against 0.18–0.34
+  for the rest). The cars are whole, but roughly half the size of their neighbours.
+- **Taillights do not meet the colour contract.** `15 hot-pink` survives on 10 of 16 cells
+  but only 1–24 px each (cell 7, 24 px); cells 1, 3, 9, 11, 12 and 15 have none. `8
+  signal-red` — the hostile accent — appears in 11 of 16 cells, 1–21 px each.
+- Metrics: `score 83.19`, `meanPaletteDistance 51.8`, `sizeVariance 0.13`,
+  `meanSymmetry 0.66`, `meanDistinctColors 12.6`.
+- Shipped: `public/assets/assets.json` carries `player-vehicle/interceptor-clean` (the id
+  `src/entities/player.ts` asks for first) and the sheet packs **16 frames** at 64 × 64;
+  `art:validate` passes over 17 sprite ids and `npm run test:e2e` passes.
 
-**Decision: packed sheets are not viable for this model.** The reported gate number is not
-trustworthy for this endpoint, and the underlying sheet is below the 6/16 threshold once
-keying and framing are accounted for. Do not spend the remaining images on 4 × 4 sheets
-until the key and the sheet framing are fixed and a fresh gate image passes.
+**Decision: the gate passes on yield — 9/16 genuinely usable, against the 6/16 threshold —
+so packed 4 × 4 sheets stay viable for this model and the remaining slots may spend as
+planned.** Three defects carry forward as prompt work, not pipeline work: cells 8–14 are
+wrongly oriented, the surviving lane hairlines halve three interceptor cells, and
+taillights quantise toward `signal-red` instead of `hot-pink`.
 
 ## 6. Motion
 

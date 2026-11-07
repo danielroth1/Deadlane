@@ -2,7 +2,7 @@
   "slotId": "art-02-player-vehicle",
   "attempt": 1,
   "sourcePath": "pipeline/raw/art-02-player-vehicle/attempt-1.png",
-  "processedAt": "2026-11-07T21:30:57.030Z",
+  "processedAt": "2026-11-07T21:44:50.639Z",
   "grid": {
     "cols": 4,
     "rows": 4
@@ -13,155 +13,155 @@
       "index": 0,
       "name": "interceptor clean",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 78.20698707095386,
-      "distinctColors": 12,
-      "symmetry": 1
+      "fill": 0.17724609375,
+      "meanPaletteDistance": 58.300073659990204,
+      "distinctColors": 11,
+      "symmetry": 0.8333333333333334
     },
     {
       "index": 1,
       "name": "interceptor damaged 1",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 77.89924329340684,
+      "fill": 0.197509765625,
+      "meanPaletteDistance": 47.04563517766147,
       "distinctColors": 15,
-      "symmetry": 1
+      "symmetry": 0.6577868852459017
     },
     {
       "index": 2,
       "name": "interceptor damaged 2",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 79.51680769168966,
-      "distinctColors": 12,
-      "symmetry": 1
+      "fill": 0.170166015625,
+      "meanPaletteDistance": 56.709781344996486,
+      "distinctColors": 11,
+      "symmetry": 0.7645569620253164
     },
     {
       "index": 3,
       "name": "interceptor wrecked",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 70.25918252946731,
-      "distinctColors": 13,
-      "symmetry": 1
+      "fill": 0.312744140625,
+      "meanPaletteDistance": 42.1378850717941,
+      "distinctColors": 12,
+      "symmetry": 0.6855263157894737
     },
     {
       "index": 4,
       "name": "interceptor headlights on",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 78.48905888479096,
+      "fill": 0.213134765625,
+      "meanPaletteDistance": 45.29209715091849,
       "distinctColors": 13,
-      "symmetry": 1
+      "symmetry": 0.9443207126948775
     },
     {
       "index": 5,
       "name": "interceptor shield active",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 78.90819208242323,
+      "fill": 0.22021484375,
+      "meanPaletteDistance": 44.47780343119343,
       "distinctColors": 14,
-      "symmetry": 1
+      "symmetry": 0.8830897703549061
     },
     {
       "index": 6,
       "name": "interceptor oil pod fitted",
       "empty": false,
-      "fill": 0.87158203125,
-      "meanPaletteDistance": 76.63047282158992,
+      "fill": 0.220703125,
+      "meanPaletteDistance": 66.88923701780706,
       "distinctColors": 12,
-      "symmetry": 0.9833333333333333
+      "symmetry": 0.9609544468546638
     },
     {
       "index": 7,
       "name": "interceptor smoke pod fitted",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 76.29864751298648,
-      "distinctColors": 13,
-      "symmetry": 1
+      "fill": 0.2119140625,
+      "meanPaletteDistance": 45.457752727515086,
+      "distinctColors": 11,
+      "symmetry": 0.8121085594989561
     },
     {
       "index": 8,
       "name": "speedboat clean",
       "empty": false,
-      "fill": 0.878662109375,
-      "meanPaletteDistance": 80.22347530545422,
-      "distinctColors": 11,
-      "symmetry": 0.9994444444444445
+      "fill": 0.260009765625,
+      "meanPaletteDistance": 46.88671917364027,
+      "distinctColors": 13,
+      "symmetry": 0.6666666666666666
     },
     {
       "index": 9,
       "name": "speedboat damaged",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 80.02196925765897,
+      "fill": 0.2412109375,
+      "meanPaletteDistance": 51.546243208974786,
       "distinctColors": 15,
-      "symmetry": 1
+      "symmetry": 0.5413416536661466
     },
     {
       "index": 10,
       "name": "speedboat wrecked",
       "empty": false,
-      "fill": 0.8779296875,
-      "meanPaletteDistance": 80.38775298734966,
-      "distinctColors": 13,
-      "symmetry": 0.9977777777777778
+      "fill": 0.17919921875,
+      "meanPaletteDistance": 43.70665515214115,
+      "distinctColors": 12,
+      "symmetry": 0.6457399103139013
     },
     {
       "index": 11,
       "name": "hover interceptor",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 78.1531644646637,
+      "fill": 0.248046875,
+      "meanPaletteDistance": 44.145166251764714,
       "distinctColors": 14,
-      "symmetry": 1
+      "symmetry": 0.30256410256410254
     },
     {
       "index": 12,
       "name": "interceptor trailing exhaust",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 79.55827306921024,
-      "distinctColors": 12,
-      "symmetry": 1
+      "fill": 0.1728515625,
+      "meanPaletteDistance": 63.80195248591461,
+      "distinctColors": 11,
+      "symmetry": 0
     },
     {
       "index": 13,
       "name": "interceptor banking left",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 78.03586504801966,
+      "fill": 0.34033203125,
+      "meanPaletteDistance": 51.85370629626173,
       "distinctColors": 12,
-      "symmetry": 1
+      "symmetry": 0.5251641137855579
     },
     {
       "index": 14,
       "name": "interceptor banking right",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 84.01969903578043,
+      "fill": 0.27392578125,
+      "meanPaletteDistance": 72.9227914638995,
       "distinctColors": 13,
-      "symmetry": 1
+      "symmetry": 0.36996336996337
     },
     {
       "index": 15,
       "name": "interceptor airborne",
       "empty": false,
-      "fill": 0.87890625,
-      "meanPaletteDistance": 77.02825760585878,
-      "distinctColors": 11,
-      "symmetry": 1
+      "fill": 0.223876953125,
+      "meanPaletteDistance": 47.62341887827919,
+      "distinctColors": 13,
+      "symmetry": 0.8946280991735537
     }
   ],
   "summary": {
     "totalCells": 16,
     "usableCells": 16,
-    "meanPaletteDistance": 78.35231554133149,
-    "sizeVariance": 0,
-    "meanSymmetry": 0.9987847222222223,
+    "meanPaletteDistance": 51.799807405797026,
+    "sizeVariance": 0.12855733932383034,
+    "meanSymmetry": 0.6554840563706705,
     "meanSeamError": 0,
-    "meanDistinctColors": 12.8125,
-    "score": 85.62
+    "meanDistinctColors": 12.625,
+    "score": 83.19
   }
 }

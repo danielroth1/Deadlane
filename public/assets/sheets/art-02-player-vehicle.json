@@ -1,0 +1,106 @@
+{
+  "slot": "art-02-player-vehicle",
+  "code": "player-vehicle",
+  "cellSize": 64,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-02-player-vehicle.png",
+  "frames": {
+    "player-vehicle/interceptor-clean": {
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-damaged-1": {
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-damaged-2": {
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-wrecked": {
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-headlights-on": {
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-shield-active": {
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-oil-pod-fitted": {
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-smoke-pod-fitted": {
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/speedboat-clean": {
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/speedboat-damaged": {
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/speedboat-wrecked": {
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/hover-interceptor": {
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-trailing-exhaust": {
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-banking-left": {
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-banking-right": {
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "player-vehicle/interceptor-airborne": {
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    }
+  }
+}

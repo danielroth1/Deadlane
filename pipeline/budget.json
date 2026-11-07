@@ -75,7 +75,8 @@
           "costUsd": 0.0084
         }
       ],
-      "status": "open"
+      "status": "approved",
+      "selected": 1
     },
     "art-03-enemy-ground-a": {
       "id": "art-03-enemy-ground-a",
