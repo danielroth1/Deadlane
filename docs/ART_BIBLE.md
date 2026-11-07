@@ -154,48 +154,46 @@ Required sheet properties — this is the prompt spec, not a suggestion:
 Sheets are sliced, quantised, outlined and re-packed by `pipeline/steps/`. Model output is
 never shipped.
 
-### Gate: is a 4 × 4 sheet viable at 64 px for `fal-ai/flux-2/turbo`? (WO-11, re-read by WO-21)
+### Gate: sheet yield on `art-02-player-vehicle` attempt 2 (WO-11, 2 × 2 @ 128 px per WO-21)
 
-Measured on `art-02-player-vehicle` attempt 1 (seed `944511190`, `fal-ai/flux-2/turbo`),
-re-processed with the hue/saturation key introduced by WO-19. No second image was spent.
+Measured on `art-02-player-vehicle` attempt 2 (seed `1475577038`, `fal-ai/flux-2/turbo`,
+`square_hd`), processed at the 2 × 2 / 128 px contract. Attempt 1 was measured at the earlier
+4 × 4 / 64 px contract, so its metrics are not comparable and are not quoted here.
 
-- **The key now works on this endpoint.** The sheet is **79.9% transparent** after
-  `chromaKey()` (211,277 of 1,048,576 pixels opaque), against 0% in round 1. Per cell the
-  plate drops to **65.0–86.5% transparent**, and un-keyed plate residue is 0.00–1.11% of a
-  cell. The old 0/16 result was a measurement bug, not a bad sheet.
-- **`art:process` reports `usableCells 16/16` — still not the gate.** It counts non-empty
-  cells. Checked cell by cell against the four conditions (background removed, subject
-  whole, not straddling a boundary, pointing up) the real yield is **9/16**: cells 0, 1, 2,
-  3, 4, 5, 7, 12 and 15.
-- **The other seven are off-contract in orientation.** Cells 8–11 (speedboat clean,
-  damaged, wrecked, and the hover craft) are drawn **horizontally facing right**; cells 13
-  and 14 are banked on a diagonal; cell 6 reads as a white pod overlay rather than a car
-  with an oil pod fitted.
-- **No cell straddles a boundary.** Every cell-boundary column and row is fully transparent
-  (checked at x = 255/256 and 511/512, y = 255/256), so no car was cut in two. Cell 11's
-  flames reach within ~2 px of its left boundary and cell 15's plume is clipped by the
-  sheet's bottom edge — clipped content, not a split car.
-- **Lane paint survives, correctly.** The model painted white lane markings with magenta
-  bloom (`#e5bbc3`, `#dc95aa`; saturation 0.18–0.30 — not backdrop). In cells 0, 2 and 12
-  those hairlines run the full cell height and therefore set the trim box, shrinking the
-  car to a **19 × 34 px** footprint inside the 64 px canvas (fill 0.17 against 0.18–0.34
-  for the rest). The cars are whole, but roughly half the size of their neighbours.
-- **Taillights do not meet the colour contract.** `15 hot-pink` survives on 10 of 16 cells
-  but only 1–24 px each (cell 7, 24 px); cells 1, 3, 9, 11, 12 and 15 have none. `8
-  signal-red` — the hostile accent — appears in 11 of 16 cells, 1–21 px each.
-- Metrics: `score 83.19`, `meanPaletteDistance 51.8`, `sizeVariance 0.13`,
-  `meanSymmetry 0.66`, `meanDistinctColors 12.6`.
+- **Tool yield: `usableCells 4/4`.** `art:process` counts non-empty cells, so the
+  per-cell read below is the gate.
+- **Background removal is complete in every cell.** Transparency is 79.8%, 78.4%, 79.2%
+  and 80.6% of the 128 × 128 cell (cells 0–3). Every remaining pixel is one of the 16
+  palette colours; `art:validate` finds 0 off-palette pixels in 374,609 opaque pixels. No
+  magenta field or plate residue survives.
+- **All four cells are whole, axis-aligned and nose-up.** Each cell's content is a single
+  car inside a 120 × 120 trim at x 4–123, y 4–123, and no cell has an opaque pixel on any
+  border ring (top 0, bottom 0, left 0, right 0), so nothing straddles a cell boundary.
+- **Only three states were drawn, not four.** Row-major the cells are: clean, wrecked,
+  clean, hover. The contract asks for clean, damaged, wrecked, hover; the "damaged" cell is
+  a second clean car. Cell 0 and cell 2 differ at 2,093 of 16,384 pixels (12.8%; mean
+  |RGB| distance 16.2 over co-opaque pixels) — different pixels, same readable state. Cell
+  0 vs cell 1 differ at 17.2%, cell 1 vs cell 2 at 21.5%.
+- **`15 hot-pink` is present in all four cells but sparse:** 12, 2, 10 and 12 px
+  (0.1–0.4% of opaque pixels). The side marker lights read pink; the rear light bar
+  quantises darker and lands on `8 signal-red`.
+- **`8 signal-red` is not absent:** 11, 29, 10 and 8 px in cells 0–3 (0.3–0.8%). In cells
+  0 and 2 it is the rear light strip (y 95 and y 93); in cell 3 it includes a wing-tip pixel
+  at (31, 51); in the wrecked cell (cell 1) the 29 px sit in the fire and debris inside the
+  sprite. No cell is free of the hostile accent by pixel count.
+- Metrics: `meanPaletteDistance 37.6`, `sizeVariance 0.00`, `meanSymmetry 78%`,
+  `meanDistinctColors 11.75`, `score 89.25`.
 - Shipped: `public/assets/assets.json` carries `player-vehicle/interceptor-clean` (the id
-  `src/entities/player.ts` asks for first) and the sheet packs **16 frames** at 64 × 64;
-  `art:validate` passes over 17 sprite ids and `npm run test:e2e` passes. That is the
-  WO-11 state of the shipped sheet; the slot has since been re-scoped to 2 × 2 at 128 px
-  and is regenerated by a later art order.
+  `src/entities/player.ts` asks for first) and the sheet packs **4 frames** at 128 × 128:
+  `interceptor-clean`, `interceptor-damaged`, `interceptor-wrecked`,
+  `hover-interceptor`. Frames follow cell order, so `interceptor-damaged` is the
+  wrecked-looking cell (index 1) and `interceptor-wrecked` is the second clean cell
+  (index 2).
 
-**Decision (WO-21): `art-02-player-vehicle` is 2 × 2 at 128 px.** The measured facts are:
-**9 of 16 cells usable at 64 px**, the chroma key correct on this endpoint at **79.9%
-transparent** (211,277 of 1,048,576 pixels opaque), and the seven failures are size and
-orientation problems caused by the prompt, not grid-detection errors. No more than that
-is claimed here.
+**Gate outcome (WO-11, amended target ≥3 of 4 usable cells): 4 of 4 cells are whole,
+axis-aligned, nose-up and free of boundary straddles; 3 of 4 are distinct states. The
+palette clause is not met — `8 signal-red` appears in every cell (8–29 px), so 0 of 4 cells
+is entirely free of it.** No claim beyond these numbers is made here.
 
 ### Owed player states
 

@@ -133,13 +133,13 @@
       "id": "WO-11",
       "title": "Art slot 02: player vehicle sheet (go/no-go gate)",
       "file": "gauntlet/work-orders/WO-11-player-vehicle.md",
-      "status": "pending",
-      "round": 2,
+      "status": "escalated",
+      "round": 3,
       "dependsOn": [
         "WO-10"
       ],
       "lastVerdict": "fail",
-      "note": "gate: 9/16 usable by cell audit; fails orientation (8-11 boats side-on, 13-14 banked) and hostile-red criteria; art:process usableCells is not a usability count"
+      "note": "gate measured 4/4 whole+axis-aligned; fails on hostile red (tail bar -> signal-red), damaged/wrecked frame swap, and 128px sprite drawn unscaled in game"
     },
     {
       "id": "WO-12",

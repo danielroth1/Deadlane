@@ -34,7 +34,8 @@ cheap to test here and expensive to discover later. `art:process` reports
 
 ## Acceptance criteria
 
-- [ ] At least **6 of 16** cells are usable. This is the gate.
+- [ ] At least **3 of 4** cells are usable. This is the gate. (Amended from 6 of 16 when the
+      contract moved to 2×2 @128 px — WO-21.)
 - [ ] The interceptor is axis-aligned and points up in every cell.
 - [ ] No cell straddles a boundary (the slicer would have produced two half-cars).
 - [ ] Hostile red is absent; hot pink tail lights are present.

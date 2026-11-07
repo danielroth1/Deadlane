@@ -1,0 +1,59 @@
+{
+  "slotId": "art-02-player-vehicle",
+  "attempt": 2,
+  "sourcePath": "pipeline/raw/art-02-player-vehicle/attempt-2.png",
+  "processedAt": "2026-11-07T22:30:37.609Z",
+  "grid": {
+    "cols": 2,
+    "rows": 2
+  },
+  "finalSize": 128,
+  "cells": [
+    {
+      "index": 0,
+      "name": "interceptor clean",
+      "empty": false,
+      "fill": 0.20159912109375,
+      "meanPaletteDistance": 35.323679634524176,
+      "distinctColors": 11,
+      "symmetry": 0.8556179775280899
+    },
+    {
+      "index": 1,
+      "name": "interceptor damaged",
+      "empty": false,
+      "fill": 0.21575927734375,
+      "meanPaletteDistance": 36.32573750428557,
+      "distinctColors": 13,
+      "symmetry": 0.6881566380133716
+    },
+    {
+      "index": 2,
+      "name": "interceptor wrecked",
+      "empty": false,
+      "fill": 0.20782470703125,
+      "meanPaletteDistance": 35.773702192972216,
+      "distinctColors": 12,
+      "symmetry": 0.860655737704918
+    },
+    {
+      "index": 3,
+      "name": "hover interceptor",
+      "empty": false,
+      "fill": 0.19403076171875,
+      "meanPaletteDistance": 43.03914136725373,
+      "distinctColors": 11,
+      "symmetry": 0.7165226781857451
+    }
+  ],
+  "summary": {
+    "totalCells": 4,
+    "usableCells": 4,
+    "meanPaletteDistance": 37.61556517475893,
+    "sizeVariance": 0,
+    "meanSymmetry": 0.7802382578580311,
+    "meanSeamError": 0,
+    "meanDistinctColors": 11.75,
+    "score": 89.25
+  }
+}

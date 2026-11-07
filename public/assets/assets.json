@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T21:47:06.869Z",
+  "generatedAt": "2026-11-07T22:30:39.477Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -20,106 +20,34 @@
     "art-02-player-vehicle": {
       "slot": "art-02-player-vehicle",
       "code": "player-vehicle",
-      "cellSize": 64,
-      "cols": 4,
-      "rows": 4,
+      "cellSize": 128,
+      "cols": 2,
+      "rows": 2,
       "image": "assets/sheets/art-02-player-vehicle.png",
       "frames": {
         "player-vehicle/interceptor-clean": {
           "x": 0,
           "y": 0,
-          "w": 64,
-          "h": 64
+          "w": 128,
+          "h": 128
         },
-        "player-vehicle/interceptor-damaged-1": {
-          "x": 64,
-          "y": 0,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-damaged-2": {
+        "player-vehicle/interceptor-damaged": {
           "x": 128,
           "y": 0,
-          "w": 64,
-          "h": 64
+          "w": 128,
+          "h": 128
         },
         "player-vehicle/interceptor-wrecked": {
-          "x": 192,
-          "y": 0,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-headlights-on": {
-          "x": 0,
-          "y": 64,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-shield-active": {
-          "x": 64,
-          "y": 64,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-oil-pod-fitted": {
-          "x": 128,
-          "y": 64,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-smoke-pod-fitted": {
-          "x": 192,
-          "y": 64,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/speedboat-clean": {
           "x": 0,
           "y": 128,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/speedboat-damaged": {
-          "x": 64,
-          "y": 128,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/speedboat-wrecked": {
-          "x": 128,
-          "y": 128,
-          "w": 64,
-          "h": 64
+          "w": 128,
+          "h": 128
         },
         "player-vehicle/hover-interceptor": {
-          "x": 192,
-          "y": 128,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-trailing-exhaust": {
-          "x": 0,
-          "y": 192,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-banking-left": {
-          "x": 64,
-          "y": 192,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-banking-right": {
           "x": 128,
-          "y": 192,
-          "w": 64,
-          "h": 64
-        },
-        "player-vehicle/interceptor-airborne": {
-          "x": 192,
-          "y": 192,
-          "w": 64,
-          "h": 64
+          "y": 128,
+          "w": 128,
+          "h": 128
         }
       }
     }
@@ -136,113 +64,29 @@
       "sheet": "art-02-player-vehicle",
       "x": 0,
       "y": 0,
-      "w": 64,
-      "h": 64
+      "w": 128,
+      "h": 128
     },
-    "player-vehicle/interceptor-damaged-1": {
-      "sheet": "art-02-player-vehicle",
-      "x": 64,
-      "y": 0,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-damaged-2": {
+    "player-vehicle/interceptor-damaged": {
       "sheet": "art-02-player-vehicle",
       "x": 128,
       "y": 0,
-      "w": 64,
-      "h": 64
+      "w": 128,
+      "h": 128
     },
     "player-vehicle/interceptor-wrecked": {
       "sheet": "art-02-player-vehicle",
-      "x": 192,
-      "y": 0,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-headlights-on": {
-      "sheet": "art-02-player-vehicle",
-      "x": 0,
-      "y": 64,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-shield-active": {
-      "sheet": "art-02-player-vehicle",
-      "x": 64,
-      "y": 64,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-oil-pod-fitted": {
-      "sheet": "art-02-player-vehicle",
-      "x": 128,
-      "y": 64,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-smoke-pod-fitted": {
-      "sheet": "art-02-player-vehicle",
-      "x": 192,
-      "y": 64,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/speedboat-clean": {
-      "sheet": "art-02-player-vehicle",
       "x": 0,
       "y": 128,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/speedboat-damaged": {
-      "sheet": "art-02-player-vehicle",
-      "x": 64,
-      "y": 128,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/speedboat-wrecked": {
-      "sheet": "art-02-player-vehicle",
-      "x": 128,
-      "y": 128,
-      "w": 64,
-      "h": 64
+      "w": 128,
+      "h": 128
     },
     "player-vehicle/hover-interceptor": {
       "sheet": "art-02-player-vehicle",
-      "x": 192,
-      "y": 128,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-trailing-exhaust": {
-      "sheet": "art-02-player-vehicle",
-      "x": 0,
-      "y": 192,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-banking-left": {
-      "sheet": "art-02-player-vehicle",
-      "x": 64,
-      "y": 192,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-banking-right": {
-      "sheet": "art-02-player-vehicle",
       "x": 128,
-      "y": 192,
-      "w": 64,
-      "h": 64
-    },
-    "player-vehicle/interceptor-airborne": {
-      "sheet": "art-02-player-vehicle",
-      "x": 192,
-      "y": 192,
-      "w": 64,
-      "h": 64
+      "y": 128,
+      "w": 128,
+      "h": 128
     }
   }
 }

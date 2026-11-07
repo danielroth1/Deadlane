@@ -73,10 +73,20 @@
           "requestId": "01a1b7eb-01f2-7f50-bc17-9e7e82b96520",
           "url": "https://v3b.fal.media/files/b/0ab18f3b/XLVLLenooecPmSQhESbem_9qWEbKHa.png",
           "costUsd": 0.0084
+        },
+        {
+          "attempt": 2,
+          "seed": 1475577038,
+          "promptHash": "0d31e15aec0255e8",
+          "state": "generated",
+          "claimedAt": "2026-11-07T22:26:50.214Z",
+          "requestId": "01a1b81f-5f1c-7312-999e-5ef961cf535c",
+          "url": "https://v3b.fal.media/files/b/0ab19094/2D47nos5qgszeCsA7XgcT_JEf0i7Xs.png",
+          "costUsd": 0.0084
         }
       ],
       "status": "approved",
-      "selected": 1
+      "selected": 2
     },
     "art-03-enemy-ground-a": {
       "id": "art-03-enemy-ground-a",
