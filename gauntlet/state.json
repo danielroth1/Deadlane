@@ -107,11 +107,13 @@
       "id": "WO-09b",
       "title": "Pin the image model and capture its schema",
       "file": "gauntlet/work-orders/WO-09b-mcp-pin.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-09a"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "flux-1/schnell pinned at $0.003/MP, schema.json verbatim, art:claim exits 0"
     },
     {
       "id": "WO-10",

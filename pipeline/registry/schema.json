@@ -1,0 +1,689 @@
+{
+  "endpoint_id": "fal-ai/flux-1/schnell",
+  "display_name": "FLUX.1 [schnell]",
+  "category": "text-to-image",
+  "description": "Fastest inference in the world for the 12 billion parameter FLUX.1 [schnell] text-to-image model. ",
+  "input_params": [
+    {
+      "name": "prompt",
+      "type": "string",
+      "description": "The prompt to generate an image from.",
+      "required": true
+    },
+    {
+      "name": "seed",
+      "type": "integer | null",
+      "description": "\n        The same seed and the same prompt given to the same version of the model\n        will output the same image every time.\n    ",
+      "required": false
+    },
+    {
+      "name": "image_size",
+      "type": "object | string",
+      "description": "The size of the generated image.",
+      "required": false,
+      "default": "landscape_4_3"
+    },
+    {
+      "name": "num_inference_steps",
+      "type": "integer",
+      "description": "The number of inference steps to perform.",
+      "required": false,
+      "default": 4
+    },
+    {
+      "name": "guidance_scale",
+      "type": "number",
+      "description": "\n        The CFG (Classifier Free Guidance) scale is a measure of how close you want\n        the model to stick to your prompt when looking for a related image to show you.\n    ",
+      "required": false,
+      "default": 3.5
+    },
+    {
+      "name": "sync_mode",
+      "type": "boolean",
+      "description": "If `True`, the media will be returned as a data URI and the output data won't be available in the request history.",
+      "required": false,
+      "default": false
+    },
+    {
+      "name": "output_format",
+      "type": "string",
+      "description": "The format of the generated image.",
+      "required": false,
+      "default": "jpeg",
+      "enum": [
+        "jpeg",
+        "png"
+      ]
+    },
+    {
+      "name": "acceleration",
+      "type": "string",
+      "description": "The speed of the generation. The higher the speed, the faster the generation.",
+      "required": false,
+      "default": "none",
+      "enum": [
+        "none",
+        "regular",
+        "high"
+      ]
+    },
+    {
+      "name": "enable_safety_checker",
+      "type": "boolean",
+      "description": "If set to true, the safety checker will be enabled. Disabling it requires account authorization; unauthorized requests are always checked, and images flagged as unsafe are returned as black images.",
+      "required": false,
+      "default": true
+    },
+    {
+      "name": "num_images",
+      "type": "integer",
+      "description": "The number of images to generate.",
+      "required": false,
+      "default": 1
+    }
+  ],
+  "output_fields": [
+    {
+      "name": "timings",
+      "type": "object",
+      "required": true
+    },
+    {
+      "name": "seed",
+      "type": "integer",
+      "description": "\n            Seed of the generated Image. It will be the same value of the one passed in the\n            input or the randomly generated that was used in case none was passed.\n        ",
+      "required": true
+    },
+    {
+      "name": "prompt",
+      "type": "string",
+      "description": "The prompt used for generating the image.",
+      "required": true
+    },
+    {
+      "name": "has_nsfw_concepts",
+      "type": "array<boolean>",
+      "description": "Whether the generated images contain NSFW concepts.",
+      "required": true
+    },
+    {
+      "name": "images",
+      "type": "array<object>",
+      "description": "The generated image files info.",
+      "required": true
+    }
+  ],
+  "input_schema": {
+    "required": [
+      "prompt"
+    ],
+    "properties": {
+      "prompt": {
+        "examples": [
+          "Extreme close-up of a single tiger eye, direct frontal view. Detailed iris and pupil. Sharp focus on eye texture and color. Natural lighting to capture authentic eye shine and depth. The word \"FLUX\" is painted over it in big, white brush strokes with visible texture."
+        ],
+        "type": "string",
+        "description": "The prompt to generate an image from.",
+        "title": "Prompt"
+      },
+      "seed": {
+        "anyOf": [
+          {
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "title": "Seed",
+        "description": "\n        The same seed and the same prompt given to the same version of the model\n        will output the same image every time.\n    "
+      },
+      "image_size": {
+        "anyOf": [
+          {
+            "properties": {
+              "height": {
+                "default": 512,
+                "title": "Height",
+                "maximum": 14142,
+                "type": "integer",
+                "description": "The height of the generated image.",
+                "exclusiveMinimum": 0
+              },
+              "width": {
+                "default": 512,
+                "title": "Width",
+                "maximum": 14142,
+                "type": "integer",
+                "description": "The width of the generated image.",
+                "exclusiveMinimum": 0
+              }
+            },
+            "type": "object",
+            "title": "ImageSize",
+            "x-fal-order-properties": [
+              "width",
+              "height"
+            ]
+          },
+          {
+            "type": "string",
+            "enum": [
+              "square_hd",
+              "square",
+              "portrait_4_3",
+              "portrait_16_9",
+              "landscape_4_3",
+              "landscape_16_9"
+            ]
+          }
+        ],
+        "title": "Image Size",
+        "description": "The size of the generated image.",
+        "default": "landscape_4_3"
+      },
+      "num_inference_steps": {
+        "minimum": 1,
+        "title": "Num Inference Steps",
+        "maximum": 12,
+        "type": "integer",
+        "description": "The number of inference steps to perform.",
+        "default": 4
+      },
+      "guidance_scale": {
+        "minimum": 1,
+        "title": "Guidance scale (CFG)",
+        "maximum": 20,
+        "type": "number",
+        "description": "\n        The CFG (Classifier Free Guidance) scale is a measure of how close you want\n        the model to stick to your prompt when looking for a related image to show you.\n    ",
+        "default": 3.5
+      },
+      "sync_mode": {
+        "title": "Sync Mode",
+        "type": "boolean",
+        "description": "If `True`, the media will be returned as a data URI and the output data won't be available in the request history.",
+        "default": false
+      },
+      "output_format": {
+        "title": "Output Format",
+        "enum": [
+          "jpeg",
+          "png"
+        ],
+        "type": "string",
+        "description": "The format of the generated image.",
+        "default": "jpeg"
+      },
+      "acceleration": {
+        "title": "Acceleration",
+        "enum": [
+          "none",
+          "regular",
+          "high"
+        ],
+        "type": "string",
+        "description": "The speed of the generation. The higher the speed, the faster the generation.",
+        "default": "none"
+      },
+      "enable_safety_checker": {
+        "title": "Enable Safety Checker",
+        "type": "boolean",
+        "description": "If set to true, the safety checker will be enabled. Disabling it requires account authorization; unauthorized requests are always checked, and images flagged as unsafe are returned as black images.",
+        "default": true
+      },
+      "num_images": {
+        "minimum": 1,
+        "title": "Num Images",
+        "maximum": 4,
+        "type": "integer",
+        "description": "The number of images to generate.",
+        "default": 1
+      }
+    },
+    "type": "object",
+    "title": "SchnellTextToImageInput",
+    "x-fal-order-properties": [
+      "num_inference_steps",
+      "prompt",
+      "image_size",
+      "seed",
+      "guidance_scale",
+      "sync_mode",
+      "num_images",
+      "enable_safety_checker",
+      "output_format",
+      "acceleration"
+    ]
+  },
+  "output_schema": {
+    "required": [
+      "images",
+      "timings",
+      "seed",
+      "has_nsfw_concepts",
+      "prompt"
+    ],
+    "properties": {
+      "timings": {
+        "additionalProperties": {
+          "type": "number"
+        },
+        "type": "object",
+        "title": "Timings"
+      },
+      "seed": {
+        "type": "integer",
+        "description": "\n            Seed of the generated Image. It will be the same value of the one passed in the\n            input or the randomly generated that was used in case none was passed.\n        ",
+        "title": "Seed"
+      },
+      "prompt": {
+        "type": "string",
+        "description": "The prompt used for generating the image.",
+        "title": "Prompt"
+      },
+      "has_nsfw_concepts": {
+        "items": {
+          "type": "boolean"
+        },
+        "type": "array",
+        "description": "Whether the generated images contain NSFW concepts.",
+        "title": "Has Nsfw Concepts"
+      },
+      "images": {
+        "items": {
+          "required": [
+            "url",
+            "width",
+            "height"
+          ],
+          "properties": {
+            "content_type": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Content Type",
+              "default": "image/jpeg"
+            },
+            "url": {
+              "type": "string",
+              "title": "Url"
+            },
+            "height": {
+              "type": "integer",
+              "title": "Height"
+            },
+            "width": {
+              "type": "integer",
+              "title": "Width"
+            }
+          },
+          "type": "object",
+          "title": "Image",
+          "x-fal-order-properties": [
+            "url",
+            "width",
+            "height",
+            "content_type"
+          ]
+        },
+        "type": "array",
+        "description": "The generated image files info.",
+        "title": "Images"
+      }
+    },
+    "type": "object",
+    "title": "Output",
+    "x-fal-order-properties": [
+      "images",
+      "timings",
+      "seed",
+      "has_nsfw_concepts",
+      "prompt"
+    ]
+  },
+  "exact_input_schema": {
+    "$ref": "#/components/schemas/FluxSchnellInput"
+  },
+  "exact_output_schema": {
+    "$ref": "#/components/schemas/FluxSchnellOutput"
+  },
+  "components": {
+    "securitySchemes": {
+      "apiKeyAuth": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "Authorization",
+        "description": "Fal Key"
+      }
+    },
+    "schemas": {
+      "QueueStatus": {
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string",
+            "enum": [
+              "IN_QUEUE",
+              "IN_PROGRESS",
+              "COMPLETED"
+            ]
+          },
+          "request_id": {
+            "type": "string",
+            "description": "The request id."
+          },
+          "response_url": {
+            "type": "string",
+            "description": "The response url."
+          },
+          "status_url": {
+            "type": "string",
+            "description": "The status url."
+          },
+          "cancel_url": {
+            "type": "string",
+            "description": "The cancel url."
+          },
+          "logs": {
+            "type": "object",
+            "description": "The logs.",
+            "additionalProperties": true
+          },
+          "metrics": {
+            "type": "object",
+            "description": "The metrics.",
+            "additionalProperties": true
+          },
+          "queue_position": {
+            "type": "integer",
+            "description": "The queue position."
+          }
+        },
+        "required": [
+          "status",
+          "request_id"
+        ]
+      },
+      "FluxSchnellInput": {
+        "required": [
+          "prompt"
+        ],
+        "properties": {
+          "prompt": {
+            "examples": [
+              "Extreme close-up of a single tiger eye, direct frontal view. Detailed iris and pupil. Sharp focus on eye texture and color. Natural lighting to capture authentic eye shine and depth. The word \"FLUX\" is painted over it in big, white brush strokes with visible texture."
+            ],
+            "type": "string",
+            "description": "The prompt to generate an image from.",
+            "title": "Prompt"
+          },
+          "seed": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed",
+            "description": "\n        The same seed and the same prompt given to the same version of the model\n        will output the same image every time.\n    "
+          },
+          "image_size": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ImageSize"
+              },
+              {
+                "type": "string",
+                "enum": [
+                  "square_hd",
+                  "square",
+                  "portrait_4_3",
+                  "portrait_16_9",
+                  "landscape_4_3",
+                  "landscape_16_9"
+                ]
+              }
+            ],
+            "title": "Image Size",
+            "description": "The size of the generated image.",
+            "default": "landscape_4_3"
+          },
+          "num_inference_steps": {
+            "minimum": 1,
+            "title": "Num Inference Steps",
+            "maximum": 12,
+            "type": "integer",
+            "description": "The number of inference steps to perform.",
+            "default": 4
+          },
+          "guidance_scale": {
+            "minimum": 1,
+            "title": "Guidance scale (CFG)",
+            "maximum": 20,
+            "type": "number",
+            "description": "\n        The CFG (Classifier Free Guidance) scale is a measure of how close you want\n        the model to stick to your prompt when looking for a related image to show you.\n    ",
+            "default": 3.5
+          },
+          "sync_mode": {
+            "title": "Sync Mode",
+            "type": "boolean",
+            "description": "If `True`, the media will be returned as a data URI and the output data won't be available in the request history.",
+            "default": false
+          },
+          "output_format": {
+            "title": "Output Format",
+            "enum": [
+              "jpeg",
+              "png"
+            ],
+            "type": "string",
+            "description": "The format of the generated image.",
+            "default": "jpeg"
+          },
+          "acceleration": {
+            "title": "Acceleration",
+            "enum": [
+              "none",
+              "regular",
+              "high"
+            ],
+            "type": "string",
+            "description": "The speed of the generation. The higher the speed, the faster the generation.",
+            "default": "none"
+          },
+          "enable_safety_checker": {
+            "title": "Enable Safety Checker",
+            "type": "boolean",
+            "description": "If set to true, the safety checker will be enabled. Disabling it requires account authorization; unauthorized requests are always checked, and images flagged as unsafe are returned as black images.",
+            "default": true
+          },
+          "num_images": {
+            "minimum": 1,
+            "title": "Num Images",
+            "maximum": 4,
+            "type": "integer",
+            "description": "The number of images to generate.",
+            "default": 1
+          }
+        },
+        "type": "object",
+        "title": "SchnellTextToImageInput",
+        "x-fal-order-properties": [
+          "num_inference_steps",
+          "prompt",
+          "image_size",
+          "seed",
+          "guidance_scale",
+          "sync_mode",
+          "num_images",
+          "enable_safety_checker",
+          "output_format",
+          "acceleration"
+        ]
+      },
+      "FluxSchnellOutput": {
+        "required": [
+          "images",
+          "timings",
+          "seed",
+          "has_nsfw_concepts",
+          "prompt"
+        ],
+        "properties": {
+          "timings": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Timings"
+          },
+          "seed": {
+            "type": "integer",
+            "description": "\n            Seed of the generated Image. It will be the same value of the one passed in the\n            input or the randomly generated that was used in case none was passed.\n        ",
+            "title": "Seed"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "The prompt used for generating the image.",
+            "title": "Prompt"
+          },
+          "has_nsfw_concepts": {
+            "items": {
+              "type": "boolean"
+            },
+            "type": "array",
+            "description": "Whether the generated images contain NSFW concepts.",
+            "title": "Has Nsfw Concepts"
+          },
+          "images": {
+            "items": {
+              "$ref": "#/components/schemas/Image"
+            },
+            "type": "array",
+            "description": "The generated image files info.",
+            "title": "Images"
+          }
+        },
+        "type": "object",
+        "title": "Output",
+        "x-fal-order-properties": [
+          "images",
+          "timings",
+          "seed",
+          "has_nsfw_concepts",
+          "prompt"
+        ]
+      },
+      "ImageSize": {
+        "properties": {
+          "height": {
+            "default": 512,
+            "title": "Height",
+            "maximum": 14142,
+            "type": "integer",
+            "description": "The height of the generated image.",
+            "exclusiveMinimum": 0
+          },
+          "width": {
+            "default": 512,
+            "title": "Width",
+            "maximum": 14142,
+            "type": "integer",
+            "description": "The width of the generated image.",
+            "exclusiveMinimum": 0
+          }
+        },
+        "type": "object",
+        "title": "ImageSize",
+        "x-fal-order-properties": [
+          "width",
+          "height"
+        ]
+      },
+      "Image": {
+        "required": [
+          "url",
+          "width",
+          "height"
+        ],
+        "properties": {
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Type",
+            "default": "image/jpeg"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          },
+          "height": {
+            "type": "integer",
+            "title": "Height"
+          },
+          "width": {
+            "type": "integer",
+            "title": "Width"
+          }
+        },
+        "type": "object",
+        "title": "Image",
+        "x-fal-order-properties": [
+          "url",
+          "width",
+          "height",
+          "content_type"
+        ]
+      }
+    }
+  },
+  "openapi_version": "3.1.0",
+  "selection_guidance": "To choose a model for a task, call recommend_model: it applies current published guidance, checks fit and returns next_call with an input contract. Catalog order is not a quality ranking. Copy endpoint_id exactly; never add or change a provider prefix such as fal-ai/.",
+  "knowledge_status": "complete",
+  "knowledge_retrieval": {
+    "fetched_at": "2026-11-07T19:40:50.080Z",
+    "warnings": []
+  },
+  "model_knowledge": {
+    "models": [
+      {
+        "endpoint_id": "fal-ai/flux-1/schnell",
+        "display_name": "FLUX.1 [schnell]",
+        "category": "text-to-image",
+        "relevance": null,
+        "insights": []
+      }
+    ],
+    "evidence": {
+      "version": 3,
+      "compiled_at": null,
+      "window_start": null,
+      "window_end": null,
+      "evaluated_at": "2026-11-07T19:40:50.386Z",
+      "latency_definition": "Successful execution observations in milliseconds; mixed workloads; excludes queue/startup; not runtime guarantees.",
+      "instructions": "Successful execution observations in milliseconds; mixed workloads; excludes queue/startup; not runtime guarantees. Report p50/p90 with their measurement window. Null means unknown, never zero. Trending is the analytics category rank at its source timestamp, not adoption or quality. New means registry publication within 30 days of the response evaluation time, not first usage. Lab recommendations are authored guidance, not measured latency, trending or newness. Use the existing pricing tool for current prices, preserving billing units and required configuration; these observations contain no prices.",
+      "models": [
+        {
+          "endpoint_id": "fal-ai/flux-1/schnell",
+          "evidence": null
+        }
+      ]
+    },
+    "unavailable_endpoint_ids": [],
+    "stats_available": false,
+    "note": "Successful execution observations in milliseconds; mixed workloads; excludes queue/startup; not runtime guarantees. Report p50/p90 with their measurement window. Null means unknown, never zero. Trending is the analytics category rank at its source timestamp, not adoption or quality. New means registry publication within 30 days of the response evaluation time, not first usage. Lab recommendations are authored guidance, not measured latency, trending or newness. Use the existing pricing tool for current prices, preserving billing units and required configuration; these observations contain no prices."
+  }
+}
