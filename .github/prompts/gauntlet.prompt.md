@@ -43,12 +43,15 @@ npm run art:status
 npm run art:claim -- --slot <slot-id>
 ```
 
-Call `fal run_model` with **exactly** the endpoint, prompt, seed and `count: 1` the claim
+If the fal `run_model` tool is not in your toolset, stop **before** claiming and report
+`blocked: no fal tool available to the orchestrator`.
+
+Call `run_model` with **exactly** the endpoint, prompt, seed and `count: 1` the claim
 printed. Save the raw result to `/tmp/<slot-id>-attempt-<n>-result.json` and a short
 evidence file to `/tmp/<slot-id>-attempt-<n>-evidence.md` (claim output, request id, image
 URL, `pricing.amountUsd` from `pipeline/registry/model.json`).
 
-Poll `fal check_job` if the result is `processing`. Never call `run_model` twice on one
+Poll `check_job` if the result is `processing`. Never call `run_model` twice on one
 claim. On failure or a blocked account, `npm run art:release -- --slot <slot-id>
 --attempt <n>` and stop.
 
@@ -86,7 +89,7 @@ VERIFICATION
 <command output from the implementer>
 ```
 
-For art orders, add a `VISUAL` block: the verbatim output of `fal inspect_images` on the
+For art orders, add a `VISUAL` block: the verbatim output of `inspect_images` on the
 generated URL, plus the `art:process` numbers (`usableCells`, `meanPaletteDistance`,
 `sizeVariance`, `seamError`). Never include the implementer's report or reasoning — the
 reviewer must judge the artefact, not the argument for it.

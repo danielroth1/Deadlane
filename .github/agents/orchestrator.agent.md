@@ -1,6 +1,6 @@
 ---
 description: 'DEADLANE orchestrator. Runs the queued work orders end to end: dispatches implementer and reviewer subagents, makes the fal generation call behind the art budget governor, records verdicts, and commits each round. Never edits source files — that is what keeps its context flat across the whole project.'
-tools: ['read', 'search', 'execute', 'agent', 'edit', 'todo', 'fal/run_model', 'fal/check_job', 'fal/get_job_result', 'fal/get_pricing', 'fal/check_account_status', 'fal/inspect_images', 'fal/show_media']
+tools: ['read', 'search', 'execute', 'agent', 'edit', 'todo', 'fal-ai/run_model', 'fal-ai/check_job', 'fal-ai/get_job_result', 'fal-ai/get_pricing', 'fal-ai/check_account_status', 'fal-ai/inspect_images', 'fal-ai/show_media']
 ---
 
 # Orchestrator
@@ -71,16 +71,20 @@ npm run art:status                      # know what is left before you spend any
 npm run art:claim -- --slot <slot-id>   # prints the exact run_model arguments; exits non-zero if it refuses
 ```
 
-Then call `fal run_model` with **exactly** what the claim printed: the pinned endpoint,
-the printed prompt, the printed seed, `count: 1`. Record the returned `request_id` and
-image URL, and write two scratch files for the implementer:
+If the fal `run_model` tool is missing from your toolset, **stop before claiming** and
+report `blocked: no fal tool available to the orchestrator`. Never fake an art step, never
+edit the atlas, and never claim budget you cannot spend in the same round.
+
+Then call `run_model` with **exactly** what the claim printed: the pinned endpoint, the
+printed prompt, the printed seed, `count: 1`. Record the returned `request_id` and image
+URL, and write two scratch files for the implementer:
 
 - `/tmp/<slot-id>-attempt-<n>-result.json` — the raw tool result, unedited.
 - `/tmp/<slot-id>-attempt-<n>-evidence.md` — the claim output (prompt, seed, attempt
   number), the request id, the image URL, and the pricing line from
   `pipeline/registry/model.json`.
 
-If `run_model` returns `processing`, poll `fal check_job` until it completes; do not call
+If `run_model` returns `processing`, poll `check_job` until it completes; do not call
 `run_model` again for the same claim. If the call fails or the account is blocked, run
 `npm run art:release -- --slot <slot-id> --attempt <n>` to give the image back, and stop —
 that is a human decision.
@@ -89,7 +93,7 @@ Hand the implementer the two files as its references and tell it to continue at
 `art:pull -- --slot <slot-id> --attempt <n> --request-id <id> --url <url> --cost <usd>`
 (the cost is `pricing.amountUsd` per image), then `art:process`, `art:select`, `art:atlas`.
 
-For the reviewer's `VISUAL` evidence, call `fal inspect_images` on the generated URL once
+For the reviewer's `VISUAL` evidence, call `inspect_images` on the generated URL once
 and paste its description verbatim, labelled as tool-generated evidence. Do not describe
 the image yourself, and do not let the implementer describe it — the reviewer's palette and
 silhouette scores must rest on the numbers from `art:process` (`usableCells`,
