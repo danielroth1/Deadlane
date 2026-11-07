@@ -299,11 +299,13 @@
       "id": "WO-26",
       "title": "Pipeline: key enclosed chroma residue and drop enemy plumes",
       "file": "gauntlet/work-orders/WO-26-chroma-residue.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-25"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "enclosed magenta key + enemy-only plume/palette-15 removal; 92 tests green, 0 hot-pink px (reviewer findings: unused MIN_PLUME_CORE_PIXELS import, comment 285 vs note 275 px, silent palette fallback in cellPalette)"
     },
     {
       "id": "WO-27",

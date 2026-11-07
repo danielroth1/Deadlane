@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest';
-import { alphaBounds, chromaKey, hexToRgb, rotate180, subjectBounds, type Raster } from './image';
+import {
+  MIN_ENCLOSED_RESIDUE_AREA,
+  MIN_PLUME_AREA,
+  MIN_PLUME_CORE_PIXELS,
+  alphaBounds,
+  chromaKey,
+  dropExhaustPlume,
+  hexToRgb,
+  keyEnclosedMagenta,
+  paletteWithout,
+  quantize,
+  rotate180,
+  subjectBounds,
+  type Palette,
+  type Raster,
+} from './image';
 
 /**
  * The chroma key is the one step that decides whether a generated sheet becomes transparent
@@ -319,5 +334,215 @@ describe('rotate180', () => {
 
     expect(pixelAt(rotated, 31, 0).a).toBe(255);
     expect(subjectBounds(rotated)).toEqual({ left: 6, top: 6, width: 20, height: 20 });
+  });
+});
+
+/**
+ * The border fill is only half of the key. art-05 cell 0 painted its rotor fan in the
+ * backdrop colour and fenced it in with a 1 px highlight, so the fill could not reach 8,329
+ * px of plate and `quantize` snapped all of it to hot-pink (WO-24 defect 2).
+ *
+ * These tests pin the enclosed pass *and* its narrowness: the band stops at 340°, hot-pink
+ * measures 344.8°, so an enclosed `#ff2e63` accent is still subject however it is fenced in.
+ */
+describe('keyEnclosedMagenta', () => {
+  /** Plate ring with a plate-coloured blob fenced inside it. */
+  function makeEnclosedBlob(blobHex: string): Raster {
+    const cell = makeRaster(24, 24, BACKDROP);
+    fillRect(cell, 2, 2, 21, 21, PLATE);
+    fillRect(cell, 8, 4, 15, 12, blobHex);
+    return cell;
+  }
+
+  it('keys an enclosed plate-coloured fan the border fill cannot reach', () => {
+    const source = makeEnclosedBlob(BACKDROP);
+    const borderKeyed = chromaKey(source, KEY);
+
+    // Guards the premise: the fill stops at the plate ring, which is the whole defect.
+    expect(pixelAt(borderKeyed, 10, 8)).toEqual({ r: 238, g: 4, b: 102, a: 255 });
+
+    const keyed = keyEnclosedMagenta(borderKeyed);
+
+    expect(pixelAt(keyed, 10, 8)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+    expect(pixelAt(keyed, 8, 4).a).toBe(0);
+    expect(pixelAt(keyed, 15, 12).a).toBe(0);
+
+    // The plate ring around the fan is subject and must survive untouched.
+    expect(pixelAt(keyed, 4, 4)).toEqual(pixelAt(source, 4, 4));
+    expect(pixelAt(keyed, 4, 4).a).toBe(255);
+
+    // And the border field is still keyed.
+    expect(pixelAt(keyed, 0, 0).a).toBe(0);
+  });
+
+  it('keeps an enclosed hot-pink accent, because the band stops at 340°', () => {
+    // The player car's accent, drawn inside the body exactly like the fan above.
+    const source = makeEnclosedBlob(HOT_PINK);
+    const keyed = keyEnclosedMagenta(chromaKey(source, KEY));
+
+    expect(pixelAt(keyed, 10, 8)).toEqual({ r: 255, g: 46, b: 99, a: 255 });
+    expect(pixelAt(keyed, 8, 4).a).toBe(255);
+
+    // Guards the premise from the other side: this colour is outside the residue band.
+    const [r, g, b] = hexToRgb(HOT_PINK);
+    const max = Math.max(r, g, b);
+    const delta = max - Math.min(r, g, b);
+    const hue = (60 * ((((g - b) / delta) % 6) + 6)) % 360;
+    expect(hue).toBeGreaterThan(340);
+  });
+
+  it('leaves an enclosed region below the area floor alone', () => {
+    const source = makeRaster(24, 24, BACKDROP);
+    fillRect(source, 2, 2, 21, 21, PLATE);
+    // 3 x 3 px: an anti-aliased fringe of a legitimate accent, not a painted region.
+    fillRect(source, 10, 10, 12, 12, BACKDROP);
+    expect(9).toBeLessThan(MIN_ENCLOSED_RESIDUE_AREA);
+
+    const keyed = keyEnclosedMagenta(chromaKey(source, KEY));
+
+    expect(pixelAt(keyed, 11, 11)).toEqual({ r: 238, g: 4, b: 102, a: 255 });
+  });
+
+  it('ignores a magenta field that touches the border, i.e. an unkeyed raster', () => {
+    // Without the border fill there is no way to tell plate from residue, so the pass must
+    // refuse to act rather than clear the whole sheet.
+    const source = makeRaster(16, 16, BACKDROP);
+
+    const keyed = keyEnclosedMagenta(source);
+
+    expect(opaqueCount(keyed)).toBe(256);
+    expect(pixelAt(keyed, 8, 8)).toEqual(pixelAt(source, 8, 8));
+  });
+
+  it('returns a new raster without mutating the source', () => {
+    const source = makeEnclosedBlob(BACKDROP);
+    const before = Buffer.from(source.data);
+
+    const keyed = keyEnclosedMagenta(source);
+
+    expect(keyed).not.toBe(source);
+    expect(source.data.equals(before)).toBe(true);
+  });
+});
+
+/**
+ * `docs/ART_BIBLE.md` §8 forbids exhaust plumes and art-05 cell 3 shipped one anyway: a
+ * white-hot jet flame hanging off the engine nozzle.
+ *
+ * Colour alone cannot identify it — the same sheets hold a bright yellow-green bulldozer
+ * body and an orange drone canopy — so the rule is a warm component *with* a white-hot core.
+ * These tests pin the removal and both false-positive guards.
+ */
+describe('dropExhaustPlume', () => {
+  const HULL = '#1a1c2c';
+  const FLAME_RIM = '#e0762a';
+  const FLAME_CORE = '#f6ee5a';
+  const WARM_BODY = '#e6b43c';
+
+  it('keys an amber plume hanging off a hull', () => {
+    const cell = makeEmpty(200, 200);
+    fillRect(cell, 60, 40, 140, 150, HULL);
+    fillRect(cell, 85, 150, 115, 185, FLAME_RIM);
+    fillRect(cell, 92, 152, 108, 165, FLAME_CORE);
+
+    const cleaned = dropExhaustPlume(cell);
+
+    expect(pixelAt(cleaned, 100, 160)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+    expect(pixelAt(cleaned, 100, 180).a).toBe(0);
+    expect(pixelAt(cleaned, 100, 100)).toEqual(pixelAt(cell, 100, 100));
+    expect(pixelAt(cleaned, 100, 100).a).toBe(255);
+  });
+
+  it('removes the bright red rim together with the flame body', () => {
+    const RED_RIM = '#f55552';
+    const cell = makeEmpty(200, 200);
+    fillRect(cell, 60, 40, 140, 150, HULL);
+    fillRect(cell, 85, 150, 115, 175, FLAME_RIM);
+    fillRect(cell, 92, 152, 108, 165, FLAME_CORE);
+    // The outer rim reads as bright red just below 0°, not amber. Before the band wrapped,
+    // this survived as a detached 244 px fragment on the real sheet.
+    fillRect(cell, 85, 176, 115, 185, RED_RIM);
+
+    const cleaned = dropExhaustPlume(cell);
+
+    expect(pixelAt(cleaned, 100, 180).a).toBe(0);
+    expect(pixelAt(cleaned, 100, 160).a).toBe(0);
+    expect(pixelAt(cleaned, 100, 100).a).toBe(255);
+  });
+
+  it('leaves a warm vehicle body alone, however bright', () => {
+    const cell = makeEmpty(200, 200);
+    fillRect(cell, 40, 40, 160, 150, WARM_BODY);
+    // A lamp cluster: bright, but nowhere near a flame's white-hot interior.
+    fillRect(cell, 60, 60, 63, 63, FLAME_CORE);
+
+    const cleaned = dropExhaustPlume(cell);
+
+    expect(opaqueCount(cleaned)).toBe(opaqueCount(cell));
+    expect(pixelAt(cleaned, 100, 100)).toEqual(pixelAt(cell, 100, 100));
+    expect(pixelAt(cleaned, 61, 61)).toEqual(pixelAt(cell, 61, 61));
+  });
+
+  it('leaves a warm patch below the area floor alone', () => {
+    const cell = makeEmpty(200, 200);
+    fillRect(cell, 60, 40, 140, 150, HULL);
+    // Small but genuinely white-hot.
+    fillRect(cell, 90, 152, 109, 171, FLAME_RIM);
+    fillRect(cell, 92, 154, 107, 169, FLAME_CORE);
+    expect(20 * 20).toBeLessThan(MIN_PLUME_AREA);
+
+    const cleaned = dropExhaustPlume(cell);
+
+    expect(pixelAt(cleaned, 100, 160).a).toBe(255);
+  });
+
+  it('does not mutate the source', () => {
+    const cell = makeEmpty(200, 200);
+    fillRect(cell, 60, 40, 140, 150, HULL);
+    fillRect(cell, 85, 150, 115, 185, FLAME_RIM);
+    fillRect(cell, 92, 152, 108, 165, FLAME_CORE);
+    const before = Buffer.from(cell.data);
+
+    const cleaned = dropExhaustPlume(cell);
+
+    expect(cell.data.equals(before)).toBe(true);
+    expect(cleaned.data.equals(before)).toBe(false);
+  });
+});
+
+/**
+ * Palette colour 15 is reserved for the player, so hostile sheets quantise against a palette
+ * that cannot produce it. Removing the entry (rather than remapping afterwards) is what makes
+ * a hostile red land on signal-red instead of on whatever index 15 was reassigned to.
+ */
+describe('paletteWithout', () => {
+  const palette: Palette = {
+    colors: [
+      { index: 8, hex: '#b8452f', name: 'signal-red', rgb: hexToRgb('#b8452f') },
+      { index: 15, hex: HOT_PINK.toLowerCase(), name: 'hot-pink', rgb: hexToRgb(HOT_PINK) },
+    ],
+    transparentKey: KEY,
+    playerAccentKey: HOT_PINK.toLowerCase(),
+  };
+
+  it('removes the reserved accent from the quantiser reach', () => {
+    const source = makeRaster(4, 4, HOT_PINK);
+
+    expect(quantize(source, palette).raster.data.readUInt8(0)).toBe(255);
+
+    const hostile = paletteWithout(palette, [15]);
+    const quantised = quantize(source, hostile);
+
+    expect(quantised.raster.data.readUInt8(0)).toBe(184);
+    expect(quantised.raster.data.readUInt8(1)).toBe(69);
+    expect(quantised.raster.data.readUInt8(2)).toBe(47);
+  });
+
+  it('keeps the reserved keys on the reduced palette', () => {
+    const hostile = paletteWithout(palette, [15]);
+
+    expect(hostile.transparentKey).toBe(KEY);
+    expect(hostile.playerAccentKey).toBe(HOT_PINK.toLowerCase());
+    expect(hostile.colors.map((c) => c.index)).toEqual([8]);
   });
 });

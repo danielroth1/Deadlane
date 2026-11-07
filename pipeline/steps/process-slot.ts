@@ -7,15 +7,19 @@ import {
   chromaKey,
   crop,
   decode,
+  dropExhaustPlume,
   encode,
   fitCentered,
+  keyEnclosedMagenta,
   loadPalette,
   mirrorSymmetry,
   outline,
+  paletteWithout,
   quantize,
   rotate180,
   seamError,
   subjectBounds,
+  type Palette,
   type Raster,
 } from '../lib/image.js';
 
@@ -41,6 +45,41 @@ const CELL_ROTATION_DEGREES: Readonly<Record<string, readonly (0 | 180)[]>> = {
 /** Declared rotation for one cell, defaulting to upright. */
 export function cellRotationDegrees(slotId: string, index: number): 0 | 180 {
   return CELL_ROTATION_DEGREES[slotId]?.[index] ?? 0;
+}
+
+/**
+ * Sheets whose art belongs to the hostile faction.
+ *
+ * Hostile sheets get three extra guards that the player sheet must not get, because the
+ * player is allowed everything the enemy is not: the reserved hot-pink accent, and the
+ * magenta glow it blooms into. Measured on the shipped sheets, the enclosed-residue band
+ * holds 8,329 px of plate on art-05 and 1,187 px of legitimate tail-light bloom on the
+ * player sheet, so the band means "residue" on a hostile and "the accent" on the player.
+ */
+const ENEMY_SLOT_IDS: ReadonlySet<string> = new Set([
+  'art-03-enemy-ground-a',
+  'art-04-enemy-ground-b',
+  'art-05-enemy-air',
+  'art-06-enemy-sea',
+  'art-07-boss',
+]);
+
+export function isEnemySlot(slotId: string): boolean {
+  return ENEMY_SLOT_IDS.has(slotId);
+}
+
+/**
+ * The palette a cell is quantised against.
+ *
+ * Palette colour 15 (hot-pink) is reserved for the player, so it is removed from the
+ * candidate set for hostile slots. Removing the entry rather than remapping after quantise
+ * means a hostile red detail lands on the nearest *legal* colour instead of on a colour that
+ * is reserved for the car.
+ */
+export function cellPalette(palette: Palette, slotId: string): Palette {
+  if (!isEnemySlot(slotId)) return palette;
+  const accent = palette.colors.find((entry) => entry.hex === palette.playerAccentKey);
+  return accent ? paletteWithout(palette, [accent.index]) : palette;
 }
 
 /**
@@ -98,7 +137,13 @@ export async function processSlot(
 ): Promise<ProcessResult> {
   const palette = await loadPalette();
   const source = await decode(sourcePath);
-  const keyed = chromaKey(source, palette.transparentKey);
+
+  // Hostile sheets carry two defects the border key cannot see: magenta residue fenced in by
+  // the subject outline (WO-24 defect 2) and exhaust plumes hanging off the rear. Both are
+  // keyed before slicing so that trim, fit and metrics all describe the art that ships.
+  const base = chromaKey(source, palette.transparentKey);
+  const keyed = isEnemySlot(slot.id) ? dropExhaustPlume(keyEnclosedMagenta(base)) : base;
+  const quantisePalette = cellPalette(palette, slot.id);
 
   const { cols, rows } = slot.grid;
   const cellW = Math.floor(keyed.width / cols);
@@ -151,8 +196,8 @@ export async function processSlot(
     const trimmed = crop(region, bounds);
     const canvas = fitCentered(trimmed, slot.finalSize);
 
-    const quantised = quantize(canvas, palette);
-    const outlined = outline(quantised.raster, palette);
+    const quantised = quantize(canvas, quantisePalette);
+    const outlined = outline(quantised.raster, quantisePalette);
 
     const framePath = join(workDir, `cell-${index}.png`);
     await encode(outlined, framePath);

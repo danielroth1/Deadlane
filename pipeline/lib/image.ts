@@ -35,6 +35,8 @@ export interface PaletteEntry {
 export interface Palette {
   readonly colors: readonly PaletteEntry[];
   readonly transparentKey: string;
+  /** `reserved.playerAccent` — hot-pink, legal on the player and nowhere else. */
+  readonly playerAccentKey: string;
 }
 
 export function hexToRgb(hex: string): [number, number, number] {
@@ -55,7 +57,7 @@ export async function loadPalette(): Promise<Palette> {
   const path = resolve(REPO_ROOT, 'pipeline', 'registry', 'palette.json');
   const raw = JSON.parse(await readFile(path, 'utf8')) as {
     colors: { index: number; hex: string; name: string }[];
-    reserved: { transparentKey: string };
+    reserved: { transparentKey: string; playerAccent: string };
   };
   return {
     colors: raw.colors.map((c) => ({
@@ -65,6 +67,25 @@ export async function loadPalette(): Promise<Palette> {
       rgb: hexToRgb(c.hex),
     })),
     transparentKey: raw.reserved.transparentKey,
+    playerAccentKey: raw.reserved.playerAccent.toLowerCase(),
+  };
+}
+
+/**
+ * Copy of a palette with entries removed.
+ *
+ * Used to make palette colour 15 unreachable for hostile sheets: the accent is reserved for
+ * the player, so on an enemy sprite the nearest-colour search must not be able to pick it.
+ * Removing the entry rather than remapping after quantise means a red detail lands on the
+ * nearest *legal* colour (signal-red) instead of on whatever index 15 happened to be
+ * reassigned to.
+ */
+export function paletteWithout(palette: Palette, indices: readonly number[]): Palette {
+  const dropped = new Set(indices);
+  return {
+    colors: palette.colors.filter((entry) => !dropped.has(entry.index)),
+    transparentKey: palette.transparentKey,
+    playerAccentKey: palette.playerAccentKey,
   };
 }
 
@@ -260,6 +281,305 @@ export function chromaKey(raster: Raster, keyHex: string, tolerance = 90): Raste
     if (x < width - 1) visit(x + 1, y);
     if (y > 0) visit(x, y - 1);
     if (y < height - 1) visit(x, y + 1);
+  }
+
+  return { width, height, data: out };
+}
+
+/* --------------------------- enclosed chroma residue ----------------------- */
+
+/**
+ * Options for {@link keyEnclosedMagenta}. Every field has a measured default; they are
+ * exposed so a test can shrink a region without reaching into module constants.
+ */
+export interface EnclosedResidueOptions {
+  readonly hueCentre?: number;
+  readonly hueHalfWidth?: number;
+  readonly minSaturation?: number;
+  readonly minBrightness?: number;
+  readonly minArea?: number;
+}
+
+/** Centre of the residue band. 20° below the border key's 322.5°, see below. */
+export const ENCLOSED_RESIDUE_HUE_CENTRE = 320;
+
+/** Half-width of the residue band, which makes it 300–340°. */
+export const ENCLOSED_RESIDUE_HUE_HALF_WIDTH = 20;
+
+export const ENCLOSED_RESIDUE_MIN_SATURATION = 0.5;
+
+/**
+ * Far below the border key's brightness floor on purpose: this pass is not asking "is this
+ * the plate?", it is asking "is this a colour the palette does not contain?".
+ */
+export const ENCLOSED_RESIDUE_MIN_BRIGHTNESS = 40;
+
+/**
+ * Smallest enclosed region worth clearing.
+ *
+ * 24 px at 512 px per cell is 1.5 px at the 128 px final size, i.e. below anything the
+ * downsample could carry. The point of the floor is to leave anti-aliased fringes of
+ * legitimate hot-pink artwork alone rather than to describe a real region: the residue this
+ * pass exists for measured 8,329 px in art-05 cell 0.
+ */
+export const MIN_ENCLOSED_RESIDUE_AREA = 24;
+
+/**
+ * The other half of the chroma key: magenta-family colour that the border fill cannot reach.
+ *
+ * `chromaKey` only clears the key family where it touches the image border. That is what
+ * keeps palette colour 15 (`#ff2e63`, hot-pink) alive when it is drawn inside a car — and
+ * it is also how the art-05 rotor fan shipped. The model painted the fan with the backdrop
+ * colour and fenced it in with a 1 px highlight, so the fill never reached those 8,329 px
+ * and `quantize` snapped every one of them to hot-pink (WO-24 defect 2).
+ *
+ * The band here is deliberately *narrower* than the border key's 295–350°: 300–340°. The
+ * reserved player accent `#ff2e63` measures 344.8°, so it stays outside the band even when
+ * enclosed, while every plate region measured so far (331.8–339.2° per-region mean) is
+ * inside it. Narrowing is what makes this pass safe enough to run at all; widening it to the
+ * border key's band would eat the player's tail lights first.
+ *
+ * Brightness is floored at 40 rather than 90 because the question is different: the border
+ * fill asks "is this the plate?", where dark pixels are shading, while this pass asks "is
+ * this outside the palette?", and the hue band already excludes every palette entry. The
+ * floor exists only to keep near-black outline pixels — whose hue is numerical noise — out
+ * of a component.
+ *
+ * A component that touches the raster border is skipped. Once `chromaKey` has run the border
+ * is transparent, so a border-touching component means the caller passed in an unkeyed
+ * raster, where a magenta plate would otherwise look like one enormous enclosed region.
+ */
+export function keyEnclosedMagenta(
+  raster: Raster,
+  options: EnclosedResidueOptions = {},
+): Raster {
+  const hueCentre = options.hueCentre ?? ENCLOSED_RESIDUE_HUE_CENTRE;
+  const hueHalfWidth = options.hueHalfWidth ?? ENCLOSED_RESIDUE_HUE_HALF_WIDTH;
+  const minSaturation = options.minSaturation ?? ENCLOSED_RESIDUE_MIN_SATURATION;
+  const minBrightness = options.minBrightness ?? ENCLOSED_RESIDUE_MIN_BRIGHTNESS;
+  const minArea = options.minArea ?? MIN_ENCLOSED_RESIDUE_AREA;
+
+  const { width, height, data } = raster;
+  const out = Buffer.from(data);
+
+  const inFamily = (pixel: number): boolean => {
+    const i = pixel * 4;
+    if (data.readUInt8(i + 3) === 0) return false;
+
+    const r = data.readUInt8(i);
+    const g = data.readUInt8(i + 1);
+    const b = data.readUInt8(i + 2);
+    if (Math.max(r, g, b) < minBrightness) return false;
+
+    const { hue, saturation } = hueAndSaturation(r, g, b);
+    if (saturation < minSaturation) return false;
+
+    const offset = ((hue - hueCentre + 540) % 360) - 180;
+    return Math.abs(offset) <= hueHalfWidth;
+  };
+
+  const seen = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  const region = new Int32Array(width * height);
+
+  for (let start = 0; start < width * height; start += 1) {
+    if (seen.at(start) === 1) continue;
+    seen[start] = 1;
+    if (!inFamily(start)) continue;
+
+    let tail = 0;
+    let area = 0;
+    let touchesBorder = false;
+    queue[0] = start;
+    tail += 1;
+
+    for (let head = 0; head < tail; head += 1) {
+      const pixel = queue.at(head);
+      if (pixel === undefined) break;
+
+      region[area] = pixel;
+      area += 1;
+
+      const x = pixel % width;
+      const y = (pixel - x) / width;
+      if (x === 0 || y === 0 || x === width - 1 || y === height - 1) touchesBorder = true;
+
+      const neighbours = [
+        x > 0 ? pixel - 1 : -1,
+        x < width - 1 ? pixel + 1 : -1,
+        y > 0 ? pixel - width : -1,
+        y < height - 1 ? pixel + width : -1,
+      ];
+
+      for (const next of neighbours) {
+        if (next < 0 || seen.at(next) === 1) continue;
+        seen[next] = 1;
+        if (!inFamily(next)) continue;
+        queue[tail] = next;
+        tail += 1;
+      }
+    }
+
+    if (touchesBorder || area < minArea) continue;
+
+    for (let k = 0; k < area; k += 1) {
+      const i = (region.at(k) ?? 0) * 4;
+      out[i] = 0;
+      out[i + 1] = 0;
+      out[i + 2] = 0;
+      out[i + 3] = 0;
+    }
+  }
+
+  return { width, height, data: out };
+}
+
+/* -------------------------------- exhaust plume ---------------------------- */
+
+/** Options for {@link dropExhaustPlume}; defaults are the calibrated values. */
+export interface PlumeOptions {
+  readonly hueMin?: number;
+  readonly hueMax?: number;
+  readonly minSaturation?: number;
+  readonly minBrightness?: number;
+  readonly minArea?: number;
+  readonly minCorePixels?: number;
+}
+
+/**
+ * Warm band the flame occupies, from its red outer rim to its yellow core.
+ *
+ * `hueMin > hueMax` deliberately means "wrap through 0°": the measured art-05 flame has a
+ * bright red rim at 0.0–359.7°, and a plain `hue >= min && hue <= max` test abandoned that
+ * rim as a detached 244 px component below every threshold. Widening the band to 340–70°
+ * joins the rim to the body — a 3,038 px component with a 275 px white-hot core — and, on
+ * all four hostile sheets, still matches that one region and nothing else.
+ */
+export const PLUME_HUE_MIN = 340;
+export const PLUME_HUE_MAX = 70;
+export const PLUME_MIN_SATURATION = 0.5;
+export const PLUME_MIN_BRIGHTNESS = 150;
+
+/**
+ * Smallest warm component that can be a flame. Measured on the four hostile sheets, the
+ * art-05 plume is 3,038 px including its red rim at 512 px per cell.
+ */
+export const MIN_PLUME_AREA = 900;
+
+/**
+ * A flame is drawn with a white-hot interior. Instrument lights, canopy frames and lit
+ * instrument panels peak at a few dozen near-white yellow pixels; the measured art-05 plume
+ * carries 285, the next brightest legitimate warm region in the whole sheet (the hunter
+ * drone's canopy) carries 88.
+ */
+export const MIN_PLUME_CORE_PIXELS = 128;
+
+/**
+ * Remove exhaust plumes from a keyed raster.
+ *
+ * `docs/ART_BIBLE.md` §8 forbids plumes and art-05 cell 3 shipped one anyway: a white-hot
+ * jet flame hanging off the engine nozzle. Keying it is preferred over refusing the cell
+ * because the jet itself is a usable sprite once the flame is gone (WO-27 repacks the
+ * sheets; it should not have to replace a good aircraft).
+ *
+ * There is no colour that means "flame" — the same sheet contains a bright yellow-green
+ * bulldozer body (4,550 px of warm pixels) and an orange drone canopy, and the keyed plate
+ * blend makes geometry unreliable too: the model casts a drop shadow below every vehicle,
+ * so "hangs below the silhouette" is not a usable test either. What does separate them is
+ * the white-hot core. A component is a plume when it is warm, at least {@link MIN_PLUME_AREA}
+ * px, and contains at least {@link MIN_PLUME_CORE_PIXELS} near-white yellow pixels; the two
+ * floors together matched exactly one region across all four hostile sheets.
+ *
+ * The raster must already have been through {@link chromaKey}: the pass is a component walk
+ * over opaque pixels and clears whole components, never individual pixels.
+ */
+export function dropExhaustPlume(raster: Raster, options: PlumeOptions = {}): Raster {
+  const hueMin = options.hueMin ?? PLUME_HUE_MIN;
+  const hueMax = options.hueMax ?? PLUME_HUE_MAX;
+  const minSaturation = options.minSaturation ?? PLUME_MIN_SATURATION;
+  const minBrightness = options.minBrightness ?? PLUME_MIN_BRIGHTNESS;
+  const minArea = options.minArea ?? MIN_PLUME_AREA;
+  const minCorePixels = options.minCorePixels ?? MIN_PLUME_CORE_PIXELS;
+
+  const { width, height, data } = raster;
+  const out = Buffer.from(data);
+
+  /** White-hot interior of a flame: a near-white yellow, brighter than any palette colour. */
+  const isCore = (r: number, g: number, b: number): boolean => r >= 230 && g >= 220 && b <= 150;
+
+  const isWarm = (pixel: number): boolean => {
+    const i = pixel * 4;
+    if (data.readUInt8(i + 3) === 0) return false;
+
+    const r = data.readUInt8(i);
+    const g = data.readUInt8(i + 1);
+    const b = data.readUInt8(i + 2);
+    if (Math.max(r, g, b) < minBrightness) return false;
+
+    const { hue, saturation } = hueAndSaturation(r, g, b);
+    if (saturation < minSaturation) return false;
+
+    // `hueMin > hueMax` means the band wraps through red, so the flame's outer rim stays
+    // attached to its body instead of being left behind as a detached bright-red fragment.
+    return hueMin <= hueMax
+      ? hue >= hueMin && hue <= hueMax
+      : hue >= hueMin || hue <= hueMax;
+  };
+
+  const seen = new Uint8Array(width * height);
+  const queue = new Int32Array(width * height);
+  const region = new Int32Array(width * height);
+
+  for (let start = 0; start < width * height; start += 1) {
+    if (seen.at(start) === 1) continue;
+    seen[start] = 1;
+    if (!isWarm(start)) continue;
+
+    let tail = 0;
+    let area = 0;
+    let cores = 0;
+    queue[0] = start;
+    tail += 1;
+
+    for (let head = 0; head < tail; head += 1) {
+      const pixel = queue.at(head);
+      if (pixel === undefined) break;
+
+      region[area] = pixel;
+      area += 1;
+
+      const i = pixel * 4;
+      if (isCore(data.readUInt8(i), data.readUInt8(i + 1), data.readUInt8(i + 2))) {
+        cores += 1;
+      }
+
+      const x = pixel % width;
+      const y = (pixel - x) / width;
+      const neighbours = [
+        x > 0 ? pixel - 1 : -1,
+        x < width - 1 ? pixel + 1 : -1,
+        y > 0 ? pixel - width : -1,
+        y < height - 1 ? pixel + width : -1,
+      ];
+
+      for (const next of neighbours) {
+        if (next < 0 || seen.at(next) === 1) continue;
+        seen[next] = 1;
+        if (!isWarm(next)) continue;
+        queue[tail] = next;
+        tail += 1;
+      }
+    }
+
+    if (area < minArea || cores < minCorePixels) continue;
+
+    for (let k = 0; k < area; k += 1) {
+      const i = (region.at(k) ?? 0) * 4;
+      out[i] = 0;
+      out[i + 1] = 0;
+      out[i + 2] = 0;
+      out[i + 3] = 0;
+    }
   }
 
   return { width, height, data: out };
