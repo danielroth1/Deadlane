@@ -239,8 +239,11 @@ Background removal is complete in all 16 cells: no magenta field, plate or drop 
 survives, every remaining pixel is one of the 16 palette colours, and `art:validate` reports
 0 off-palette pixels in 456,917 opaque pixels across the 6 shipped sheets. No cell carries
 baked-in text or a label (`art-03` attempt 1 was rejected for exactly that reason and is not
-selected). No cell has an opaque pixel on any border ring, in the shipped cell or in the raw
-quadrant — the raw sheets are clean to their own edge, which is a first for this pipeline.
+selected). Every shipped cell has 0 opaque pixels on all four border rings. The raw sheets
+are **not** clean to their own edge, though: the bottom-left quadrant of all four carries
+1–3 border-adjacent stray pixels (`x = 0`, `y = 1022–1023`), measured in the trim-collapse
+paragraph below. They fall outside the trim box only after the damage is done — they are
+what stretches it.
 
 Off-contract cells, read by eye on the processed 128 px cells:
 
