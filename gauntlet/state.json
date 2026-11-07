@@ -275,13 +275,44 @@
       "id": "WO-24",
       "title": "Enemy sheets 03-06 at 2x2",
       "file": "gauntlet/work-orders/WO-24-enemy-sheets.md",
-      "status": "pending",
+      "status": "blocked",
       "round": 2,
       "dependsOn": [
         "WO-23"
       ],
       "lastVerdict": "fail",
-      "note": "round 2 docs-only: nose-down cells, hot-pink rotor fan, three-quarter boat and cell-2 trim collapse all survive; fixes need pipeline code outside the whitelist"
+      "note": "split by size guard after round 2: three of four defects live in pipeline code outside the whitelist; replaced by WO-25 + WO-26 (pipeline fixes) and WO-27 (re-pack and record)"
+    },
+    {
+      "id": "WO-25",
+      "title": "Pipeline: trim guard and nose-up orientation for 2x2 enemy cells",
+      "file": "gauntlet/work-orders/WO-25-trim-and-orientation.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-23"
+      ]
+    },
+    {
+      "id": "WO-26",
+      "title": "Pipeline: key enclosed chroma residue and drop enemy plumes",
+      "file": "gauntlet/work-orders/WO-26-chroma-residue.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-25"
+      ]
+    },
+    {
+      "id": "WO-27",
+      "title": "Re-pack enemy sheets 03-06 and record measured yield",
+      "file": "gauntlet/work-orders/WO-27-enemy-repack.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-25",
+        "WO-26"
+      ]
     }
   ]
 }
