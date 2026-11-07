@@ -119,15 +119,15 @@
       "id": "WO-10",
       "title": "Art slot 01: style anchor",
       "file": "gauntlet/work-orders/WO-10-style-anchor.md",
-      "status": "escalated",
+      "status": "done",
       "round": 3,
       "dependsOn": [
         "WO-09b",
         "WO-15",
         "WO-16"
       ],
-      "lastVerdict": "fail",
-      "note": "palette 2 / consistency 2 / background 1: stray debris + bloom + speckle; third round used"
+      "lastVerdict": "pass",
+      "note": "Human override after 3/3 rounds: attempt 4 accepted as the style anchor. Scene plate (top-down highway + interceptor), speckle/grain and the model-painted contour accepted; road texture is art-13..18's deliverable, and the anchor is a style reference, not a sprite source. Reviewer had failed it on palette 2 / consistency 2 / background 1."
     },
     {
       "id": "WO-11",
