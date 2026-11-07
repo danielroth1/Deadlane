@@ -312,11 +312,13 @@
       "title": "Re-pack enemy sheets 03-06 and record measured yield",
       "file": "gauntlet/work-orders/WO-27-enemy-repack.md",
       "status": "pending",
-      "round": 0,
+      "round": 1,
       "dependsOn": [
         "WO-25",
         "WO-26"
-      ]
+      ],
+      "lastVerdict": "fail",
+      "note": "shipped art-03 cell 0 (nose-down) and art-06 cell 1 (three-quarter) despite the cell gate; usableCells relabelled not reported; delete both cells and re-atlas"
     }
   ]
 }

@@ -285,6 +285,75 @@ Metrics as reported by `art:process`: `art-03` palette 40.4, size variance 0.12,
 `art-06` 43.4 / 0.09 / 59 % / 84.3. The scorer ranks all four well and cannot see a
 180° rotation, which is exactly why the numbers are not the gate.
 
+### Measured yield: enemy sheets 03–06 (WO-27, fixed pipeline)
+
+Re-packed the same four paid attempts under the WO-25 trim/rotation and WO-26 chroma/plume
+fixes. **No image was generated, claimed or pulled.** This read supersedes the WO-24
+numbers above, which were taken before those fixes.
+
+| Slot | Attempt | `usableCells` (gate) |
+| --- | --- | --- |
+| `art-03-enemy-ground-a` | 2 | **3/4** |
+| `art-04-enemy-ground-b` | 1 | **4/4** |
+| `art-05-enemy-air` | 1 | **4/4** |
+| `art-06-enemy-sea` | 1 | **3/4** |
+
+`art:process` reports `usableCells 4/4` for every slot because that counter only rejects
+empty cells. The gate numbers above are the per-cell read below; where they differ, the
+gate is the truth.
+
+| Slot | Cell | Transparency | Opaque border px | Shipped footprint | Gate |
+| --- | --- | --- | --- | --- | --- |
+| `art-03` | 0 | 74.5 % | 0 | 69 × 120 | **fail — nose-down** |
+| `art-03` | 1 | 61.4 % | 0 | 65 × 120 | pass |
+| `art-03` | 2 | 55.3 % | 0 | 71 × 120 | pass |
+| `art-03` | 3 | 55.4 % | 0 | 69 × 120 | pass |
+| `art-04` | 0 | 52.3 % | 0 | 72 × 120 | pass |
+| `art-04` | 1 | 53.9 % | 0 | 98 × 120 | pass |
+| `art-04` | 2 | 47.3 % | 0 | 82 × 120 | pass |
+| `art-04` | 3 | 64.9 % | 0 | 61 × 120 | pass |
+| `art-05` | 0 | 72.3 % | 0 | 110 × 120 | pass |
+| `art-05` | 1 | 70.9 % | 0 | 109 × 120 | pass |
+| `art-05` | 2 | 71.9 % | 0 | 106 × 120 | pass |
+| `art-05` | 3 | 68.7 % | 0 | 97 × 120 | pass |
+| `art-06` | 0 | 72.6 % | 0 | 44 × 120 | pass |
+| `art-06` | 1 | 70.3 % | 0 | 101 × 120 | **fail — three-quarter + spray** |
+| `art-06` | 2 | 59.2 % | 0 | 78 × 120 | pass |
+| `art-06` | 3 | 75.6 % | 0 | 59 × 120 | pass |
+
+Off-contract cells, read by eye on the processed 128 px cells:
+
+- **`art-03` cell 0 (enforcer motorcycle) is nose-down.** The handlebars, front fork and
+  front lamp sit at the bottom of the shipped cell, with the rear wheel and tail at the
+  top. WO-24 already called this cell end-ambiguous; WO-25's uniform 180° flip of all four
+  `art-03` cells left it inverted. Cells 1–3 (switchblade interceptor, road lord heavy,
+  division sports coupe) are nose-up with the red nose lamps at the top.
+- **`art-04` — all four pass.** Cells 0 and 2 are nose-up after the declared 180° flip;
+  cell 1 (turret rig) and cell 3 (missile trailer) are upright as declared. Every cell is
+  one whole tracked/wheeled machine, square to the frame.
+- **`art-05` — all four pass.** All four aircraft are nose-up and square-on. The
+  hot-pink rotor fan on cell 0 is gone (the rotor now reads as a clean cross), and the
+  afterburner plume on cell 3 is gone. No plume pixel survives in any cell.
+- **`art-06` cell 1 (speedboat hostile) still fails.** It is drawn in three-quarter view,
+  not square-on overhead, and is ringed with model-drawn white spray. It is the cell
+  WO-24 identified and it was not re-generated. Cells 0, 2 and 3 (gunboat, hovercraft,
+  torpedo boat) are bow-up, spray-free and have distinct hulls.
+
+Pipeline fixes confirmed on all sixteen cells: every footprint is 120 px on its long axis,
+so the WO-24 trim collapse (89–95 px sprites pushed into a corner) is gone; there are **0
+`15 hot-pink` pixels**; there are **0 off-palette pixels** (`art:validate` checks 468,579
+opaque pixels across the 6 shipped sheets); and every cell has **0 opaque border-ring
+pixels** on all four sides.
+
+Metrics as reported by `art:process`: `art-03` palette 40.7, size variance 0.01, symmetry
+98 %, score 92.0; `art-04` 40.3 / 0.03 / 94 % / 91.1; `art-05` 47.9 / 0.04 / 88 % / 88.8;
+`art-06` 43.5 / 0.03 / 79 % / 88.2.
+
+**Gate outcome (WO-27): 14 of 16 cells pass.** `art-03` is **3/4**, `art-04` **4/4**,
+`art-05` **4/4**, `art-06` **3/4**. The two failing cells remain inside their packed sheets
+because dropping a cell requires a slot/atlas change, which is outside this work order's
+whitelist. No claim beyond these numbers is made here.
+
 ## 6. Motion
 
 We do **not** ask a diffusion model for animation. Animation is assembled in code:
