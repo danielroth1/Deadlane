@@ -167,12 +167,13 @@
       "id": "WO-13",
       "title": "Remaining art slots 03-20",
       "file": "gauntlet/work-orders/WO-13-art-batch.md",
-      "status": "pending",
+      "status": "blocked",
       "round": 0,
       "dependsOn": [
         "WO-11",
         "WO-12"
-      ]
+      ],
+      "note": "Oversized: 16 slots / ~18 images. Split into WO-23 (re-scope enemy sheets to 2x2 @128), WO-24 (enemy sheets 03-06), and per-group orders for boss, civilians, props/fx, tiles and UI."
     },
     {
       "id": "WO-14",
@@ -257,6 +258,28 @@
       ],
       "lastVerdict": "pass",
       "note": "player sheet 2x2 @128, axis-aligned only; house style no longer names scenery"
+    },
+    {
+      "id": "WO-23",
+      "title": "Re-scope the enemy sheets to 2x2 hero cells",
+      "file": "gauntlet/work-orders/WO-23-enemy-rescope.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-11"
+      ],
+      "lastVerdict": "pass",
+      "note": "art-03..06 re-scoped to 2x2 @128, axis-aligned only, owed cells recorded"
+    },
+    {
+      "id": "WO-24",
+      "title": "Enemy sheets 03-06 at 2x2",
+      "file": "gauntlet/work-orders/WO-24-enemy-sheets.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-23"
+      ]
     }
   ]
 }
