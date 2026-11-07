@@ -10,8 +10,9 @@ import type { SlotSpec } from './slots.js';
  * with it.
  */
 export const HOUSE_STYLE = [
-  'top-down 2D pixel art game asset, viewed directly from above',
-  'flat hard-edged colours, exactly one pixel dark outline around every shape',
+  'retro 2D pixel art game still, strict top-down orthographic view from directly overhead',
+  'camera perpendicular to the ground plane, flat map-like framing, no horizon, no sky, no vanishing point',
+  'flat hard-edged colours, exactly one pixel dark outline around every element in the frame, including every car, every lane marking and every guardrail',
   'limited 16-colour palette of cold steel greys, matte black, bone white, signal red, amber, teal and olive',
   'top-left key light, no gradients, no glow, no bloom, no soft shadows, no anti-aliasing',
   'crisp chunky pixels, readable silhouette at small size',
@@ -46,6 +47,11 @@ const NEGATIVE_HINTS = [
   'not blurred',
   'not tilted',
   'no perspective distortion',
+  'no horizon',
+  'no sky',
+  'no vanishing point',
+  'no one-point perspective',
+  'no chase camera',
 ];
 
 export interface BuiltPrompt {

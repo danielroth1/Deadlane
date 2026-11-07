@@ -49,9 +49,10 @@ export const SLOTS: readonly SlotSpec[] = [
     grid: { cols: 1, rows: 1 },
     finalSize: 640,
     subject:
-      'a single hero frame: one matte-black interceptor car seen from directly above, centred on an eight-lane asphalt highway at night, lane markings, steel guardrails, distant city lights on the horizon, tyre smoke behind the rear wheels',
+      'a single hero frame: one matte-black interceptor car seen from directly above, centred on an eight-lane asphalt highway at night, lane markings, steel guardrails, flat city light reflected on the wet asphalt, tyre smoke behind the rear wheels',
     emphasis: [
       'this is the visual reference for the whole game, so it must read as a game still, not a poster',
+      'the camera is perpendicular to the ground and the whole frame is road surface, with no horizon',
       'strong readable road markings and a clear top-down camera',
     ],
   },

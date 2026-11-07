@@ -188,9 +188,11 @@
       "id": "WO-16",
       "title": "Force a strict overhead camera in the house style",
       "file": "gauntlet/work-orders/WO-16-prompt-topdown.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "house style + anchor subject now demand strict overhead orthographic, no horizon"
     }
   ]
 }
