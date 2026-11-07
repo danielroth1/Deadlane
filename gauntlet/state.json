@@ -133,13 +133,21 @@
       "id": "WO-11",
       "title": "Art slot 02: player vehicle sheet (go/no-go gate)",
       "file": "gauntlet/work-orders/WO-11-player-vehicle.md",
-      "status": "escalated",
+      "status": "done",
       "round": 3,
       "dependsOn": [
         "WO-10"
       ],
-      "lastVerdict": "fail",
-      "note": "gate measured 4/4 whole+axis-aligned; fails on hostile red (tail bar -> signal-red), damaged/wrecked frame swap, and 128px sprite drawn unscaled in game"
+      "lastVerdict": "pass",
+      "note": "Human override after 3/3 rounds: the 2x2 @128 sheet is accepted. Measured 4/4 cells whole, axis-aligned and keyed (78-81% transparent), rubric grid 5 / silhouette 4 / palette 3 / perspective 4 / consistency 5 / background 5. Residuals carried by WO-22: 128px sprite drawn unscaled in game, damaged/wrecked frame names swapped, tail bar quantises to signal-red."
+    },
+    {
+      "id": "WO-22",
+      "title": "Draw the generated player sprite at 64 px and unswap its frames",
+      "file": "gauntlet/work-orders/WO-22-player-scale.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
     },
     {
       "id": "WO-12",
