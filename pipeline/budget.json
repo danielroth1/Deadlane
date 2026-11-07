@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "limit": 80,
+  "limit": 120,
   "perSlotLimit": 6,
   "createdAt": "2026-11-06T20:00:35.336Z",
   "slots": {

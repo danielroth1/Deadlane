@@ -225,6 +225,26 @@
       "dependsOn": [],
       "lastVerdict": "pass",
       "note": "chromaKey keys by hue+saturation; real sheet 79.9% keyed, all 16 borders >=96.9%"
+    },
+    {
+      "id": "WO-20",
+      "title": "Raise the image ceiling to 120 and migrate the ledger",
+      "file": "gauntlet/work-orders/WO-20-budget-120.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "ceiling 120 via art:migrate; all 6 attempts and $0.040 preserved"
+    },
+    {
+      "id": "WO-21",
+      "title": "Player vehicle sheet becomes a 2x2 hero sheet",
+      "file": "gauntlet/work-orders/WO-21-player-2x2.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-20"
+      ]
     }
   ]
 }

@@ -18,6 +18,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "art:init": "tsx pipeline/cli/init.ts",
+    "art:migrate": "tsx pipeline/cli/migrate.ts",
     "art:status": "tsx pipeline/cli/status.ts",
     "art:claim": "tsx pipeline/cli/claim.ts",
     "art:release": "tsx pipeline/cli/release.ts",

@@ -75,6 +75,52 @@ export function createLedger(slotIds: readonly string[], limit: number, perSlotL
   };
 }
 
+/**
+ * Lifetime ceiling for the project, in images.
+ *
+ * Raised from 80 to 120 by an explicit human decision (WO-20). Raise it only the same
+ * way — see AGENTS.md, "Do not raise the ceiling without the human saying so".
+ */
+export const DEFAULT_IMAGE_LIMIT = 120;
+
+/**
+ * Change the lifetime ceiling, keeping every existing slot and attempt intact.
+ *
+ * A limit below what has already been consumed is refused: lowering the ceiling would
+ * orphan recorded spend, and the ledger's whole job is to account for it.
+ */
+export function setLimit(ledger: Ledger, limit: number): Ledger {
+  if (!Number.isInteger(limit) || limit < 0) {
+    throw new BudgetError(`Image limit must be a non-negative integer, got "${String(limit)}".`);
+  }
+  const used = usedImages(ledger);
+  if (limit < used) {
+    throw new BudgetError(
+      `Refusing to set the image limit to ${limit}: ${used} image(s) are already consumed.`,
+      'The ceiling can never drop below recorded spend.',
+    );
+  }
+  return { ...ledger, limit };
+}
+
+/**
+ * Add registry slots that the ledger does not know about yet.
+ *
+ * Existing records are returned untouched (same ids, attempts, selection, status), so
+ * this is safe to run against a ledger with real spend. Slots are appended in the order
+ * given; nothing is reordered, renamed or removed.
+ */
+export function addMissingSlots(ledger: Ledger, slotIds: readonly string[]): Ledger {
+  const missing = slotIds.filter((id) => ledger.slots[id] === undefined);
+  if (missing.length === 0) return ledger;
+
+  const slots: Record<string, SlotRecord> = { ...ledger.slots };
+  for (const id of missing) {
+    slots[id] = { id, attempts: [], status: 'open' };
+  }
+  return { ...ledger, slots };
+}
+
 /** Images consumed across the whole project. Released attempts do not count. */
 export function usedImages(ledger: Ledger): number {
   return Object.values(ledger.slots)
