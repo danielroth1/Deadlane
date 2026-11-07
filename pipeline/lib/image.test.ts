@@ -7,14 +7,21 @@ import { chromaKey, hexToRgb, type Raster } from './image';
  * `#ee0466`, 174 away from the `#ff00ff` key, and the old colour-only match keyed nothing.
  *
  * These tests pin the replacement rule: the backdrop is the magenta-family region that
- * touches the image border. Connectivity, not colour, decides.
+ * touches the image border, where "magenta-family" means a bright, saturated hue in the
+ * 295–350° band — not proximity to one hex. Connectivity decides which pixels are subject.
  */
 
 const KEY = '#ff00ff';
 const BACKDROP = '#ee0466';
 const HOT_PINK = '#ff2e63';
+const VIOLET = '#6a4fa3';
+const GREY_PINK = '#8a7a80';
+const WHITE = '#ffffff';
 const PLATE = '#1a1c2c';
 const GREEN = '#00ff00';
+
+/** Every plate colour measured on the real sheet: same hue, different brightness. */
+const BACKDROPS = ['#ff00ff', '#ee0466', '#df0b61', '#c60756'] as const;
 
 function makeRaster(width: number, height: number, hex: string): Raster {
   const [r, g, b] = hexToRgb(hex);
@@ -150,5 +157,52 @@ describe('chromaKey', () => {
     expect(keyed).not.toBe(source);
     expect(source.data.equals(before)).toBe(true);
     expect(keyed.data.equals(before)).toBe(false);
+  });
+
+  it.each(BACKDROPS)('keys a full frame of %s to 0 opaque pixels', (hex) => {
+    const keyed = chromaKey(makeRaster(16, 16, hex), KEY);
+
+    expect(opaqueCount(keyed)).toBe(0);
+    expect(pixelAt(keyed, 0, 0)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+    expect(pixelAt(keyed, 8, 8)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+    expect(pixelAt(keyed, 15, 15)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
+  });
+
+  it('does not key a border-touching block of palette violet #6a4fa3', () => {
+    // Hue ~259°, well outside the magenta band, so connectivity must not matter.
+    const source = makeRaster(16, 16, BACKDROP);
+    fillRect(source, 0, 4, 5, 11, VIOLET);
+
+    const keyed = chromaKey(source, KEY);
+
+    expect(pixelAt(keyed, 0, 4)).toEqual(pixelAt(source, 0, 4));
+    expect(pixelAt(keyed, 5, 8)).toEqual(pixelAt(source, 5, 8));
+    expect(pixelAt(keyed, 0, 4).a).toBe(255);
+
+    // The backdrop around it is still keyed, so the fill reached the border freely.
+    expect(pixelAt(keyed, 0, 0).a).toBe(0);
+    expect(pixelAt(keyed, 15, 8).a).toBe(0);
+  });
+
+  it('does not key a border-touching desaturated grey-pink #8a7a80', () => {
+    // Saturation ~0.12: the hue is magenta-ish but this is a grey, not a plate.
+    const source = makeRaster(16, 16, BACKDROP);
+    fillRect(source, 10, 0, 15, 7, GREY_PINK);
+
+    const keyed = chromaKey(source, KEY);
+
+    expect(pixelAt(keyed, 10, 0)).toEqual(pixelAt(source, 10, 0));
+    expect(pixelAt(keyed, 15, 7)).toEqual(pixelAt(source, 15, 7));
+    expect(pixelAt(keyed, 15, 7).a).toBe(255);
+
+    expect(pixelAt(keyed, 15, 15).a).toBe(0);
+    expect(pixelAt(keyed, 10, 8).a).toBe(0);
+  });
+
+  it('still keys a pure white frame through the fallback', () => {
+    const keyed = chromaKey(makeRaster(8, 8, WHITE), KEY);
+
+    expect(opaqueCount(keyed)).toBe(0);
+    expect(pixelAt(keyed, 4, 4)).toEqual({ r: 0, g: 0, b: 0, a: 0 });
   });
 });

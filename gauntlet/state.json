@@ -215,6 +215,16 @@
       "dependsOn": [],
       "lastVerdict": "pass",
       "note": "chromaKey keys border-connected magenta family; enclosed hot-pink preserved"
+    },
+    {
+      "id": "WO-19",
+      "title": "Decide the backdrop by hue and saturation, not distance from one hex",
+      "file": "gauntlet/work-orders/WO-19-chroma-hue.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "chromaKey keys by hue+saturation; real sheet 79.9% keyed, all 16 borders >=96.9%"
     }
   ]
 }

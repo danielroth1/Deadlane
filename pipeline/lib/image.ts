@@ -103,6 +103,54 @@ export function crop(raster: Raster, box: Box): Raster {
   return { width: box.width, height: box.height, data: out };
 }
 
+/* -------------------------------- chroma key ------------------------------- */
+
+/**
+ * Hue in degrees (0–360) and saturation (0–1) for an 0–255 RGB triple.
+ *
+ * Brightness is deliberately not returned: the key predicate compares the max channel
+ * directly, which avoids a redundant round trip through the normalised value.
+ */
+interface HueSaturation {
+  readonly hue: number;
+  readonly saturation: number;
+}
+
+function hueAndSaturation(r: number, g: number, b: number): HueSaturation {
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const delta = max - min;
+  const saturation = max === 0 ? 0 : delta / max;
+
+  if (delta === 0) return { hue: 0, saturation };
+
+  let hue: number;
+  if (max === r) {
+    hue = (60 * ((((g - b) / delta) % 6) + 6)) % 360;
+  } else if (max === g) {
+    hue = 60 * ((b - r) / delta + 2);
+  } else {
+    hue = 60 * ((r - g) / delta + 4);
+  }
+  return { hue, saturation };
+}
+
+/** Darker than this and the pixel is shading, not a flat plate, whatever its hue. */
+const MIN_KEY_BRIGHTNESS = 90;
+
+/** Washed-out pixels are greys, not backdrops. */
+const MIN_KEY_SATURATION = 0.55;
+
+/**
+ * Warm drift of the backdrop relative to the key hue. `#ff00ff` is pure magenta at 300°;
+ * the endpoint paints plates 20–40° warmer (measured: 334.8–335.7°), so the accepted family
+ * is centred 22.5° into that drift, at 322.5°.
+ */
+const HUE_DRIFT_DEGREES = 22.5;
+
+/** Half-width of the magenta family: 322.5° ± 27.5° gives the 295–350° band. */
+const HUE_HALF_WIDTH_DEGREES = 27.5;
+
 /**
  * Turn the flat generation background into transparency.
  *
@@ -111,24 +159,36 @@ export function crop(raster: Raster, box: Box): Raster {
  * models that ignore the background instruction, but it is a review failure if it happens
  * often.
  *
- * The model does not always render the exact key colour: attempt 5 of the style anchor came
- * back with a `#ee0466` plate, which sits 174 away from `#ff00ff` in Manhattan distance and
- * so survived a key matched at `tolerance = 90`. Loosening the tolerance is not an option,
- * because palette colour 15 (`hot-pink`, `#ff2e63`) is only 202 away from the key and would
- * be eaten alongside it.
+ * The predicate is a **hue and saturation test, not a distance from one hex**. A radius
+ * around `#ff00ff` cannot work here: the endpoint keeps the backdrop in the magenta hue
+ * band but drifts its brightness across a single sheet, so measured plate pixels sit at
+ * `#df0b61`, `#ee0466` and `#c60756` — 194 to 236 away in Manhattan distance, well outside
+ * any tolerance that is still safe for the palette. Widening the radius instead is worse
+ * than useless, because palette colour 15 (`hot-pink`, `#ff2e63`) is also magenta and would
+ * be eaten with the plate. Hue and saturation are invariant under that brightness drift,
+ * which is what makes them the right feature: every one of those plate colours lands
+ * between 334.8° and 335.7° at saturation > 0.94.
  *
- * The backdrop is therefore identified by geometry rather than by colour alone: it is the
- * flat region that touches the image border. Only border-connected pixels within
- * `tolerance * 2` of the key are cleared, so an enclosed pixel survives however close its
- * colour is to magenta. The flood fill is 4-connected and iterative, so a full-size sheet
- * cannot blow the call stack.
+ * A pixel is backdrop when its max channel is at least 90, its saturation is at least 0.55,
+ * and its hue falls in the magenta band 295–350° (the band is anchored on the key's own hue
+ * and widened by `tolerance / 12`, so `tolerance` still means "how much drift to forgive").
+ *
+ * Colour alone is still not sufficient: palette colour 15, `#ff2e63`, sits at hue ~345° and
+ * 0.82 saturation, inside the band. It survives only because of connectivity — the backdrop
+ * is the flat region that touches the image border, so only border-connected pixels in the
+ * band are cleared. `#ff2e63` is drawn inside the car, enclosed by opaque body pixels, and
+ * the flood fill never reaches it. The fill is 4-connected and iterative, so a full-size
+ * sheet cannot blow the call stack.
  */
 export function chromaKey(raster: Raster, keyHex: string, tolerance = 90): Raster {
-  const key = hexToRgb(keyHex);
+  const [keyR, keyG, keyB] = hexToRgb(keyHex);
+  const keyHue = hueAndSaturation(keyR, keyG, keyB).hue;
+  const centre = keyHue + HUE_DRIFT_DEGREES;
+  const halfWidth = HUE_HALF_WIDTH_DEGREES + tolerance / 12;
+
   const { width, height } = raster;
   const source = raster.data;
   const out = Buffer.from(source);
-  const limit = tolerance * 2;
 
   // Unchanged fallback: a pure white plate means the model ignored the background
   // instruction entirely.
@@ -148,11 +208,18 @@ export function chromaKey(raster: Raster, keyHex: string, tolerance = 90): Raste
 
   const isKeyFamily = (pixel: number): boolean => {
     const i = pixel * 4;
-    const distance =
-      Math.abs(source.readUInt8(i) - key[0]) +
-      Math.abs(source.readUInt8(i + 1) - key[1]) +
-      Math.abs(source.readUInt8(i + 2) - key[2]);
-    return distance < limit;
+    const r = source.readUInt8(i);
+    const g = source.readUInt8(i + 1);
+    const b = source.readUInt8(i + 2);
+
+    if (Math.max(r, g, b) < MIN_KEY_BRIGHTNESS) return false;
+
+    const { hue, saturation } = hueAndSaturation(r, g, b);
+    if (saturation < MIN_KEY_SATURATION) return false;
+
+    // Signed angular distance to the centre of the family, which wraps cleanly at 0/360.
+    const offset = ((hue - centre + 540) % 360) - 180;
+    return Math.abs(offset) <= halfWidth;
   };
 
   const seen = new Uint8Array(width * height);
