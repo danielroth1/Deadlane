@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AUDIO } from '@/config';
-import { AudioSystem } from './audio';
+import { AudioSystem, WEAPON_CUE_EVENTS, weaponCue } from './audio';
 import {
   AUDIO_KEY,
   MUTE_KEY,
@@ -293,5 +293,46 @@ describe('audio registry ownership', () => {
     expect(readStoredMute()).toBe(false);
     expect(() => storeMute(true)).not.toThrow();
     expect(acquireAudio(registry).isMuted).toBe(false);
+  });
+});
+
+describe('special weapon cues', () => {
+  it('gives every special weapon event its own cue', () => {
+    const cues = WEAPON_CUE_EVENTS.map(weaponCue);
+
+    expect(new Set(cues).size, 'two events resolve to the same sound').toBe(cues.length);
+  });
+
+  it('resolves every event to a cue at all', () => {
+    for (const event of WEAPON_CUE_EVENTS) {
+      expect(weaponCue(event).length).toBeGreaterThan(0);
+    }
+  });
+
+  it('emits audio for every cue instead of falling through the switch', () => {
+    for (const event of WEAPON_CUE_EVENTS) {
+      const ctx = fakeContext();
+      const audio = systemOn(ctx);
+      audio.unlock();
+
+      // Master gain plus engine gain are built by `unlock`; anything else is the cue.
+      const before = ctx.gains.length;
+      audio.play(weaponCue(event));
+
+      expect(ctx.gains.length, `${event} made no sound`).toBeGreaterThan(before);
+      audio.destroy();
+    }
+  });
+
+  it('stays silent for a cue while muted', () => {
+    const ctx = fakeContext();
+    const audio = systemOn(ctx);
+    audio.unlock();
+    audio.setMuted(true);
+
+    const before = ctx.gains.length;
+    for (const event of WEAPON_CUE_EVENTS) audio.play(weaponCue(event));
+
+    expect(ctx.gains.length).toBe(before);
   });
 });

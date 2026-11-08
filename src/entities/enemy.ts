@@ -1,9 +1,10 @@
 import type Phaser from 'phaser';
-import { COLLISION, MOTION, PLAYER, SPAWN, WORLD } from '@/config';
+import { COLLISION, MOTION, PLAYER, SPAWN, WEAPON_FX, WORLD } from '@/config';
 import { laneCenter, type RoadProfile } from '@/levels/types';
 import type { EnemyDef } from '@/content';
 import type { Art } from '@/art';
 import { easeTowards } from '@/systems/motion';
+import { createSpin, isSpinning, spinDrift, type SpinState } from '@/systems/weapons';
 
 /**
  * A hostile unit.
@@ -56,6 +57,16 @@ export class EnemyVehicle {
   /** The last world distance and scroll the unit was stepped at, world px and px/s. */
   private lastDistance: number | null = null;
   private scroll = 0;
+  /**
+   * The oil spin in progress, or null.
+   *
+   * A spinning car has no steering and no aim: it drifts sideways on a decaying sine of the
+   * scene clock, its sprite turns, and it cannot fire. It is _not_ destroyed — a slick costs
+   * control, and the car is still shootable while it flails.
+   */
+  private spin: SpinState | null = null;
+  /** The scene clock this frame, so the spin can be read without reaching for the scene. */
+  private now = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -115,6 +126,16 @@ export class EnemyVehicle {
 
   get wantsToFire(): boolean {
     return false;
+  }
+
+  /** True while a slick still has this car spinning. */
+  get isSpinning(): boolean {
+    return isSpinning(this.spin, this.now);
+  }
+
+  /** A slick was crossed: lose control for `durationMs`. A second slick restarts the spin. */
+  applySpin(now: number, durationMs: number): void {
+    this.spin = createSpin(now, durationMs);
   }
 
   /** Box centre on the lane axis, world px. */
@@ -189,6 +210,7 @@ export class EnemyVehicle {
   }
 
   update(ctx: EnemyUpdateContext, road: RoadProfile): boolean {
+    this.now = ctx.now;
     this.at += (this.speed + this.impulseAt) * ctx.dt;
     this.impulseAt = easeTowards(this.impulseAt, 0, COLLISION.impulseDrag * ctx.dt);
     this.phase += ctx.dt;
@@ -235,9 +257,17 @@ export class EnemyVehicle {
     }
 
     // Smooth lateral motion so nothing teleports sideways.
-    const steerStep = (targetX - this.currentX) * Math.min(1, ctx.dt * 6);
-    this.steerVelocity = ctx.dt > 0 ? steerStep / ctx.dt : 0;
-    this.currentX += steerStep + this.impulseX * ctx.dt;
+    const spinning = this.isSpinning;
+    if (spinning) {
+      // No steering while the wheels are spinning: the drift is the whole of the motion.
+      const drift = spinDrift(this.spin, ctx.now, WEAPON_FX.oilSpinDrift, WEAPON_FX.oilSpinHz);
+      this.steerVelocity = drift;
+      this.currentX += (drift + this.impulseX) * ctx.dt;
+    } else {
+      const steerStep = (targetX - this.currentX) * Math.min(1, ctx.dt * 6);
+      this.steerVelocity = ctx.dt > 0 ? steerStep / ctx.dt : 0;
+      this.currentX += steerStep + this.impulseX * ctx.dt;
+    }
     this.impulseX = easeTowards(this.impulseX, 0, COLLISION.impulseDrag * ctx.dt);
 
     const minX = road.left + this.sprite.displayWidth * 0.3;
@@ -247,11 +277,17 @@ export class EnemyVehicle {
     this.sprite.y = screenY;
     if (screenY >= 0 && screenY <= WORLD.height) this.entered = true;
 
-    // Lean into the direction of travel, snapped to whole degrees.
-    const delta = targetX - this.currentX;
-    this.sprite.setRotation(delta > 2 ? 0.06 : delta < -2 ? -0.06 : 0);
+    if (spinning) {
+      // A whole, visible turn: clock-derived, so the same run spins the same way twice.
+      const turns = ((ctx.now - (this.spin?.from ?? ctx.now)) / 1000) * WEAPON_FX.oilSpinTurns;
+      this.sprite.setRotation(turns * Math.PI * 2);
+    } else {
+      // Lean into the direction of travel, snapped to whole degrees.
+      const delta = targetX - this.currentX;
+      this.sprite.setRotation(delta > 2 ? 0.06 : delta < -2 ? -0.06 : 0);
+    }
 
-    if (this.def.behavior === 'turret' && this.def.fireRate) {
+    if (!spinning && this.def.behavior === 'turret' && this.def.fireRate) {
       if (ctx.now >= this.nextFireAt && screenY > -40 && screenY < PLAYER.y) {
         this.nextFireAt = ctx.now + this.def.fireRate;
         return true;

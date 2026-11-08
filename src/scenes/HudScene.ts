@@ -29,6 +29,12 @@ export interface DebugControl {
   stageBarrier(): void;
   /** Put a ramp in the car's lane with a solid barrier beyond it, to test the jump. */
   stageRampBarrier(): void;
+  /** Put a pursuer just short of a freshly laid slick, to test the oil spin. */
+  stageOilPursuer(): void;
+  /** Put a pursuer in the rocket's path and launch one. */
+  stageRocketTarget(): void;
+  /** Put a pursuer inside the flame cone and fire the flamethrower. */
+  stageFlameTarget(): void;
   /** Advance the run by `pixels` of world distance instead of waiting out the clock. */
   fastForward(pixels: number): void;
   /** Spend one life through the real wreck path, respawning or ending the run. */
@@ -206,8 +212,11 @@ export class HudScene extends Phaser.Scene {
     const g = this.pips;
     const x = 8;
     const y = GAME.height - 18;
-    /** Where the life pips start: past the armour pips (5 × 9 px) and the gun oil counter. */
-    const livesX = x + 130;
+    /**
+     * Where the life pips start: past the four weapon counters, which are 6 oil pips, 4
+     * smoke pips, 8 rocket pips and 6 flame pips at 5 px a pip plus their gaps.
+     */
+    const livesX = x + 208;
 
     g.clear();
 
@@ -233,12 +242,19 @@ export class HudScene extends Phaser.Scene {
       }
     }
 
-    // Oil and smoke counters.
+    // Weapon counters, left to right in the order the keys sit on the keyboard: the two
+    // dropped hazards, then the two forward specials.
     g.fillStyle(PALETTE.violet, 1);
     for (let i = 0; i < state.oil; i += 1) g.fillRect(x + 62 + i * 5, y, 3, 7);
 
     g.fillStyle(PALETTE.bone, 1);
-    for (let i = 0; i < state.smoke; i += 1) g.fillRect(x + 96 + i * 5, y, 3, 7);
+    for (let i = 0; i < state.smoke; i += 1) g.fillRect(x + 98 + i * 5, y, 3, 7);
+
+    g.fillStyle(PALETTE.teal, 1);
+    for (let i = 0; i < state.rockets; i += 1) g.fillRect(x + 124 + i * 5, y, 3, 7);
+
+    g.fillStyle(PALETTE.rust, 1);
+    for (let i = 0; i < state.flame; i += 1) g.fillRect(x + 170 + i * 5, y, 3, 7);
   }
 
   private drawSpeed(state: HudState): void {
@@ -416,6 +432,9 @@ export class HudScene extends Phaser.Scene {
         this.gameScene.debugStageCollision(approachSpeed),
       stageBarrier: () => this.gameScene.debugStageBarrier(),
       stageRampBarrier: () => this.gameScene.debugStageRampBarrier(),
+      stageOilPursuer: () => this.gameScene.debugStageOilPursuer(),
+      stageRocketTarget: () => this.gameScene.debugStageRocketTarget(),
+      stageFlameTarget: () => this.gameScene.debugStageFlameTarget(),
       fastForward: (pixels: number) => this.gameScene.debugFastForward(pixels),
       loseLife: () => this.gameScene.debugLoseLife(),
       destroyPlayer: () => this.gameScene.debugDestroyPlayer(),

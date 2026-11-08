@@ -831,6 +831,13 @@ export const SLOTS: readonly SlotSpec[] = [
       'flat colour, hard edges',
       'no glow, no soft gradients and no anti-aliasing',
     ],
+    /**
+     * Attempt 7's four flame-stream cells carry the cell captions baked into the artwork
+     * (`Flame stream`, `Frame streamm`, …), so they can never render in game. The flame
+     * stream falls back to the art-10 flame frame instead; every other cell on the sheet
+     * is clean and is wired in `src/art/ids.ts`.
+     */
+    droppedCellsByAttempt: { 7: [0, 1, 2, 3] },
   },
 ];
 

@@ -1,5 +1,5 @@
 {
-  "$comment": "Player equipment. Cooldowns and lifetimes are in milliseconds and are the only place those numbers live. The slick trails behind the car; the smoke cloud hangs between the car and the pursuit.",
+  "$comment": "Player equipment. Cooldowns and lifetimes are in milliseconds and are the only place those numbers live. A dropped slick or cloud is world-static: it stays where it was laid. The rocket's `range` is its fuse, and the flame's `range` is the far edge of its cone.",
   "weapons": [
     {
       "id": "gun",
@@ -17,9 +17,9 @@
       "slot": "rear",
       "cooldown": 900,
       "ammo": "oil",
-      "damage": 2,
+      "damage": 0,
       "duration": 7000,
-      "description": "Drops a slick behind the car. Pursuers that hit it lose control."
+      "description": "Lays a slick on the road ahead. Pursuers that cross it lose control and drift."
     },
     {
       "id": "smoke",
@@ -29,7 +29,32 @@
       "ammo": "smoke",
       "damage": 0,
       "duration": 4500,
-      "description": "Blocks pursuit vision. Hostiles behind the cloud stop firing."
+      "description": "Lays a cloud across the road. Hostiles beyond it stop firing."
+    },
+    {
+      "id": "rocket",
+      "label": "ROCKETS",
+      "slot": "forward",
+      "cooldown": 800,
+      "ammo": "rocket",
+      "damage": 4,
+      "projectileSpeed": 520,
+      "range": 640,
+      "splashRadius": 56,
+      "description": "Forward rocket. Detonates on the first thing it touches and hurts everything inside the blast."
+    },
+    {
+      "id": "flame",
+      "label": "FLAME",
+      "slot": "forward",
+      "cooldown": 1200,
+      "ammo": "flame",
+      "damage": 1,
+      "range": 140,
+      "coneHalfWidth": 30,
+      "duration": 900,
+      "tickMs": 150,
+      "description": "Short-range cone of fire. Burns whatever is in front of the car and reaches nothing beyond it."
     }
   ]
 }

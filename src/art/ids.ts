@@ -62,6 +62,65 @@ export const EFFECT_ART: Record<EffectKind, readonly string[]> = {
   splash: ['fx/water-splash'],
 };
 
+/** The effects the special weapons draw from `art-25-fx-expanded`. */
+export type WeaponEffectKind = 'blast' | 'shockwave' | 'debris' | 'smoke' | 'splash' | 'sparks';
+
+/**
+ * Weapon effect → candidate frame ids, most specific first.
+ *
+ * art-25 attempt 7 is shifted from its labels across the whole sheet, so every entry below
+ * was matched on `pipeline/work/art-25-fx-expanded/attempt-7/cell-N.png`, not on the cell
+ * name. Row-major from cell 4 (cells 0–3 carry baked-in captions and are declared dropped in
+ * `pipeline/registry/slots.ts`, so those frames never reach the atlas):
+ *   4 a small smoke puff (labelled `explosion medium`) · 5 a larger cloud (labelled
+ *   `explosion large`) · 6 the largest cloud (labelled `smoke puff`) · 7 the sheet's only
+ *   explosion (labelled `smoke cloud`) · 8 scattered chunks (labelled `smoke ring`) ·
+ *   9 a rock cluster (labelled `debris burst`) · 10 a dark ring (labelled `debris chunk`) ·
+ *   11 a white arc (labelled `shockwave ring`) · 12 a small splash (labelled
+ *   `shockwave arc`) · 13 and 14 larger splashes · 15 a spark burst.
+ */
+export const WEAPON_EFFECT_ART: Record<WeaponEffectKind, readonly string[]> = {
+  // Cell 7 — the rocket's detonation.
+  blast: ['fx-expanded/smoke-cloud'],
+  // Cells 10 and 11 — a whole ring, then the single arc.
+  shockwave: ['fx-expanded/debris-chunk', 'fx-expanded/shockwave-ring'],
+  // Cells 8 and 9 — flung chunks, then the rock cluster.
+  debris: ['fx-expanded/smoke-ring', 'fx-expanded/debris-burst'],
+  // Cells 6 and 4 — the two largest clouds.
+  smoke: ['fx-expanded/smoke-puff', 'fx-expanded/explosion-medium'],
+  // Cells 14, 13 and 12 — large, medium and small.
+  splash: [
+    'fx-expanded/water-splash-large',
+    'fx-expanded/water-splash-small',
+    'fx-expanded/shockwave-arc',
+  ],
+  // Cell 15.
+  sparks: ['fx-expanded/sparks-burst'],
+};
+
+/**
+ * The flame stream, in flicker order, drawn from art-10.
+ *
+ * art-25's three flame-stream cells carry the cell captions baked into the artwork, so the
+ * order falls back to art-10 for the flame: cell 3 is a literal flame (`fx/fireball`) and
+ * the two bursts behind it are what the stream flickers between. All three frames already
+ * ship, so the fallback costs no extra image.
+ */
+export const FLAME_STREAM_ART: readonly (readonly string[])[] = [
+  ['fx/fireball'],
+  ['fx/explosion-medium'],
+  ['fx/explosion-small'],
+];
+
+/**
+ * The rocket's frame in flight.
+ *
+ * art-10 cell 12 is labelled `electric arc` but draws a small projectile with a spark
+ * trail — the only missile-shaped cell in either sheet, and it is already shipped.
+ */
+export const ROCKET_ART: readonly string[] = ['fx/electric-arc'];
+
+
 /** The prop ids the level `propPool` rows place. */
 export type PropKind =
   | 'cone'

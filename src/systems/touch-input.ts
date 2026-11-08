@@ -11,7 +11,15 @@ import { TOUCH } from '@/config';
  */
 
 /** Everything a finger can do on the pad. Steer has no button: it is a drag. */
-export type PadAction = 'boost' | 'brake' | 'fire' | 'oil' | 'smoke' | 'pause';
+export type PadAction =
+  | 'boost'
+  | 'brake'
+  | 'fire'
+  | 'oil'
+  | 'smoke'
+  | 'rocket'
+  | 'flame'
+  | 'pause';
 
 /**
  * `hold` behaves like a held key (accelerate, brake, fire); `tap` fires once per press,
@@ -40,6 +48,8 @@ export const PAD_BUTTONS: readonly PadButton[] = [
   { action: 'brake', label: 'BRK', behaviour: 'hold', rect: TOUCH.pad.brake },
   { action: 'oil', label: 'OIL', behaviour: 'tap', rect: TOUCH.pad.oil },
   { action: 'smoke', label: 'SMOKE', behaviour: 'tap', rect: TOUCH.pad.smoke },
+  { action: 'rocket', label: 'RKT', behaviour: 'tap', rect: TOUCH.pad.rocket },
+  { action: 'flame', label: 'FLAME', behaviour: 'tap', rect: TOUCH.pad.flame },
   { action: 'pause', label: '', behaviour: 'tap', rect: TOUCH.pad.pause },
 ];
 

@@ -38,8 +38,8 @@ export function playerArtState(armor: number): PlayerArtState {
   return 'clean';
 }
 
-/** The three weapons the car carries; cadence and lifetimes live in `weapons.json`. */
-export type WeaponId = 'gun' | 'oil' | 'smoke';
+/** The weapons the car carries; cadence, ranges and lifetimes live in `weapons.json`. */
+export type WeaponId = 'gun' | 'oil' | 'smoke' | 'rocket' | 'flame';
 
 /** Collision half-width as a fraction of the displayed sprite width. */
 export const HALF_WIDTH_RATIO = 0.36;
@@ -63,6 +63,8 @@ export class PlayerVehicle {
   armor: number = PLAYER.startArmor;
   oil: number = PLAYER.startOil;
   smoke: number = PLAYER.startSmoke;
+  rockets: number = PLAYER.startRockets;
+  flame: number = PLAYER.startFlame;
 
   private invulnerableUntil = 0;
   /**
@@ -84,6 +86,8 @@ export class PlayerVehicle {
     gun: Number.NEGATIVE_INFINITY,
     oil: Number.NEGATIVE_INFINITY,
     smoke: Number.NEGATIVE_INFINITY,
+    rocket: Number.NEGATIVE_INFINITY,
+    flame: Number.NEGATIVE_INFINITY,
   };
   private readonly baseX: number;
   private artState: PlayerArtState = 'clean';
@@ -343,6 +347,30 @@ export class PlayerVehicle {
     this.smoke -= 1;
     this.lastUsedAt.smoke = time;
     return true;
+  }
+
+  /** Launch one rocket. False while the tube is empty or still cooling down. */
+  useRocket(time: number, cooldown: number): boolean {
+    if (this.rockets <= 0 || !this.canUseWeapon('rocket', time, cooldown)) return false;
+    this.rockets -= 1;
+    this.lastUsedAt.rocket = time;
+    return true;
+  }
+
+  /** Fire one flame burst. False with no fuel left or while the burner is recovering. */
+  useFlame(time: number, cooldown: number): boolean {
+    if (this.flame <= 0 || !this.canUseWeapon('flame', time, cooldown)) return false;
+    this.flame -= 1;
+    this.lastUsedAt.flame = time;
+    return true;
+  }
+
+  addRockets(n = 1): void {
+    this.rockets = Math.min(PLAYER.maxRockets, this.rockets + n);
+  }
+
+  addFlame(n = 1): void {
+    this.flame = Math.min(PLAYER.maxFlame, this.flame + n);
   }
 
   addOil(n = 1): void {

@@ -1,0 +1,82 @@
+{
+  "slot": "art-25-fx-expanded",
+  "code": "fx-expanded",
+  "cellSize": 64,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-25-fx-expanded.png",
+  "frames": {
+    "fx-expanded/explosion-medium": {
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/explosion-large": {
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/smoke-puff": {
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/smoke-cloud": {
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/smoke-ring": {
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/debris-burst": {
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/debris-chunk": {
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/shockwave-ring": {
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/shockwave-arc": {
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/water-splash-small": {
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/water-splash-large": {
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "fx-expanded/sparks-burst": {
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    }
+  }
+}

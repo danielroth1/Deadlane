@@ -20,6 +20,8 @@ const ACCENT: Readonly<Record<PadAction, number>> = {
   brake: PALETTE.signalRed,
   oil: PALETTE.violet,
   smoke: PALETTE.bone,
+  rocket: PALETTE.teal,
+  flame: PALETTE.rust,
   pause: PALETTE.steelLight,
 };
 

@@ -96,6 +96,91 @@ export function oilCatches(
 }
 
 /**
+ * A dropped hazard: a world station and the lane x it was laid at.
+ *
+ * Both are fixed at the drop point. The car drives away from the hazard, so only the screen
+ * projection moves; the hazard itself never rides along with the player.
+ */
+export interface HazardSpot {
+  readonly at: number;
+  readonly x: number;
+}
+
+/** Where a world-static hazard is drawn this frame. `at` is returned untouched. */
+export function projectHazard(
+  spot: HazardSpot,
+  distance: number,
+  playerY = PLAYER.y,
+): HazardSpot & { readonly y: number } {
+  return { at: spot.at, x: spot.x, y: screenYFromWorldAt(spot.at, distance, playerY) };
+}
+
+/** A car caught by a slick: it spins for a while, drifts sideways and cannot aim. */
+export interface SpinState {
+  /** Scene-clock time the spin started. */
+  readonly from: number;
+  /** Scene-clock time control comes back. */
+  readonly until: number;
+}
+
+/** Start a spin now, for `durationMs`. */
+export function createSpin(now: number, durationMs: number): SpinState {
+  return { from: now, until: now + durationMs };
+}
+
+/** Is the car still out of control? True from the moment the slick caught it. */
+export function isSpinning(spin: SpinState | null, now: number): boolean {
+  return spin !== null && now >= spin.from && now < spin.until;
+}
+
+/**
+ * Lateral drift of a spinning car, px/s.
+ *
+ * A decaying sine of the scene clock rather than a random walk: the same run at the same
+ * frame rate drifts the same way every replay, which is what keeps a seeded run honest.
+ * Zero once the spin ends, so the car steers itself straight again.
+ */
+export function spinDrift(
+  spin: SpinState | null,
+  now: number,
+  peak: number,
+  hz: number,
+): number {
+  if (spin === null || now >= spin.until) return 0;
+  const age = Math.max(0, now - spin.from) / 1000;
+  const length = Math.max(1, spin.until - spin.from);
+  const decay = (spin.until - now) / length;
+  return Math.sin(age * hz * Math.PI * 2) * peak * decay;
+}
+
+/**
+ * Does a flame cone from `origin` reach `target`?
+ *
+ * The cone opens forward from the nose: `nearWidth` half-width at the bumper, `farWidth` at
+ * `range`. Nothing behind the nose and nothing past `range` is touched, which is what makes
+ * the weapon lethal at point-blank and useless at distance.
+ */
+export function flameCatches(
+  origin: Body,
+  target: Body,
+  range: number,
+  nearWidth: number,
+  farWidth: number,
+): boolean {
+  const ahead = origin.y - target.y;
+  if (ahead <= 0 || ahead > range) return false;
+  const spread = nearWidth + (farWidth - nearWidth) * (ahead / range);
+  return Math.abs(target.x - origin.x) <= spread;
+}
+
+/** Does a burst at `centre` reach `target`? A circle, so a corner never counts as a hit. */
+export function withinBlast(centre: Body, target: Body, radius: number): boolean {
+  const dx = target.x - centre.x;
+  const dy = target.y - centre.y;
+  return dx * dx + dy * dy <= radius * radius;
+}
+
+/**
  * Does a smoke cloud at `cloudAt` hide the player from a hostile at `hostileAt`?
  *
  * Only a cloud ahead of the car can sit between the two, and only a hostile beyond the

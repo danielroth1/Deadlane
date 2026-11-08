@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { PLAYER, WEAPON_FX } from '@/config';
 import {
+  createSpin,
+  flameCatches,
   forwardShot,
+  isSpinning,
   oilCatches,
+  projectHazard,
   returnShot,
   screenYFromWorldAt,
   smokeBlocksFire,
+  spinDrift,
+  withinBlast,
   worldAtFromScreenY,
 } from './weapons';
 
@@ -112,7 +118,7 @@ describe('returnShot', () => {
 });
 
 describe('oilCatches', () => {
-  const slick = { x: 320, y: PLAYER_Y + WEAPON_FX.oilOffset };
+  const slick = { x: 320, y: PLAYER_Y - WEAPON_FX.oilDropAhead };
 
   it('catches a pursuer sitting on the slick', () => {
     expect(
@@ -144,16 +150,17 @@ describe('oilCatches', () => {
     ).toBe(false);
   });
 
-  it('is true for a slick dropped at the car rear, which the old gate rejected', () => {
-    // `hazard.sprite.y < PLAYER.y - 80` could never hold for a slick at PLAYER.y + 30.
-    expect(slick.y).toBeGreaterThan(PLAYER_Y);
+  it('is true for a slick laid up the road, which is where a drop now lands', () => {
+    // A world-static slick has to be ahead: everything that can cross it is ahead too.
+    expect(slick.y).toBeLessThan(PLAYER_Y);
     expect(oilCatches(slick, { x: slick.x, y: slick.y }, 34, 30)).toBe(true);
   });
 });
 
 describe('smokeBlocksFire', () => {
   const playerAt = 1000;
-  const cloudAt = playerAt - WEAPON_FX.smokeOffset;
+  /** A cloud laid one cover-length up the road: the smallest window that can blind anyone. */
+  const cloudAt = playerAt + WEAPON_FX.smokeCover;
 
   it('blinds a hostile beyond the cloud', () => {
     expect(smokeBlocksFire(cloudAt, playerAt + 200, playerAt, WEAPON_FX.smokeCover)).toBe(true);
@@ -174,4 +181,129 @@ describe('smokeBlocksFire', () => {
   it('never blinds a hostile that is behind the car', () => {
     expect(smokeBlocksFire(cloudAt, playerAt - 100, playerAt, WEAPON_FX.smokeCover)).toBe(false);
   });
+
+  it('is laid ahead of the car, where it can screen the hostiles it is hiding from', () => {
+    expect(cloudAt).toBeGreaterThan(playerAt);
+  });
 });
+
+describe('projectHazard', () => {
+  it('leaves the drop point alone and only moves the screen projection', () => {
+    const spot = { at: 1500, x: 320 };
+
+    const fresh = projectHazard(spot, 1400);
+    const later = projectHazard(spot, 2000);
+
+    // The hazard itself never moves: it is the car that drives away from it.
+    expect(fresh.at).toBe(1500);
+    expect(later.at).toBe(1500);
+    expect(fresh.x).toBe(320);
+    expect(later.x).toBe(320);
+
+    // A hundred px ahead is drawn ABOVE the car, and the same spot falls behind it as the
+    // run advances.
+    expect(fresh.y).toBe(PLAYER_Y - 100);
+    expect(later.y).toBe(PLAYER_Y + 500);
+  });
+
+  it('does not ride with the car: the gap grows by exactly the distance travelled', () => {
+    const spot = { at: 900, x: 100 };
+
+    expect(projectHazard(spot, 0).y - projectHazard(spot, 600).y).toBe(-600);
+  });
+});
+
+describe('oil spin', () => {
+  const spin = createSpin(1000, WEAPON_FX.oilSpinMs);
+
+  it('lasts exactly the window the slick hands out', () => {
+    expect(isSpinning(spin, 999)).toBe(false);
+    expect(isSpinning(spin, 1000)).toBe(true);
+    expect(isSpinning(spin, 1000 + WEAPON_FX.oilSpinMs - 1)).toBe(true);
+    expect(isSpinning(spin, 1000 + WEAPON_FX.oilSpinMs)).toBe(false);
+    expect(isSpinning(null, 1000)).toBe(false);
+  });
+
+  it('drifts sideways on both sides of the lane and settles when control returns', () => {
+    const quarter = WEAPON_FX.oilSpinMs / 4;
+    const peak = 90;
+    // Half a hertz over a 1.5 s spin: a quarter of the window is a quarter turn, so the two
+    // ends of the drift have opposite signs by construction.
+    const hz = 0.5;
+
+    expect(spinDrift(spin, 1000, peak, hz)).toBeCloseTo(0, 5);
+    expect(spinDrift(spin, 1000 + quarter, peak, hz)).toBeGreaterThan(0);
+    expect(spinDrift(spin, 1000 + quarter * 3, peak, hz)).toBeLessThan(0);
+    expect(spinDrift(spin, 1000 + WEAPON_FX.oilSpinMs, peak, hz)).toBe(0);
+    expect(spinDrift(null, 1000 + quarter, peak, hz)).toBe(0);
+  });
+
+  it('is deterministic: the same clock always drifts the same way', () => {
+    const at = 1000 + WEAPON_FX.oilSpinMs / 3;
+
+    expect(spinDrift(spin, at, 90, WEAPON_FX.oilSpinHz)).toBe(
+      spinDrift(createSpin(1000, WEAPON_FX.oilSpinMs), at, 90, WEAPON_FX.oilSpinHz),
+    );
+  });
+
+  it('never drifts faster than its peak', () => {
+    for (let t = 0; t <= WEAPON_FX.oilSpinMs; t += 25) {
+      expect(Math.abs(spinDrift(spin, 1000 + t, 90, WEAPON_FX.oilSpinHz))).toBeLessThanOrEqual(90);
+    }
+  });
+});
+
+describe('flameCatches', () => {
+  const range = 140;
+  const near = WEAPON_FX.flameConeNearWidth;
+  const far = 30;
+  const origin = { x: 320, y: PLAYER_Y };
+
+  it('burns a target directly ahead inside the cone', () => {
+    expect(flameCatches(origin, { x: 320, y: PLAYER_Y - 60 }, range, near, far)).toBe(true);
+  });
+
+  it('reaches nothing past its range', () => {
+    expect(flameCatches(origin, { x: 320, y: PLAYER_Y - range }, range, near, far)).toBe(true);
+    expect(flameCatches(origin, { x: 320, y: PLAYER_Y - range - 1 }, range, near, far)).toBe(false);
+    // The old long-range weapon test: a target across the screen is untouched.
+    expect(flameCatches(origin, { x: 320, y: PLAYER_Y - 300 }, range, near, far)).toBe(false);
+  });
+
+  it('never burns anything behind the car', () => {
+    expect(flameCatches(origin, { x: 320, y: PLAYER_Y + 20 }, range, near, far)).toBe(false);
+    expect(flameCatches(origin, { x: 320, y: PLAYER_Y }, range, near, far)).toBe(false);
+  });
+
+  it('opens out with distance, so the far edge is the widest part of the cone', () => {
+    // A target just outside the nose's spread is a miss close in, and the same offset is
+    // inside the cone once it is two-thirds of the way out.
+    const narrowMiss = near + 4;
+    const farOffset = near + (far - near) * (2 / 3) - 1;
+
+    expect(
+      flameCatches(origin, { x: 320 + narrowMiss, y: PLAYER_Y - 10 }, range, near, far),
+    ).toBe(false);
+    expect(
+      flameCatches(origin, { x: 320 + farOffset, y: PLAYER_Y - 90 }, range, near, far),
+    ).toBe(true);
+  });
+});
+
+describe('withinBlast', () => {
+  const centre = { x: 320, y: 100 };
+
+  it('reaches everything inside the radius and nothing outside it', () => {
+    expect(withinBlast(centre, { x: 320, y: 100 }, 56)).toBe(true);
+    expect(withinBlast(centre, { x: 320 + 55, y: 100 }, 56)).toBe(true);
+    expect(withinBlast(centre, { x: 320 + 57, y: 100 }, 56)).toBe(false);
+  });
+
+  it('is a circle, not a box: a corner beyond the radius is a miss', () => {
+    const corner = { x: 320 + 40, y: 100 + 40 };
+
+    expect(Math.hypot(40, 40)).toBeGreaterThan(56);
+    expect(withinBlast(centre, corner, 56)).toBe(false);
+  });
+});
+

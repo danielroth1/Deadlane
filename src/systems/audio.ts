@@ -11,10 +11,58 @@ import { AUDIO } from '@/config';
  * public method is a no-op until `unlock()` has run.
  */
 
-type Sound = 'gun' | 'explosion' | 'hit' | 'pickup' | 'engineFail';
+type Sound =
+  | 'gun'
+  | 'explosion'
+  | 'hit'
+  | 'pickup'
+  | 'engineFail'
+  | 'rocketLaunch'
+  | 'rocketImpact'
+  | 'flame'
+  | 'flameLoop'
+  | 'oil'
+  | 'smoke';
 
 /** Supplies the `AudioContext`; injecting it is what makes the system unit-testable. */
 export type AudioContextFactory = () => AudioContext | null;
+
+/**
+ * Every special-weapon event the run can raise.
+ *
+ * The scene names the event, never the sound: one table decides which cue an event plays,
+ * so two weapons cannot drift onto the same sound and a test can prove each has its own.
+ */
+export type WeaponCueEvent =
+  | 'rocketLaunch'
+  | 'rocketImpact'
+  | 'flame'
+  | 'flameLoop'
+  | 'oil'
+  | 'smoke';
+
+export const WEAPON_CUE_EVENTS: readonly WeaponCueEvent[] = [
+  'rocketLaunch',
+  'rocketImpact',
+  'flame',
+  'flameLoop',
+  'oil',
+  'smoke',
+];
+
+const WEAPON_CUES: Readonly<Record<WeaponCueEvent, Sound>> = {
+  rocketLaunch: 'rocketLaunch',
+  rocketImpact: 'rocketImpact',
+  flame: 'flame',
+  flameLoop: 'flameLoop',
+  oil: 'oil',
+  smoke: 'smoke',
+};
+
+/** The cue one special-weapon event plays. */
+export function weaponCue(event: WeaponCueEvent): Sound {
+  return WEAPON_CUES[event];
+}
 
 /** The browser's own context, or null where Web Audio does not exist. */
 export function browserAudioContext(): AudioContext | null {
@@ -110,6 +158,31 @@ export class AudioSystem {
         break;
       case 'engineFail':
         this.tone(now, 140, 30, 0.9, 'sawtooth', 0.3);
+        break;
+      case 'rocketLaunch':
+        // A hard punch of noise over a falling tone: the tube discharging.
+        this.noiseBurst(now, 0.24, 520, 0.44);
+        this.tone(now, 330, 120, 0.24, 'sawtooth', 0.22);
+        break;
+      case 'rocketImpact':
+        // Deeper and longer than a shell: a warhead, not a bullet.
+        this.noiseBurst(now, 0.5, 180, 0.6);
+        this.tone(now, 120, 32, 0.48, 'square', 0.3);
+        break;
+      case 'flame':
+        // The ignition: one long noise wash for the burner catching.
+        this.noiseBurst(now, 0.6, 1400, 0.4);
+        break;
+      case 'flameLoop':
+        // The loop bed: a short crackle per burn tick, laid over the ignition's wash.
+        this.noiseBurst(now, 0.14, 1200, 0.22);
+        break;
+      case 'oil':
+        this.tone(now, 240, 90, 0.16, 'sine', 0.18);
+        this.noiseBurst(now, 0.1, 720, 0.12);
+        break;
+      case 'smoke':
+        this.noiseBurst(now, 0.3, 900, 0.34);
         break;
       default:
         break;

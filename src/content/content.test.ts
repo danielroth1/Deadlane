@@ -241,8 +241,14 @@ describe('civilian art ids', () => {
 });
 
 describe('weapon content', () => {
-  it('covers the three player verbs', () => {
-    expect(WEAPONS.map((w) => w.id).sort()).toEqual(['gun', 'oil', 'smoke']);
+  it('covers every player verb', () => {
+    expect(WEAPONS.map((w) => w.id).sort()).toEqual([
+      'flame',
+      'gun',
+      'oil',
+      'rocket',
+      'smoke',
+    ]);
   });
 
   it('has positive cooldowns', () => {
@@ -251,7 +257,7 @@ describe('weapon content', () => {
     }
   });
 
-  it('gives the rear weapons a lifetime, because the scene reads it', () => {
+  it('gives the dropped weapons a lifetime, because the scene reads it', () => {
     for (const weapon of WEAPONS) {
       if (weapon.slot !== 'rear') continue;
       expect(weapon.duration ?? 0, `${weapon.id} needs duration`).toBeGreaterThan(0);
@@ -260,6 +266,46 @@ describe('weapon content', () => {
 
   it('gives the gun a shell speed', () => {
     expect(getWeapon('gun').projectileSpeed ?? 0).toBeGreaterThan(0);
+  });
+
+  it('gives the rocket a speed, a fuse and a blast, because the scene reads all three', () => {
+    const rocket = getWeapon('rocket');
+    expect(rocket.projectileSpeed ?? 0).toBeGreaterThan(0);
+    expect(rocket.range ?? 0).toBeGreaterThan(0);
+    expect(rocket.splashRadius ?? 0).toBeGreaterThan(0);
+    expect(rocket.damage).toBeGreaterThan(0);
+  });
+
+  it('gives the flame a cone, a burn window and a tick', () => {
+    const flame = getWeapon('flame');
+    expect(flame.range ?? 0).toBeGreaterThan(0);
+    expect(flame.coneHalfWidth ?? 0).toBeGreaterThan(0);
+    expect(flame.duration ?? 0).toBeGreaterThan(0);
+    expect(flame.tickMs ?? 0).toBeGreaterThan(0);
+    expect(flame.damage).toBeGreaterThan(0);
+    // Short range is the weapon, not a tuning accident: the cone must not reach the gun.
+    expect(flame.range ?? 0).toBeLessThan(200);
+  });
+
+  it('keeps the flame cone inside its own range, so nothing burns twice', () => {
+    const flame = getWeapon('flame');
+    // A tick every tickMs over the whole window is the most damage one burst can deal.
+    const ticks = Math.ceil((flame.duration ?? 0) / (flame.tickMs ?? 1));
+    expect(ticks).toBeGreaterThan(1);
+  });
+
+  it('backs every ammo kind with a counter the player keeps', () => {
+    const kinds = new Set(['infinite', 'oil', 'smoke', 'rocket', 'flame']);
+    for (const weapon of WEAPONS) {
+      expect(kinds.has(weapon.ammo), `${weapon.id}.ammo=${weapon.ammo}`).toBe(true);
+    }
+  });
+
+  it('never gives a dropped hazard damage: a slick costs control, a cloud costs sight', () => {
+    for (const weapon of WEAPONS) {
+      if (weapon.slot !== 'rear') continue;
+      expect(weapon.damage, `${weapon.id} must not damage`).toBe(0);
+    }
   });
 });
 

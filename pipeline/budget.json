@@ -450,8 +450,68 @@
     },
     "art-25-fx-expanded": {
       "id": "art-25-fx-expanded",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1934717777,
+          "promptHash": "e379add0b1bf06ad",
+          "state": "released",
+          "claimedAt": "2026-11-08T23:11:34.819Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 2,
+          "seed": 1934717777,
+          "promptHash": "e379add0b1bf06ad",
+          "state": "released",
+          "claimedAt": "2026-11-08T23:12:18.834Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 3,
+          "seed": 1934717778,
+          "promptHash": "e379add0b1bf06ad",
+          "state": "released",
+          "claimedAt": "2026-11-08T23:13:10.891Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 4,
+          "seed": 1545210714,
+          "promptHash": "04c77c575ca02c16",
+          "state": "released",
+          "claimedAt": "2026-11-08T23:13:19.235Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 5,
+          "seed": 1934717779,
+          "promptHash": "e379add0b1bf06ad",
+          "state": "released",
+          "claimedAt": "2026-11-08T23:14:27.456Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 6,
+          "seed": 777001,
+          "promptHash": "e379add0b1bf06ad",
+          "state": "released",
+          "claimedAt": "2026-11-08T23:15:06.356Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 7,
+          "seed": 20260101,
+          "promptHash": "e379add0b1bf06ad",
+          "state": "generated",
+          "claimedAt": "2026-11-08T23:15:57.224Z",
+          "requestId": "01a1bd72-926a-7341-bb98-9e46e60cb5eb",
+          "url": "https://v3b.fal.media/files/b/0ab1b378/WQ9JO4EYrtDnQoe36S7Oj_JvIjBlRQ.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 7
     }
   }
 }

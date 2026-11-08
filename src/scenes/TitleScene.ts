@@ -73,11 +73,19 @@ export class TitleScene extends Phaser.Scene {
       color: PALETTE.steel,
       scale: 1,
       align: 'center',
-    }).setText('ARROWS STEER   SPACE FIRE   SHIFT SMOKE   M MUTE');
+    }).setText('ARROWS STEER   SPACE FIRE   Z ROCKET   C FLAME');
 
     new PixelText(this, {
       x: centerX,
-      y: 288,
+      y: 276,
+      color: PALETTE.steel,
+      scale: 1,
+      align: 'center',
+    }).setText('X OIL   SHIFT SMOKE   ESC PAUSE   M MUTE');
+
+    new PixelText(this, {
+      x: centerX,
+      y: 294,
       color: PALETTE.steel,
       scale: 1,
       align: 'center',
@@ -85,7 +93,7 @@ export class TitleScene extends Phaser.Scene {
 
     new PixelText(this, {
       x: centerX,
-      y: 306,
+      y: 312,
       color: PALETTE.asphaltLight,
       scale: 1,
       align: 'center',

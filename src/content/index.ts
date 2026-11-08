@@ -62,14 +62,23 @@ export interface CivilianDef {
 }
 
 export interface WeaponDef {
-  id: 'gun' | 'oil' | 'smoke';
+  id: 'gun' | 'oil' | 'smoke' | 'rocket' | 'flame';
   label: string;
-  slot: 'primary' | 'rear';
+  /** `forward` weapons fire up the road; `rear` weapons drop a hazard on it. */
+  slot: 'primary' | 'rear' | 'forward';
   cooldown: number;
-  ammo: 'infinite' | 'oil' | 'smoke';
+  ammo: 'infinite' | 'oil' | 'smoke' | 'rocket' | 'flame';
   damage: number;
   duration?: number;
   projectileSpeed?: number;
+  /** Projectile travel limit, px. The rocket detonates when it runs out. */
+  range?: number;
+  /** Radius around a rocket burst that takes the blast, px. */
+  splashRadius?: number;
+  /** Half-width of the flame cone at its far edge, px. */
+  coneHalfWidth?: number;
+  /** Interval between two flame damage ticks, ms. */
+  tickMs?: number;
   description: string;
 }
 

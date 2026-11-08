@@ -5,16 +5,19 @@ import {
   CANYON_TILE_ART,
   CITY_TILE_ART,
   EFFECT_ART,
+  FLAME_STREAM_ART,
   HIGHWAY_TILE_ART,
   PICKUP_ART,
   PROP_ART,
   PROP_PLACEHOLDER,
   RAMP_ART,
+  ROCKET_ART,
   SCENERY_ART,
   TRANSITION_PLACEHOLDER,
   TRANSITION_TILE_ART,
   TUNNEL_TILE_ART,
   WATER_TILE_ART,
+  WEAPON_EFFECT_ART,
   pickSceneryVariant,
   propArtIds,
   sceneryArtIds,
@@ -25,6 +28,7 @@ import {
   type TileArtByKind,
   type TileKind,
   type TransitionKind,
+  type WeaponEffectKind,
 } from './ids';
 import { PICKUP_POOL } from '@/levels/generators/shared';
 import { LEVEL_PROFILES } from '@/levels/types';
@@ -70,6 +74,65 @@ describe('effect art ids', () => {
   it('has a candidate for every effect the scene draws', () => {
     const kinds: EffectKind[] = ['explosion', 'muzzle', 'smoke', 'oil', 'dust', 'splash'];
     expect(Object.keys(EFFECT_ART).sort()).toEqual([...kinds].sort());
+  });
+});
+
+describe('special weapon art ids', () => {
+  const all = [
+    ...Object.values(WEAPON_EFFECT_ART).flat(),
+    ...FLAME_STREAM_ART.flat(),
+    ...ROCKET_ART,
+  ];
+
+  it('resolves every candidate in the shipped manifest', () => {
+    for (const id of all) {
+      expect(sprites.has(id), `${id} is not a key of .sprites in public/assets/assets.json`).toBe(
+        true,
+      );
+    }
+  });
+
+  it('points each expanded effect at the cell that really holds it', () => {
+    // art-25 attempt 7 is 4 × 4 at 64 px and drifts from its labels: the sheet's only
+    // explosion sits in cell 7 (labelled `smoke cloud`), its ring in cell 10 (labelled
+    // `debris chunk`) and its sparks in cell 15.
+    const cellIndex: Record<WeaponEffectKind, number> = {
+      blast: 7,
+      shockwave: 10,
+      debris: 8,
+      smoke: 6,
+      splash: 14,
+      sparks: 15,
+    };
+
+    for (const [kind, index] of Object.entries(cellIndex) as [WeaponEffectKind, number][]) {
+      const id = WEAPON_EFFECT_ART[kind][0];
+      expect(id, `${kind} has no primary frame`).toBeDefined();
+      const rect = manifest.sprites[id ?? ''];
+      expect(rect, `${kind} → ${id} is missing from the manifest`).toBeDefined();
+      expect({ x: rect?.x, y: rect?.y }).toEqual({
+        x: (index % 4) * 64,
+        y: Math.floor(index / 4) * 64,
+      });
+    }
+  });
+
+  it('never wires a captioned flame cell: those frames are declared dropped', () => {
+    const frames = Object.keys(manifest.sprites).filter((id) => id.startsWith('fx-expanded/'));
+
+    expect(frames).not.toContain('fx-expanded/flame-stream-a');
+    expect(frames).not.toContain('fx-expanded/flame-stream-b');
+    expect(frames).not.toContain('fx-expanded/flame-stream-c');
+    // Cell 3 was drawn as a fourth captioned flame under the label `explosion small`.
+    expect(frames).not.toContain('fx-expanded/explosion-small');
+  });
+
+  it('falls the flame stream back to art-10, which is a real flame', () => {
+    expect(FLAME_STREAM_ART.length).toBeGreaterThan(1);
+    for (const frame of FLAME_STREAM_ART) {
+      expect(frame[0]?.startsWith('fx/'), `${frame[0]} is not an art-10 frame`).toBe(true);
+    }
+    expect(FLAME_STREAM_ART[0]?.[0]).toBe('fx/fireball');
   });
 });
 

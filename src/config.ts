@@ -171,26 +171,61 @@ export const PLAYER = {
   startSmoke: 2,
   maxOil: 6,
   maxSmoke: 4,
+  /** Rockets carried at the start of a run, and the ceiling a pickup can refill to. */
+  startRockets: 4,
+  maxRockets: 8,
+  /** Flamethrower bursts carried at the start of a run, and their ceiling. */
+  startFlame: 3,
+  maxFlame: 6,
   /** Steering lean threshold, px/s. */
   leanThreshold: 120,
 } as const;
 
 /**
- * Where the rear weapons put their effects, and how big the catch windows are.
+ * Where the dropped hazards land, how long a slick spins a car, and how the special
+ * weapons sit on screen.
  *
- * Weapon cadence, damage and lifetimes are *not* here: they are content, in
- * `src/content/weapons.json`. These numbers only position an effect on screen.
+ * Weapon cadence, damage, ranges and lifetimes are *not* here: they are content, in
+ * `src/content/weapons.json`. These numbers only position an effect and shape the spin.
+ *
+ * A dropped hazard is world-static: it keeps the `at` it was laid at and only its screen
+ * `y` is re-derived each frame, so the car drives away from it. Both drop distances are
+ * therefore *ahead* of the car — a hazard behind the car is behind everything that can
+ * touch it, because every hostile on the road is ahead and closing.
  */
 export const WEAPON_FX = {
-  /** Screen offset of a dropped slick from the car's centre, px. Positive is behind. */
-  oilOffset: 30,
-  /** Screen offset of the smoke cloud from the car's centre, px. Negative is ahead. */
-  smokeOffset: -34,
+  /** World distance ahead of the car a slick is laid, px. */
+  oilDropAhead: 200,
+  /** World distance ahead of the car a smoke cloud is laid, px. */
+  smokeDropAhead: 240,
   /** Oil catch window around a slick's centre, px. */
   oilCatchHalfWidth: 34,
   oilCatchHalfHeight: 30,
   /** Half-length of the smoke band along the road, px. */
   smokeCover: 40,
+  /** How long a car caught by a slick keeps spinning, ms. */
+  oilSpinMs: 1500,
+  /** Peak lateral drift of a spinning car, px/s. */
+  oilSpinDrift: 90,
+  /** Revolutions per second the sprite turns through while it spins. */
+  oilSpinTurns: 2,
+  /** Frequency of the spin's lateral drift, Hz. Clock-derived, never random. */
+  oilSpinHz: 0.9,
+  /** Screen offset above the car's centre the rocket and the flame leave from, px. */
+  muzzleOffset: 26,
+  /** Fallbacks for the rocket when `weapons.json` omits a number. */
+  rocketProjectileSpeed: 520,
+  rocketRange: 640,
+  rocketSplashRadius: 56,
+  /** Cone half-width at the nose and at the far edge, px. */
+  flameConeNearWidth: 10,
+  /** Flame ticks when the content row omits `tickMs`, ms. */
+  flameTickMs: 150,
+  /** Distance between the stream sprites drawn up the flame cone, px. */
+  flameStreamSpacing: 38,
+  /** How many stream sprites the flame draws, and how long one flicker beat lasts, ms. */
+  flameStreamSprites: 3,
+  flameFlickerMs: 60,
   /** Shell speed for a hostile whose content row omits `projectileSpeed`. */
   enemyProjectileSpeed: 220,
   /** Shell speed if `weapons.json` ever omits the gun's. */
@@ -353,11 +388,14 @@ export const TOUCH = {
     /** Right gutter: the thumb that holds the trigger. */
     fire: { x: 524, y: 236, width: 104, height: 92 },
     pause: { x: 576, y: 32, width: 56, height: 44 },
-    /** Left gutter: movement and the two rear weapons. */
+    /** Left gutter: movement and the dropped weapons. */
     boost: { x: 8, y: 236, width: 112, height: 92 },
     brake: { x: 8, y: 138, width: 112, height: 92 },
     oil: { x: 6, y: 36, width: 58, height: 52 },
     smoke: { x: 66, y: 36, width: 58, height: 52 },
+    /** A second row between the dropped weapons and the brake: the forward specials. */
+    rocket: { x: 6, y: 92, width: 58, height: 44 },
+    flame: { x: 66, y: 92, width: 58, height: 44 },
   },
 } as const;
 
@@ -380,7 +418,8 @@ export const SCORE = {
   civilianDestroyed: -500,
   enemyDestroyed: 150,
   distancePerPoint: 12,
-  oilKill: 300,
+  /** A car caught by a slick loses control; the slick is spent, the car is not. */
+  oilSpin: 250,
 } as const;
 
 export const DIFFICULTY = {

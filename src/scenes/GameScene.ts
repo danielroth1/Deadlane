@@ -21,6 +21,9 @@ import { PALETTE } from '@/palette';
 import { Art } from '@/art';
 import {
   EFFECT_ART,
+  FLAME_STREAM_ART,
+  ROCKET_ART,
+  WEAPON_EFFECT_ART,
   pickSceneryVariant,
   pickupArtIds,
   propArtIds,
@@ -35,18 +38,21 @@ import { BossVehicle } from '@/entities/boss';
 import { findProp, getCivilian, getEnemy, getWeapon, type PropCollision } from '@/content';
 import { bossForLevel, type BossAttackPattern } from '@/systems/boss';
 import {
+  flameCatches,
   forwardShot,
   oilCatches,
+  projectHazard,
   returnShot,
   screenYFromWorldAt,
   smokeBlocksFire,
+  withinBlast,
   worldAtFromScreenY,
 } from '@/systems/weapons';
 import { levelForSeed, levelLabelFor, type LevelBlueprint } from '@/levels';
 import { decorX, laneCenter, laneCenterAt, roadAt, type LevelEvent, type RoadProfile } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
-import type { AudioSystem } from '@/systems/audio';
+import { weaponCue, type AudioSystem } from '@/systems/audio';
 import { speedRatio, stepSpeed } from '@/systems/motion';
 import {
   contactBetween,
@@ -91,13 +97,26 @@ interface Bullet {
 
 interface Hazard {
   readonly sprite: Phaser.GameObjects.Image;
-  /** World position, re-derived every frame: a hazard rides with the car. */
-  at: number;
+  /**
+   * The world station the hazard was laid at. Fixed for its whole life: the car drives away
+   * from it, so a slick or cloud is never glued to the bumper.
+   */
+  readonly at: number;
   readonly kind: 'oil' | 'smoke';
-  /** Screen offset from the car's centre, px. Positive is behind, negative ahead. */
-  readonly screenOffset: number;
-  /** Mutable so a slick that has caught a pursuer can be spent on the spot. */
+  /** Mutable so a slick that has caught a car can be spent on the spot. */
   expiresAt: number;
+}
+
+/** One rocket in flight: a world station, a fuse and the blast it leaves behind. */
+interface Rocket {
+  readonly sprite: Phaser.GameObjects.Image;
+  at: number;
+  readonly speed: number;
+  readonly damage: number;
+  readonly splashRadius: number;
+  /** Travel limit in world px. The rocket detonates when it runs out. */
+  readonly range: number;
+  travelled: number;
 }
 
 interface Pickup {
@@ -128,6 +147,9 @@ interface RampInstance {
 /** What the car landed on: dust on a road, a splash on the river. */
 export type LandingKind = 'dust' | 'splash';
 
+/** Which special weapon landed the most recent kill. Observation for the debug surface. */
+export type WeaponKillKind = 'rocket' | 'flame';
+
 export interface HudState {
   score: number;
   armor: number;
@@ -137,6 +159,8 @@ export interface HudState {
   maxLives: number;
   oil: number;
   smoke: number;
+  rockets: number;
+  flame: number;
   speed: number;
   distance: number;
   level: number;
@@ -209,6 +233,8 @@ export interface VehicleDebugState {
   readonly wrecked: boolean;
   /** True while the car is off the ground after a ramp. Always false for other cars. */
   readonly airborne: boolean;
+  /** True while a slick has this car spinning and out of control. Always false for the car. */
+  readonly spinning: boolean;
 }
 
 /** One contact the resolver finished this run, as the debug surface reports it. */
@@ -277,6 +303,8 @@ export interface RunDebugState {
   readonly lastPropContact: PropContactDebugState | null;
   /** What the last landing kicked up, or null before the first jump has ended. */
   readonly lastLanding: LandingKind | null;
+  /** Which special weapon landed the last kill, or null before one has. */
+  readonly lastWeaponKill: WeaponKillKind | null;
   /**
    * The road cross-section at the car's own `at`, in world pixels.
    *
@@ -325,6 +353,8 @@ export class GameScene extends Phaser.Scene {
   private readonly gun = getWeapon('gun');
   private readonly oilWeapon = getWeapon('oil');
   private readonly smokeWeapon = getWeapon('smoke');
+  private readonly rocketWeapon = getWeapon('rocket');
+  private readonly flameWeapon = getWeapon('flame');
 
   private blueprint!: LevelBlueprint;
   private seed = 0;
@@ -355,6 +385,14 @@ export class GameScene extends Phaser.Scene {
   private civilians: CivilianVehicle[] = [];
   private bullets: Bullet[] = [];
   private hazards: Hazard[] = [];
+  private rockets: Rocket[] = [];
+  /** Scene-clock time the live flame stream ends, and when its next damage tick is due. */
+  private flameUntil = 0;
+  private nextFlameTickAt = 0;
+  /** Scene-clock time the stream was lit, so the ignition cue is not repeated by tick one. */
+  private flameFrom = 0;
+  /** The sprites drawn up the flame cone while it burns. */
+  private flameSprites: Phaser.GameObjects.Image[] = [];
   private pickups: Pickup[] = [];
   private props: PropInstance[] = [];
   /** Ramps. Kept apart from `props`: a ramp starts a jump rather than a contact. */
@@ -363,6 +401,8 @@ export class GameScene extends Phaser.Scene {
   private shadow!: Phaser.GameObjects.Ellipse;
   /** What the most recent landing kicked up. Observation for the debug surface. */
   private lastLanding: LandingKind | null = null;
+  /** Which special weapon landed the most recent kill. Observation for the debug surface. */
+  private lastWeaponKill: WeaponKillKind | null = null;
   /** How many ground-prop contacts the run has resolved, and the most recent one. */
   private propContactCount = 0;
   private lastPropContact: PropContactDebugState | null = null;
@@ -441,6 +481,11 @@ export class GameScene extends Phaser.Scene {
     this.civilians = [];
     this.bullets = [];
     this.hazards = [];
+    this.rockets = [];
+    this.flameUntil = 0;
+    this.flameFrom = 0;
+    this.nextFlameTickAt = 0;
+    this.flameSprites = [];
     this.pickups = [];
     this.props = [];
     this.ramps = [];
@@ -463,6 +508,7 @@ export class GameScene extends Phaser.Scene {
     this.contactCount = 0;
     this.lastContact = null;
     this.lastLanding = null;
+    this.lastWeaponKill = null;
     this.propContactCount = 0;
     this.lastPropContact = null;
     this.shakeFrom = 0;
@@ -495,7 +541,7 @@ export class GameScene extends Phaser.Scene {
     this.challenges = this.createChallengeSystem();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
-    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,SHIFT,X') as Record<
+    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,SHIFT,X,Z,C') as Record<
       string,
       Phaser.Input.Keyboard.Key
     >;
@@ -549,6 +595,8 @@ export class GameScene extends Phaser.Scene {
       maxLives: PLAYER.maxLives,
       oil: this.player?.oil ?? 0,
       smoke: this.player?.smoke ?? 0,
+      rockets: this.player?.rockets ?? 0,
+      flame: this.player?.flame ?? 0,
       speed: Math.round(this.worldSpeed),
       distance: Math.round(this.distance * LEVEL.metresPerPixel),
       level: this.levelIndex,
@@ -601,6 +649,7 @@ export class GameScene extends Phaser.Scene {
         vy: this.player.vy,
         wrecked: this.player.isDestroyed,
         airborne: this.player.isAirborne,
+        spinning: false,
       },
       vehicles: [
         ...this.enemies.map((enemy) => ({
@@ -614,6 +663,7 @@ export class GameScene extends Phaser.Scene {
           vy: enemy.vy,
           wrecked: false,
           airborne: false,
+          spinning: enemy.isSpinning,
         })),
         ...this.civilians.map((civilian) => ({
           kind: 'civilian' as const,
@@ -626,11 +676,13 @@ export class GameScene extends Phaser.Scene {
           vy: civilian.vy,
           wrecked: civilian.wrecked,
           airborne: false,
+          spinning: false,
         })),
       ],
       lastContact: this.lastContact,
       lastPropContact: this.lastPropContact,
       lastLanding: this.lastLanding,
+      lastWeaponKill: this.lastWeaponKill,
       road: this.roadDebugState(),
       hud: this.hudState,
     };
@@ -785,10 +837,81 @@ export class GameScene extends Phaser.Scene {
       bullet.at = Number.NEGATIVE_INFINITY;
     }
     this.bullets = this.bullets.filter((bullet) => Number.isFinite(bullet.at));
+    for (const rocket of this.rockets) rocket.sprite.destroy();
+    this.rockets = [];
+    this.stopFlame();
+    for (const hazard of this.hazards) hazard.sprite.destroy();
+    this.hazards = [];
     for (const prop of this.props) prop.sprite.destroy();
     this.props = [];
     for (const ramp of this.ramps) ramp.sprite.destroy();
     this.ramps = [];
+  }
+
+  /**
+   * Debug-only: stage a pursuer just short of a freshly laid slick.
+   *
+   * The hostile holds the car's lane and is placed a little behind the drop point, so the
+   * next few frames are a real world-space crossing: the slick spins it, the slick is
+   * spent, and the car is still on the road. Playwright reaches this through
+   * `window.__deadlaneControl` at `?debug=1`; nothing in the run calls it.
+   */
+  debugStageOilPursuer(): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+    this.clearStagedGround();
+
+    this.stageHostile(this.distance + WEAPON_FX.oilDropAhead - 60);
+    if (this.player.oil <= 0) this.player.addOil(1);
+    this.dropOil(this.time.now);
+  }
+
+  /**
+   * Debug-only: put a pursuer in the rocket's path and launch one.
+   *
+   * Proves the whole rocket path on the shipped code: launch, flight, detonation and the
+   * blast that takes the target out. Playwright reaches this through
+   * `window.__deadlaneControl` at `?debug=1`; nothing in the run calls it.
+   */
+  debugStageRocketTarget(): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+    this.clearStagedGround();
+
+    this.stageHostile(this.distance + 180);
+    if (this.player.rockets <= 0) this.player.addRockets(1);
+    this.fireRocket(this.time.now);
+  }
+
+  /**
+   * Debug-only: put a pursuer inside the flame cone and pull the trigger.
+   *
+   * The target is close enough that it stays in the cone long enough for the burn ticks to
+   * finish it, which is what makes the flamethrower's short range part of the proof.
+   * Playwright reaches this through `window.__deadlaneControl` at `?debug=1`; nothing in
+   * the run calls it.
+   */
+  debugStageFlameTarget(): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+    this.clearStagedGround();
+
+    this.stageHostile(this.distance + 100);
+    if (this.player.flame <= 0) this.player.addFlame(1);
+    this.fireFlame(this.time.now);
+  }
+
+  /**
+   * Put one lane-holding hostile at `at`, pinned to the car's own lateral position.
+   *
+   * Pinned on x so the staged car is exactly where the test's weapon geometry expects it,
+   * whatever lane the player happens to be in.
+   */
+  private stageHostile(at: number): void {
+    const def = safeEnemy('hauler');
+    if (!def) return;
+
+    const road = roadAt(this.blueprint.road, this.distance);
+    const hostile = new EnemyVehicle(this, this.art, def, at, 0, road, 0);
+    hostile.pinTo(this.player.x, at, this.distance, road);
+    this.enemies.push(hostile);
   }
 
   /** The lane index the car is standing in right now. */
@@ -944,6 +1067,8 @@ export class GameScene extends Phaser.Scene {
     this.updateBoss(dt, time);
     this.updateCivilians(dt);
     this.updateBullets(dt);
+    this.updateRockets(dt, time);
+    this.updateFlame(time);
     this.updateHazards(time);
     this.updatePickups(dt);
     this.updateProps();
@@ -1032,6 +1157,22 @@ export class GameScene extends Phaser.Scene {
     const oilKey = this.keys['X'];
     if ((oilKey && Phaser.Input.Keyboard.JustDown(oilKey)) || this.touchInput.takeTap('oil')) {
       this.dropOil(time);
+    }
+
+    const rocketKey = this.keys['Z'];
+    if (
+      (rocketKey && Phaser.Input.Keyboard.JustDown(rocketKey)) ||
+      this.touchInput.takeTap('rocket')
+    ) {
+      this.fireRocket(time);
+    }
+
+    const flameKey = this.keys['C'];
+    if (
+      (flameKey && Phaser.Input.Keyboard.JustDown(flameKey)) ||
+      this.touchInput.takeTap('flame')
+    ) {
+      this.fireFlame(time);
     }
   }
 
@@ -1329,21 +1470,24 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * Hazards ride with the car at a fixed screen offset.
+   * Scroll the dropped hazards.
    *
-   * A world-static slick or cloud is left behind in a fraction of a second — the player
-   * travels faster than anything else on the road, so a fixed effect would never be
-   * crossed by a pursuer and would never sit between a hostile and the car.
+   * A hazard is world-static: `at` was fixed where it was laid and is never re-derived, so
+   * the car drives away from it. Only the screen projection moves. This is what lets a
+   * pursuer cross a slick the player has already left, and what stops a cloud glued to the
+   * bumper from shielding the car it is attached to.
    */
   private updateHazards(time: number): void {
     for (const hazard of this.hazards) {
-      hazard.at = this.distance - hazard.screenOffset;
-      hazard.sprite.y = screenYFromWorldAt(hazard.at, this.distance);
+      hazard.sprite.y = projectHazard(
+        { at: hazard.at, x: hazard.sprite.x },
+        this.distance,
+      ).y;
       hazard.sprite.setAlpha(Math.max(0, Math.min(1, (hazard.expiresAt - time) / 800)));
     }
 
     this.hazards = this.hazards.filter((hazard) => {
-      const alive = time < hazard.expiresAt;
+      const alive = time < hazard.expiresAt && hazard.sprite.y < WORLD.height + 120;
       if (!alive) hazard.sprite.destroy();
       return alive;
     });
@@ -1555,10 +1699,15 @@ export class GameScene extends Phaser.Scene {
   dropSmoke(time = this.time.now): void {
     if (!this.player.useSmoke(time, this.smokeWeapon.cooldown)) return;
 
-    const y = this.player.y + WEAPON_FX.smokeOffset;
+    // Laid up the road, not on the bumper: the cloud has to be between the car and the
+    // hostiles it is hiding the car from, and every hostile on the road is ahead.
+    const at = this.distance + WEAPON_FX.smokeDropAhead;
     const sprite = this.fitEffect(
-      this.art.imageFrom(EFFECT_ART.smoke, this.player.x, y, () =>
-        flatTexture(this, 'smoke', 'steelLight', 56),
+      this.art.imageFrom(
+        EFFECT_ART.smoke,
+        this.player.x,
+        screenYFromWorldAt(at, this.distance),
+        () => flatTexture(this, 'smoke', 'steelLight', 56),
       ),
       56,
     )
@@ -1566,21 +1715,25 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0.6);
     this.hazards.push({
       sprite,
-      at: worldAtFromScreenY(y, this.distance),
+      at,
       kind: 'smoke',
-      screenOffset: WEAPON_FX.smokeOffset,
       expiresAt: time + (this.smokeWeapon.duration ?? 0),
     });
+    this.audio.play(weaponCue('smoke'));
   }
 
   /** Drop an oil slick. Public so a touch pad drives the same path as X. */
   dropOil(time = this.time.now): void {
     if (!this.player.useOil(time, this.oilWeapon.cooldown)) return;
 
-    const y = this.player.y + WEAPON_FX.oilOffset;
+    // World-static, and ahead: a car that crosses it is one the player is about to meet.
+    const at = this.distance + WEAPON_FX.oilDropAhead;
     const sprite = this.fitEffect(
-      this.art.imageFrom(EFFECT_ART.oil, this.player.x, y, () =>
-        flatTexture(this, 'oil', 'void', 40),
+      this.art.imageFrom(
+        EFFECT_ART.oil,
+        this.player.x,
+        screenYFromWorldAt(at, this.distance),
+        () => flatTexture(this, 'oil', 'void', 40),
       ),
       40,
     )
@@ -1588,11 +1741,247 @@ export class GameScene extends Phaser.Scene {
       .setAlpha(0.85);
     this.hazards.push({
       sprite,
-      at: worldAtFromScreenY(y, this.distance),
+      at,
       kind: 'oil',
-      screenOffset: WEAPON_FX.oilOffset,
       expiresAt: time + (this.oilWeapon.duration ?? 0),
     });
+    this.audio.play(weaponCue('oil'));
+  }
+
+  /**
+   * Launch a rocket up the road. Public so a touch pad drives the same path as Z.
+   *
+   * The rocket is a world-station projectile like a shell, with a fuse (`range`) and a
+   * blast: it detonates on the first enemy, boss or obstacle it touches, or when the fuse
+   * runs out, and everything inside `splashRadius` takes the damage.
+   */
+  fireRocket(time = this.time.now): boolean {
+    if (!this.player.useRocket(time, this.rocketWeapon.cooldown)) return false;
+
+    const muzzleY = this.player.y - WEAPON_FX.muzzleOffset;
+    const sprite = this.art
+      .imageFrom(ROCKET_ART, this.player.x, muzzleY, () =>
+        flatTexture(this, 'rocket', 'amber', 12),
+      )
+      .setDepth(46);
+    sprite.setScale(displayScale(Math.max(sprite.width, sprite.height), 32));
+
+    this.rockets.push({
+      sprite,
+      at: worldAtFromScreenY(muzzleY, this.distance),
+      speed: this.rocketWeapon.projectileSpeed ?? WEAPON_FX.rocketProjectileSpeed,
+      damage: this.rocketWeapon.damage,
+      splashRadius: this.rocketWeapon.splashRadius ?? WEAPON_FX.rocketSplashRadius,
+      range: this.rocketWeapon.range ?? WEAPON_FX.rocketRange,
+      travelled: 0,
+    });
+    this.audio.play(weaponCue('rocketLaunch'));
+    return true;
+  }
+
+  /** Flight, contact and fuse for every live rocket. */
+  private updateRockets(dt: number, time: number): void {
+    for (const rocket of [...this.rockets]) {
+      const step = rocket.speed * dt;
+      rocket.at += step;
+      rocket.travelled += step;
+      rocket.sprite.y = screenYFromWorldAt(rocket.at, this.distance);
+
+      if (rocket.travelled >= rocket.range || this.rocketTouchesTarget(rocket)) {
+        this.detonateRocket(rocket, time);
+      }
+    }
+  }
+
+  /** Does this rocket's nose touch an enemy, the act boss or a ground obstacle? */
+  private rocketTouchesTarget(rocket: Rocket): boolean {
+    const { x, y } = rocket.sprite;
+    const boss = this.boss;
+    if (boss && Math.abs(x - boss.sprite.x) < boss.sprite.displayWidth * 0.45 &&
+        Math.abs(y - boss.sprite.y) < boss.sprite.displayHeight * 0.45) {
+      return true;
+    }
+    const enemy = this.enemies.find(
+      (unit) =>
+        Math.abs(x - unit.sprite.x) < unit.sprite.displayWidth * 0.45 &&
+        Math.abs(y - unit.sprite.y) < unit.sprite.displayHeight * 0.45,
+    );
+    if (enemy) return true;
+    return this.props.some((prop) => withinBlast(rocket.sprite, prop.sprite, 18));
+  }
+
+  /**
+   * Blow a rocket up and damage everything inside the blast.
+   *
+   * Splash is a circle around the burst, so a neighbour two lanes over is safe and one
+   * under the explosion is not. Enemies, the act boss and the ground props are all inside
+   * the same radius; the burst is what the player sees and the what the damage follows.
+   */
+  private detonateRocket(rocket: Rocket, time: number): void {
+    const index = this.rockets.indexOf(rocket);
+    if (index >= 0) this.rockets.splice(index, 1);
+
+    const { x, y } = rocket.sprite;
+    rocket.sprite.destroy();
+
+    const burst = { x, y };
+    this.showBurst(burst);
+    this.audio.play(weaponCue('rocketImpact'));
+
+    for (const enemy of [...this.enemies]) {
+      if (!withinBlast(burst, enemy.sprite, rocket.splashRadius)) continue;
+      if (!enemy.sprite.active) continue;
+      if (enemy.hit(rocket.damage)) {
+        this.lastWeaponKill = 'rocket';
+        this.killEnemy(enemy);
+      }
+    }
+
+    const boss = this.boss;
+    if (boss && withinBlast(burst, boss.sprite, rocket.splashRadius) && boss.hit(rocket.damage)) {
+      this.lastWeaponKill = 'rocket';
+      this.defeatBoss(time);
+    }
+  }
+
+  /** The rocket's blast: a burst, a shockwave and a scatter of sparks. Cosmetic only. */
+  private showBurst(centre: { readonly x: number; readonly y: number }): void {
+    const layers: readonly { readonly ids: readonly string[]; readonly size: number; readonly to: number }[] = [
+      { ids: WEAPON_EFFECT_ART.blast, size: 64, to: 1.9 },
+      { ids: WEAPON_EFFECT_ART.shockwave, size: 64, to: 2.4 },
+      { ids: WEAPON_EFFECT_ART.sparks, size: 40, to: 1.6 },
+      { ids: WEAPON_EFFECT_ART.debris, size: 40, to: 1.4 },
+    ];
+
+    for (const layer of layers) {
+      const sprite = this.fitEffect(
+        this.art.imageFrom(layer.ids, centre.x, centre.y, () =>
+          // One fallback per footprint: `flatTexture` is keyed by id, so a shared id would
+          // hand every layer the first size drawn.
+          flatTexture(this, `burst-${layer.size}`, 'amber', layer.size),
+        ),
+        layer.size,
+      ).setDepth(58);
+      this.tweens.add({
+        targets: sprite,
+        scale: layer.to,
+        alpha: { from: 1, to: 0 },
+        duration: 380,
+        onComplete: () => sprite.destroy(),
+      });
+    }
+  }
+
+  /**
+   * Fire the flamethrower. Public so a touch pad drives the same path as C.
+   *
+   * One burst buys `duration` ms of cone: the stream is redrawn every frame and a damage
+   * tick is applied every `tickMs` while it burns. The cone is short — it reaches nothing
+   * past `range` — so it is a close-range weapon by construction, not by tuning.
+   */
+  fireFlame(time = this.time.now): boolean {
+    if (!this.player.useFlame(time, this.flameWeapon.cooldown)) return false;
+
+    // Replaces any stream still burning first: `stopFlame()` clears the window, so the new
+    // one has to be opened after it.
+    this.spawnFlameStream();
+    this.flameFrom = time;
+    this.flameUntil = time + (this.flameWeapon.duration ?? 0);
+    // The first tick lands with the ignition, so a point-blank target burns immediately.
+    this.nextFlameTickAt = time;
+    this.audio.play(weaponCue('flame'));
+    return true;
+  }
+
+  /** The stream sprites that live for one burst, one per flicker frame. */
+  private spawnFlameStream(): void {
+    this.stopFlame();
+
+    for (let i = 0; i < WEAPON_FX.flameStreamSprites; i += 1) {
+      const ids = FLAME_STREAM_ART[i % FLAME_STREAM_ART.length] ?? FLAME_STREAM_ART[0] ?? [];
+      const sprite = this.fitEffect(
+        this.art.imageFrom(
+          ids,
+          this.player.x,
+          this.player.y - WEAPON_FX.muzzleOffset - i * WEAPON_FX.flameStreamSpacing,
+          () => flatTexture(this, 'flame', 'amber', 24),
+        ),
+        30,
+      ).setDepth(47);
+      this.flameSprites.push(sprite);
+    }
+  }
+
+  private stopFlame(): void {
+    this.flameUntil = 0;
+    this.flameFrom = 0;
+    this.nextFlameTickAt = 0;
+    for (const sprite of this.flameSprites) sprite.destroy();
+    this.flameSprites = [];
+  }
+
+  /**
+   * The live flame stream: flicker, positioning and the damage ticks.
+   *
+   * The flicker is a sine of the scene clock with a per-sprite phase — no random draw, so a
+   * replay burns identically — and only ever moves a sprite by whole pixels.
+   */
+  private updateFlame(time: number): void {
+    if (this.flameSprites.length === 0) return;
+    if (time >= this.flameUntil) {
+      this.stopFlame();
+      return;
+    }
+
+    const tickMs = this.flameWeapon.tickMs ?? WEAPON_FX.flameTickMs;
+
+    while (this.nextFlameTickAt < this.flameUntil && time >= this.nextFlameTickAt) {
+      this.burnFlame(this.nextFlameTickAt);
+      this.nextFlameTickAt += tickMs;
+    }
+
+    this.flameSprites.forEach((sprite, index) => {
+      const phase = (time / WEAPON_FX.flameFlickerMs + index) * Math.PI;
+      sprite.x = this.player.x;
+      sprite.y =
+        this.player.y -
+        WEAPON_FX.muzzleOffset -
+        index * WEAPON_FX.flameStreamSpacing +
+        Math.round(Math.sin(phase) * 2);
+      sprite.setAlpha(0.7 + 0.3 * Math.abs(Math.cos(phase)));
+    });
+  }
+
+  /** One damage tick of the flame cone: everything inside it burns. */
+  private burnFlame(time: number): void {
+    // The ignition has its own cue; every tick after it is the burner's loop bed.
+    if (time > this.flameFrom) this.audio.play(weaponCue('flameLoop'));
+
+    const flame = this.flameWeapon;
+    const origin = { x: this.player.x, y: this.player.groundY };
+    const range = flame.range ?? 0;
+    const farWidth = flame.coneHalfWidth ?? 0;
+
+    for (const enemy of [...this.enemies]) {
+      if (!enemy.sprite.active) continue;
+      if (!flameCatches(origin, enemy.sprite, range, WEAPON_FX.flameConeNearWidth, farWidth)) {
+        continue;
+      }
+      if (enemy.hit(flame.damage)) {
+        this.lastWeaponKill = 'flame';
+        this.killEnemy(enemy);
+      }
+    }
+
+    const boss = this.boss;
+    if (
+      boss &&
+      flameCatches(origin, boss.sprite, range, WEAPON_FX.flameConeNearWidth, farWidth) &&
+      boss.hit(flame.damage)
+    ) {
+      this.lastWeaponKill = 'flame';
+      this.defeatBoss(time);
+    }
   }
 
   /** True while any live smoke cloud sits between this hostile and the car. */
@@ -1717,24 +2106,28 @@ export class GameScene extends Phaser.Scene {
     }
     this.pickups = this.pickups.filter((p) => Number.isFinite(p.at));
 
-    // Oil slicks wreck the next pursuer that crosses them, then they are spent.
+    // A slick spins the first car that crosses it and is spent on that car. It does not
+    // kill: the car loses control, drifts sideways and cannot aim, and is still shootable
+    // while it flails. Both the slick and the car are drawn from the same world projection,
+    // so this is a world-space crossing, not a screen-space coincidence.
     for (const hazard of this.hazards) {
       if (hazard.kind !== 'oil') continue;
 
-      const target = this.enemies.find((enemy) =>
-        oilCatches(
-          hazard.sprite,
-          enemy.sprite,
-          WEAPON_FX.oilCatchHalfWidth,
-          WEAPON_FX.oilCatchHalfHeight,
-        ),
+      const target = this.enemies.find(
+        (enemy) =>
+          !enemy.isSpinning &&
+          oilCatches(
+            { x: hazard.sprite.x, y: hazard.sprite.y },
+            enemy.sprite,
+            WEAPON_FX.oilCatchHalfWidth,
+            WEAPON_FX.oilCatchHalfHeight,
+          ),
       );
       if (!target) continue;
 
       hazard.expiresAt = time;
-      target.hit(target.hp);
-      this.killEnemy(target);
-      this.score += SCORE.oilKill;
+      target.applySpin(time, WEAPON_FX.oilSpinMs);
+      this.score += SCORE.oilSpin;
     }
   }
 
@@ -2238,6 +2631,7 @@ export class GameScene extends Phaser.Scene {
     for (const civilian of this.civilians) civilian.destroy();
     for (const bullet of this.bullets) bullet.sprite.destroy();
     for (const hazard of this.hazards) hazard.sprite.destroy();
+    for (const rocket of this.rockets) rocket.sprite.destroy();
     for (const pickup of this.pickups) pickup.sprite.destroy();
     for (const prop of this.props) prop.sprite.destroy();
     for (const ramp of this.ramps) ramp.sprite.destroy();
@@ -2247,6 +2641,8 @@ export class GameScene extends Phaser.Scene {
     this.civilians = [];
     this.bullets = [];
     this.hazards = [];
+    this.rockets = [];
+    this.stopFlame();
     this.pickups = [];
     this.props = [];
     this.ramps = [];
