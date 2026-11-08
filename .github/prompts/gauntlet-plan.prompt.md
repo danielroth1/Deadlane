@@ -54,8 +54,8 @@ When it returns, show me its `QUEUE` line and commit, then hand back with: "run 
 
 - Planning writes only `gauntlet/` — never game code, pipeline code, content data or docs.
   The planner is the only writer; you dispatch it and report.
-- Never raise the image ceiling or the attempt cap. Art work names its slot id and fits the
-  existing budget.
+- There is no image ceiling and no per-slot attempt cap, so never plan a change to either.
+  Art work names its slot id; every image still needs a claim before it is generated.
 - Never reopen a `done` order. Plan a new one that supersedes it.
 - An escalated order is context, not a plan item: mention it and let me decide whether its
   blocker becomes a new order.

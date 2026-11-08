@@ -85,8 +85,9 @@ Analysis rules:
   Put first whatever unblocks the most other orders.
 - One coherent change per order. If you cannot write a verification command for it, it is
   not an order yet.
-- Art orders must name the slot id and fit the existing budget. Never propose raising the
-  image ceiling or the attempt cap.
+- Art orders must name the slot id. There is no lifetime image ceiling and no per-slot
+  attempt cap, so an art order proposes no limit change; every image it generates still
+  needs a claim first. Never propose re-adding a cap.
 - If the game already meets the definition, say so and propose nothing.
 
 This turn is a proposal for discussion — assume the human will cut, merge or reorder it. Do

@@ -107,7 +107,7 @@ inside a single agent's context. See [`AGENTS.md`](AGENTS.md).
 | `npm run typecheck` | TypeScript, strict |
 | `npm run test` | Unit tests (includes the 5,000-level matrix) |
 | `npm run test:e2e` | Playwright smoke against the production build |
-| `npm run art:validate` | Technical gate on generated art (grid, frames, keying, tiling); palette is a warning |
+| `npm run art:validate` | Technical gate on generated art (sheet grid size, frame bounds, keying, tile seams); palette is a warning |
 | `npm run lint` | ESLint |
 
 ## Deploying

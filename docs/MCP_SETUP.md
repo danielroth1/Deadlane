@@ -93,10 +93,14 @@ Call 2 endpoints:
 - `fal-ai/nano-banana` (caveat: superseded)
 
 Both calls returned non-empty pages and the reply footer resolved to the named fal
-account `Daniel Roth`. No `run_model` call was made, no claim was taken, and the ledger
-still reads `0/150`.
+account `Daniel Roth`. No `run_model` call was made and no claim was taken, so the ledger
+recorded no spend — it showed no images used and no ceiling, because the lifetime ceiling
+was retired in WO-51 (see [`pipeline/BUDGET.md`](../pipeline/BUDGET.md)).
 
 ## Current state
+
+This table is the snapshot the connection check produced; only the connection rows are
+current, and the art rows were still open at that point.
 
 | Item | State |
 | --- | --- |
@@ -104,8 +108,8 @@ still reads `0/150`.
 | Tools | `search_models` enabled and callable in this editor (`browse_models` documented as fallback) |
 | Health check performed | 2 × `search_models` (name search + category browse), both non-empty |
 | Image endpoint | **not yet pinned** — pricing and schema work is WO-09b |
-| `pipeline/registry/model.json` | still `unresolved` |
-| Budget spent | 0 / 80 |
+| `pipeline/registry/model.json` | still `unresolved` at that point |
+| Images used | 0 — the ledger had recorded no spend (its then-80-image ceiling was retired later; see [`pipeline/BUDGET.md`](../pipeline/BUDGET.md)) |
 
 Connecting is complete; choosing an endpoint is not. WO-09b pins the model in
 `pipeline/registry/model.json` and records its cached schema.

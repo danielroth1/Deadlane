@@ -2,8 +2,9 @@
 
 A style guide for the art, not a rejection gate. It describes the look the game is going
 for, the technical constraints the atlas actually needs, and the preferences a reviewer
-should raise. Only [section 2.1](#21-hard--atlas-compatibility) can reject a sheet;
-everything else is guidance, and disagreeing with it is a warning, not a failure.
+should raise. Only [section 2.1](#21-hard--atlas-compatibility) and the hard list in
+[section 5](#5-sprite-sheets) can reject a sheet; everything else is guidance, and
+disagreeing with it is a warning, not a failure.
 
 ## 1. Read of the world
 
@@ -30,15 +31,19 @@ builder, the sprite lookup or the keying step would break with it.
 
 | Requirement | What it means | Why it is hard |
 | --- | --- | --- |
-| **Fixed cell grid** | The declared columns × rows, equal cell size, one subject centred per cell, nothing crossing a cell boundary. | `pipeline/steps/` slices by equal cells. A subject on a boundary becomes two half-sprites. |
+| **Fixed cell grid** | The declared columns × rows, equal cell size, one subject centred per cell, nothing crossing a cell boundary (the last two are reviewed, not machine-checked). | `pipeline/steps/` slices by equal cells. A subject on a boundary becomes two half-sprites. |
 | **Background keying** | A flat, saturated key colour (currently `#FF00FF` magenta) behind every subject, connected to the image border. | Background removal is a flood key. A backdrop the key cannot reach ships as an opaque plate. |
 | **Frame bounds** | Every shipped frame is non-empty and lies wholly inside its sheet. | An empty or out-of-sheet frame is a missing sprite and a wrong read. |
 | **No text in UI icons** | No letters, numbers or labels baked into the icon and chrome sheets. | The game renders its own text at runtime; baked text cannot be localised and reads as noise at 32 px. |
 | **No magenta bleed** | No opaque pixel of the key colour inside a shipped sprite. | A key-coloured pixel inside an outline means keying did not finish and the sprite will carry a hole or a plate. |
 
-Grid, keying, frame bounds and magenta bleed are checked by `npm run art:validate`, which
-fails the gate on them. "No text in UI icons" is a review requirement: a checker cannot
-read a label, so the reviewer looks for it on `art-19` and `art-20`.
+`art:validate` machine-checks five things and fails the gate on any of them: the sheet is
+exactly the declared columns × cell size by rows × cell size, every frame lies inside the
+sheet, no frame is fully transparent, no magenta key pixel survives inside a sprite, and
+every declared surface tile wraps without a seam. It does **not** look for a subject
+straddling a cell boundary and it cannot read text; "no boundary bleed" and "no text in UI
+icons" are reviewed requirements — the reviewer looks for them on the processed cells and
+on `art-19` / `art-20`.
 
 ### 2.2 Preferences — style warnings
 
@@ -156,12 +161,18 @@ cell is a hero sprite, not a catalogue of every state: at 64 px a car that keeps
 road surface trims down to roughly a third of its cell, and rotated states cannot be
 gridded at all.
 
-What the atlas needs from a sheet — **hard**, checked by `art:validate`:
+What the atlas needs from a sheet — **hard**. `art:validate` machine-checks the items marked
+*(checked)* and fails the gate on them; the rest is reviewed, and a reviewer rejecting one
+blocks the sheet just as firmly:
 
-- Exactly the declared number of columns and rows, equal cell size, no grid lines.
-- Every sprite wholly inside its own cell: no opaque pixel on a cell boundary.
+- *(checked)* Exactly the declared number of columns and rows at the declared cell size.
+- No grid lines drawn on the sheet.
+- *(checked)* Every frame wholly inside the sheet and non-empty: an empty frame would be a
+  missing sprite.
+- Every sprite wholly inside its own cell — no opaque pixel on a cell boundary *(reviewed;
+  `art:validate` does not detect this)*.
 - Empty cells are acceptable; the slicer discards them and they cost nothing.
-- Flat solid `#FF00FF` background — magenta is never in the palette, so background removal
+- *(checked)* Flat solid `#FF00FF` background — magenta is never in the palette, so background removal
   is a pure chroma-key with zero risk of eating a sprite pixel. The key is a
   **hue-and-saturation** predicate, not a distance from one hex: a pixel is backdrop when
   its brightest channel is ≥ 90, its saturation is ≥ 0.55, and its hue sits in
@@ -171,6 +182,7 @@ What the atlas needs from a sheet — **hard**, checked by `art:validate`:
   Manhattan distance — a radius test cannot separate them from palette `15 hot-pink`
   (`#ff2e63`, 345°, 0.82), which survives only because it never touches the border. Pale
   lane paint the model draws has saturation 0.18–0.30 and is therefore kept, by design.
+- *(checked)* Declared surface tiles wrap without a seam.
 
 What the prompt asks for — **preferred**, and a warning when it is missing:
 
@@ -456,7 +468,9 @@ packed sheet carries 6 frames — `civilians/sedan`, `civilians/pickup-truck`,
 
 **The slot is open, not approved.** After the review the attempt was kept in the ledger and
 `npm run art:reopen -- --slot art-08-civilians` cleared only `status`/`selected`; the seed,
-request id, url and cost of attempt 1 remain for audit and the ledger still reads 13/150. A
+request id, url and cost of attempt 1 remain for audit, and at the time of writing the
+ledger recorded 13 images and no ceiling (both caps were retired in WO-51 — see
+`pipeline/BUDGET.md`). A
 new 4 × 4 attempt can therefore be claimed and judged on its own cells. `art:atlas` only
 packs approved slots, so the six frames above live in the committed manifest until a new
 attempt is selected and packed — re-running `art:atlas` while the slot is open would drop
