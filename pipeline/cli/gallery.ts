@@ -31,7 +31,6 @@ interface SlotView {
   title: string;
   status: string;
   attemptsUsed: number;
-  perSlotLimit: number;
   selected: number | null;
   attempts: AttemptView[];
 }
@@ -103,7 +102,6 @@ async function collect(): Promise<SlotView[]> {
       title: slot.title,
       status: record.status,
       attemptsUsed: record.attempts.filter((a) => a.state !== 'released').length,
-      perSlotLimit: ledger.perSlotLimit,
       selected: record.selected ?? null,
       attempts: attempts.sort((a, b) => b.score - a.score),
     });
@@ -150,7 +148,7 @@ function renderSlot(slot: SlotView): string {
   return `
     <section class="slot">
       <h2>${esc(slot.id)} <small>${esc(slot.title)}</small>
-        <span class="meta">${slot.attemptsUsed}/${slot.perSlotLimit} attempts · ${esc(slot.status)}${
+        <span class="meta">${slot.attemptsUsed} attempt(s) · ${esc(slot.status)}${
           slot.selected ? ` · picked #${slot.selected}` : ''
         }</span>
       </h2>
@@ -158,8 +156,9 @@ function renderSlot(slot: SlotView): string {
     </section>`;
 }
 
-function renderPage(slots: SlotView[], used: number, limit: number, unstarted: number): string {
-  const pct = Math.round((used / limit) * 100);
+function renderPage(slots: SlotView[], used: number, limit: number | undefined, unstarted: number): string {
+  const usage = limit === undefined ? `${used} image(s) used · no lifetime cap` : `${used}/${limit} images used (${Math.round((used / limit) * 100)}%)`;
+  const pct = limit === undefined ? null : Math.round((used / limit) * 100);
 
   const body =
     slots.length === 0
@@ -219,8 +218,8 @@ function renderPage(slots: SlotView[], used: number, limit: number, unstarted: n
 </head>
 <body>
   <h1>DEADLANE</h1>
-  <div class="sub">attempt review · ${used}/${limit} images used (${pct}%) · ${unstarted} slot(s) unstarted</div>
-  <div class="meter"><i style="width:${pct}%"></i></div>
+  <div class="sub">attempt review · ${usage} · ${unstarted} slot(s) unstarted</div>
+  ${pct === null ? '' : `<div class="meter"><i style="width:${pct}%"></i></div>`}
   <div class="zoom" style="margin-top:14px">
     zoom:
     <button data-zoom="1" aria-pressed="true">1x</button>
@@ -263,5 +262,9 @@ run(async () => {
 
   ok(`${slots.length} slot(s) with processed attempts`);
   info(`open: file://${outPath}`);
-  info(`budget: ${summary.used}/${summary.limit}`);
+  info(
+    summary.limit === undefined
+      ? `ledger: ${summary.used} image(s) used · no lifetime cap`
+      : `ledger: ${summary.used}/${summary.limit}`,
+  );
 });

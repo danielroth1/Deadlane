@@ -39,7 +39,9 @@ run(async () => {
   info(`count=${model.params.count}  seed=${model.params.seed}  size=${model.params.imageSize}`);
   if (model.pricing) info(`$${model.pricing.amountUsd} / image`);
   info(
-    `Budget of ${ledger.limit} images ≈ $` +
-      ((model.pricing?.amountUsd ?? 0) * ledger.limit).toFixed(2),
+    ledger.limit === undefined
+      ? 'Ledger has no lifetime cap; every image still needs a claim'
+      : `Budget of ${ledger.limit} images ≈ $` +
+          ((model.pricing?.amountUsd ?? 0) * ledger.limit).toFixed(2),
   );
 });

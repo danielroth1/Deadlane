@@ -74,7 +74,10 @@ export function info(text: string): void {
   console.log(`  \x1b[90m·\x1b[0m ${text}`);
 }
 
-export function progressBar(used: number, limit: number, width = 40): string {
+export function progressBar(used: number, limit?: number, width = 40): string {
+  if (limit === undefined) {
+    return `[ ${used} image${used === 1 ? '' : 's'} used · no lifetime cap ]`;
+  }
   const filled = Math.round((used / limit) * width);
   const bar = '█'.repeat(filled) + '░'.repeat(Math.max(0, width - filled));
   return `[${bar}] ${used}/${limit}`;
@@ -93,7 +96,8 @@ export async function persist(ledger: Ledger): Promise<void> {
 export function printSummary(ledger: Ledger): void {
   const s = summarize(ledger);
   console.log(`  ${progressBar(s.used, s.limit)}`);
-  info(`remaining ${s.remaining} · unstarted slots ${s.unstarted} · approved ${s.approved}`);
+  const headroom = s.remaining === undefined ? 'no lifetime cap' : `remaining ${s.remaining}`;
+  info(`${headroom} · unstarted slots ${s.unstarted} · approved ${s.approved}`);
   if (s.spendUsd > 0) info(`recorded spend $${s.spendUsd.toFixed(3)}`);
 }
 

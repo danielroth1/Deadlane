@@ -21,9 +21,10 @@ works offline once loaded.
 
 ## Hard rules
 
-1. **Never call a fal generation tool without claiming budget first.**
+1. **Never call a fal generation tool without claiming first.**
    Run `npm run art:claim -- --slot <slot-id>` and only then call `run_model`.
-   The lifetime ceiling is **150 images**. See `pipeline/BUDGET.md`.
+   There is no lifetime image ceiling and no per-slot attempt cap, but every image still
+   needs a claim so `pipeline/budget.json` stays the audit trail. See `pipeline/BUDGET.md`.
 
 2. **Never put a fal key or OAuth token in the repo, in a prompt, or in chat.**
    The fal MCP relay authenticates with OAuth through your editor. There is no
@@ -148,8 +149,8 @@ pipeline/               asset factory (Node, never bundled)
   cli/                  claim, release, pull, process, select, atlas, validate
   steps/                slice, quantize, score, variants, atlas, validate
   ui/                   attempt review gallery
-  budget.json           150-image ledger (committed, auditable)
-  BUDGET.md             how the budget works and why
+  budget.json           image ledger (committed, auditable)
+  BUDGET.md             how the ledger works and why
 
 gauntlet/               work order queue + verdicts + state
 scripts/gauntlet/       state machine enforcement + repo:map digest
@@ -193,7 +194,7 @@ e2e/                    Playwright smoke tests
    It must pass before the generator is considered done.
 
 **New art slot**: see `pipeline/BUDGET.md` and `.github/prompts/art-slot.prompt.md`.
-Slots are declared in `pipeline/registry/slots.ts` and are permanent — the 20 slots are
+Slots are declared in `pipeline/registry/slots.ts` and are permanent — the 25 slots are
 fixed, so re-scoping art means re-allocating within them.
 
 ## Do not
@@ -201,5 +202,4 @@ fixed, so re-scoping art means re-allocating within them.
 - Do not add runtime network calls to the game.
 - Do not add an analytics or telemetry dependency.
 - Do not commit `pipeline/raw/` (gitignored) — only processed atlas output is committed.
-- Do not raise the 150-image ceiling or the 6-attempt cap without the human explicitly
-  saying so in the conversation.
+- Do not generate an image without a claim, and do not hand-edit the ledger or the atlas.

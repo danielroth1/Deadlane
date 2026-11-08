@@ -1,12 +1,6 @@
 import { existsSync } from 'node:fs';
 import { SLOTS } from '../registry/slots.js';
-import {
-  createLedger,
-  DEFAULT_IMAGE_LIMIT,
-  LEDGER_PATH,
-  saveLedger,
-  summarize,
-} from '../lib/ledger.js';
+import { createLedger, LEDGER_PATH, saveLedger, summarize } from '../lib/ledger.js';
 import { banner, info, ok, progressBar, run } from './util.js';
 
 /**
@@ -24,11 +18,7 @@ run(async () => {
     );
   }
 
-  const ledger = createLedger(
-    SLOTS.map((s) => s.id),
-    DEFAULT_IMAGE_LIMIT,
-    6,
-  );
+  const ledger = createLedger(SLOTS.map((s) => s.id));
   await saveLedger(ledger);
   const s = summarize(ledger);
 

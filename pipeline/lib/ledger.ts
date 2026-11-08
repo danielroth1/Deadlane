@@ -3,18 +3,21 @@ import { dirname, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * The image budget ledger.
+ * The image ledger.
  *
  * This module is pure: every function takes a `Ledger` and returns a new one, so the
  * rules can be unit-tested without touching disk. The CLI layer in `pipeline/cli/` owns
  * file IO.
  *
  * Rules (see pipeline/BUDGET.md):
- *   R1  A lifetime ceiling of `limit` images. Nothing can exceed it.
- *   R2  A single slot may be attempted at most `perSlotLimit` times.
- *   R3  A retry is refused while it would starve a slot that has never been tried.
- *   R4  Every attempt after the first must use a seed never used by that slot.
- *   R5  Only claimed attempts consume budget; releasing returns it.
+ *   R1  An optional lifetime ceiling (`limit`). Absent means no ceiling at all.
+ *   R2  An optional per-slot cap (`perSlotLimit`). Absent means unlimited attempts.
+ *   R3  Every attempt after the first must use a seed never used by that slot.
+ *   R4  Only claimed attempts consume budget; releasing returns it.
+ *
+ * The ceiling and the per-slot cap used to be mandatory (150 images and 6 attempts). An
+ * explicit human decision removed both: cost is no longer the limiting factor, but every
+ * image still needs a claim so the ledger remains the audit trail.
  */
 
 export type AttemptState = 'claimed' | 'generated' | 'released';
@@ -41,8 +44,10 @@ export interface SlotRecord {
 
 export interface Ledger {
   readonly version: 1;
-  readonly limit: number;
-  readonly perSlotLimit: number;
+  /** Optional lifetime ceiling. Absent means unlimited. */
+  readonly limit?: number;
+  /** Optional per-slot attempt cap. Absent means unlimited attempts. */
+  readonly perSlotLimit?: number;
   readonly createdAt: string;
   slots: Record<string, SlotRecord>;
 }
@@ -61,31 +66,25 @@ export class BudgetError extends Error {
   }
 }
 
-export function createLedger(slotIds: readonly string[], limit: number, perSlotLimit: number): Ledger {
+export function createLedger(
+  slotIds: readonly string[],
+  limits: { limit?: number; perSlotLimit?: number } = {},
+): Ledger {
   const slots: Record<string, SlotRecord> = {};
   for (const id of slotIds) {
     slots[id] = { id, attempts: [], status: 'open' };
   }
   return {
     version: 1,
-    limit,
-    perSlotLimit,
+    ...(limits.limit === undefined ? {} : { limit: limits.limit }),
+    ...(limits.perSlotLimit === undefined ? {} : { perSlotLimit: limits.perSlotLimit }),
     createdAt: new Date().toISOString(),
     slots,
   };
 }
 
 /**
- * Lifetime ceiling for the project, in images.
- *
- * Raised 80 → 120 by an explicit human decision (WO-20), then 120 → 150 by an explicit
- * human decision (2026-11-08). Raise it only the same way — see AGENTS.md, "Do not raise
- * the ceiling without the human saying so".
- */
-export const DEFAULT_IMAGE_LIMIT = 150;
-
-/**
- * Change the lifetime ceiling, keeping every existing slot and attempt intact.
+ * Change the optional lifetime ceiling, keeping every existing slot and attempt intact.
  *
  * A limit below what has already been consumed is refused: lowering the ceiling would
  * orphan recorded spend, and the ledger's whole job is to account for it.
@@ -102,6 +101,36 @@ export function setLimit(ledger: Ledger, limit: number): Ledger {
     );
   }
   return { ...ledger, limit };
+}
+
+/** Change the optional per-slot attempt cap. `undefined` removes the cap entirely. */
+export function setPerSlotLimit(ledger: Ledger, perSlotLimit: number | undefined): Ledger {
+  if (perSlotLimit !== undefined && (!Number.isInteger(perSlotLimit) || perSlotLimit < 1)) {
+    throw new BudgetError(
+      `Per-slot limit must be a positive integer, got "${String(perSlotLimit)}".`,
+    );
+  }
+  const base: Ledger = {
+    version: ledger.version,
+    ...(ledger.limit === undefined ? {} : { limit: ledger.limit }),
+    createdAt: ledger.createdAt,
+    slots: ledger.slots,
+  };
+  return perSlotLimit === undefined ? base : { ...base, perSlotLimit };
+}
+
+/**
+ * Remove both caps, leaving recorded spend untouched.
+ *
+ * This is the documented migration for ledgers written while the 150-image and 6-attempt
+ * limits existed. `art:migrate -- --unlimited` is the only sanctioned caller.
+ */
+export function clearLimits(ledger: Ledger): Ledger {
+  return {
+    version: ledger.version,
+    createdAt: ledger.createdAt,
+    slots: ledger.slots,
+  };
 }
 
 /**
@@ -130,10 +159,11 @@ export function usedImages(ledger: Ledger): number {
 }
 
 export function remainingImages(ledger: Ledger): number {
+  if (ledger.limit === undefined) return Number.POSITIVE_INFINITY;
   return Math.max(0, ledger.limit - usedImages(ledger));
 }
 
-/** Slots that have never consumed an image — these hold a reservation (R3). */
+/** Slots that have never consumed an image — the first-pass signal in `art:status`. */
 export function unstartedSlots(ledger: Ledger): number {
   return Object.values(ledger.slots).filter(
     (slot) => !slot.attempts.some((a) => a.state !== 'released'),
@@ -147,6 +177,7 @@ export function attemptsFor(ledger: Ledger, slotId: string): number {
 }
 
 export function isSlotExhausted(ledger: Ledger, slotId: string): boolean {
+  if (ledger.perSlotLimit === undefined) return false;
   return attemptsFor(ledger, slotId) >= ledger.perSlotLimit;
 }
 
@@ -154,7 +185,10 @@ export function isSlotExhausted(ledger: Ledger, slotId: string): boolean {
  * Reserve one image for a slot.
  *
  * Call this immediately before invoking the fal `run_model` tool, and never afterwards.
- * If generation fails, `release` the attempt so the budget is returned.
+ * If generation fails, `release` the attempt so the claim is returned.
+ *
+ * There is no lifetime ceiling and no per-slot cap unless the ledger explicitly carries
+ * one. The remaining refusals are status (approved / skipped) and a duplicate seed.
  */
 export function claimAttempt(
   ledger: Ledger,
@@ -175,38 +209,27 @@ export function claimAttempt(
   const live = slot.attempts.filter((a) => a.state !== 'released');
   const attemptNumber = slot.attempts.length + 1;
 
-  // R2 — per-slot cap.
-  if (live.length >= ledger.perSlotLimit) {
+  // R2 — optional per-slot cap. Absent means unlimited attempts.
+  if (ledger.perSlotLimit !== undefined && live.length >= ledger.perSlotLimit) {
     return {
       ok: false,
-      reason: `Slot "${slotId}" has used all ${ledger.perSlotLimit} attempts. Pick the best existing attempt with \`npm run art:select\`.`,
+      reason: `Slot "${slotId}" has used all ${ledger.perSlotLimit} allowed attempts. Pick the best existing attempt with \`npm run art:select\`.`,
     };
   }
 
-  // R1 — lifetime ceiling.
-  const used = usedImages(ledger);
-  if (used >= ledger.limit) {
-    return {
-      ok: false,
-      reason: `Lifetime image budget exhausted (${used}/${ledger.limit}).`,
-    };
-  }
-
-  // R3 — a retry may not starve a slot that has never been attempted.
-  const isRetry = live.length > 0;
-  if (isRetry) {
-    const unstarted = unstartedSlots(ledger);
-    if (remainingImages(ledger) - 1 < unstarted) {
+  // R1 — optional lifetime ceiling. Absent means unlimited images.
+  if (ledger.limit !== undefined) {
+    const used = usedImages(ledger);
+    if (used >= ledger.limit) {
       return {
         ok: false,
-        reason:
-          `Refusing retry for "${slotId}": ${unstarted} slot(s) have never been attempted and only ` +
-          `${remainingImages(ledger)} image(s) remain. Finish the first pass across all slots first.`,
+        reason: `Lifetime image limit reached (${used}/${ledger.limit}).`,
       };
     }
   }
 
-  // R4 — retries must change the seed, otherwise they are duplicate spends.
+  // R3 — retries must change the seed, otherwise they are duplicate spends.
+  const isRetry = live.length > 0;
   if (isRetry && live.some((a) => a.seed === opts.seed)) {
     return {
       ok: false,
@@ -324,8 +347,10 @@ function requireSlotRecord(ledger: Ledger, slotId: string): SlotRecord {
 
 export interface LedgerSummary {
   readonly used: number;
-  readonly limit: number;
-  readonly remaining: number;
+  /** Absent when the ledger has no lifetime ceiling. */
+  readonly limit?: number;
+  /** Absent when the ledger has no lifetime ceiling. */
+  readonly remaining?: number;
   readonly unstarted: number;
   readonly approved: number;
   readonly exhausted: number;
@@ -336,8 +361,9 @@ export function summarize(ledger: Ledger): LedgerSummary {
   const slots = Object.values(ledger.slots);
   return {
     used: usedImages(ledger),
-    limit: ledger.limit,
-    remaining: remainingImages(ledger),
+    ...(ledger.limit === undefined
+      ? {}
+      : { limit: ledger.limit, remaining: remainingImages(ledger) }),
     unstarted: unstartedSlots(ledger),
     approved: slots.filter((s) => s.status === 'approved').length,
     exhausted: slots.filter((s) => s.status === 'exhausted').length,

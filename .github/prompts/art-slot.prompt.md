@@ -1,5 +1,5 @@
 ---
-description: 'Generate one DEADLANE art slot through the fal MCP server, within the budget governor. Use for a single slot only.'
+description: 'Generate one DEADLANE art slot through the fal MCP server, through the claim ledger. Use for a single slot only.'
 ---
 
 # One art slot, end to end
@@ -12,7 +12,8 @@ Arg: `<slot-id>` (for example `art-13-tiles-highway`).
 npm run art:status
 ```
 
-Stop if `remaining` is 0, the slot is already `approved`, or `attempts` is already 6.
+Stop if the slot is already `approved`. There is no lifetime ceiling and no per-slot attempt
+cap, but a retry still needs a diagnosis and a new seed.
 
 ## 1. Claim
 
@@ -27,7 +28,7 @@ If it refuses, read the reason — do not work around it.
 
 Call the fal MCP `run_model` tool with **exactly** the printed arguments.
 
-- One image. Always. The budget counts images, not calls.
+- One image. Always. The ledger counts images, not calls.
 - If the result is `processing`, poll with `check_job` and `get_job_result` — **never**
   call `run_model` again to check progress; that creates a second billable job.
 
@@ -79,8 +80,8 @@ npm run art:validate
 ## 7. Report
 
 ```
-<slot-id>  attempt <n>/6  cells <u>/16  score <s>  images used <n>/150
+<slot-id>  attempt <n>  cells <u>/16  score <s>  images used <n>
 ```
 
-If the slot needed more than three attempts, say which metric improved each time. If it hit
-six, say so and recommend the best attempt explicitly.
+If the slot needed more than three attempts, say which metric improved each time, and
+recommend the best attempt explicitly.

@@ -1,13 +1,12 @@
-import { loadLedger } from '../lib/ledger.js';
+import { attemptsFor, loadLedger, summarize } from '../lib/ledger.js';
 import { SLOTS } from '../registry/slots.js';
-import { attemptsFor, summarize } from '../lib/ledger.js';
 import { banner, info, printSummary, run } from './util.js';
 
 /**
- * Print the budget ledger in a form an agent can act on without reading the JSON.
+ * Print the image ledger in a form an agent can act on without reading the JSON.
  */
 run(async () => {
-  banner('DEADLANE · image budget');
+  banner('DEADLANE · image ledger');
   const ledger = await loadLedger();
   printSummary(ledger);
 
@@ -20,7 +19,7 @@ run(async () => {
     return {
       id: slot.id.padEnd(24),
       title: title.padEnd(26),
-      attempts: `${used}/${ledger.perSlotLimit}`.padStart(3),
+      attempts: String(used).padStart(3),
       status: slot.status.padEnd(9),
       selected,
     };
@@ -35,10 +34,10 @@ run(async () => {
   const s = summarize(ledger);
   console.log('');
   if (s.remaining === 0) {
-    info('Budget exhausted. Do not generate. Review, select, and ship.');
+    info('The configured lifetime limit is reached; retries need a higher limit.');
   } else if (s.unstarted > 0) {
-    info(`${s.unstarted} slot(s) still need a first attempt before any retries are allowed.`);
+    info(`${s.unstarted} slot(s) have never been attempted.`);
   } else {
-    info('All slots have at least one attempt. Retries are available within the cap.');
+    info('Every slot has at least one attempt. Retries are unlimited.');
   }
 });

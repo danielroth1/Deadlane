@@ -192,8 +192,9 @@ BLOCKED <anything you could not write, and why — or "none">
 
 - Writes go to `gauntlet/work-orders/` and `gauntlet/state.json` only. Never `src/`,
   `pipeline/`, `public/`, `docs/`, `AGENTS.md`, `.github/` or `package.json`.
-- Never raise the 150-image ceiling or the 6-attempt cap. An art order names its slot id and
-  fits the existing budget and ledger.
+- There is no lifetime image ceiling and no per-slot attempt cap. An art order still names
+  its slot id, and generation still goes through `art:claim` so the ledger stays the audit
+  trail.
 - Never reopen a `done` order — plan the one that supersedes it.
 - An escalated order is context, not a plan item; the human decides whether its blocker
   becomes a new order.

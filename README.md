@@ -11,7 +11,7 @@ Built with Phaser 3 + TypeScript + Vite. Deployed to GitHub Pages. The shipped g
   <img alt="DEADLANE" src="https://img.shields.io/badge/status-playable-ff2e63?style=flat-square" />
   <img alt="Phaser 3" src="https://img.shields.io/badge/phaser-3-8a4fff?style=flat-square" />
   <img alt="TypeScript" src="https://img.shields.io/badge/typescript-strict-3178c6?style=flat-square" />
-  <img alt="art budget" src="https://img.shields.io/badge/art%20budget-150%20images-232a34?style=flat-square" />
+  <img alt="art ledger" src="https://img.shields.io/badge/art%20ledger-audited-232a34?style=flat-square" />
 </p>
 
 ## Play
@@ -59,22 +59,24 @@ Five level types: `highway`, `canyon`, `river`, `city`, `tunnel`. Adding a sixth
 `LEVEL_TYPES` entry plus a profile row — the generator, the validation matrix and the tests
 pick it up automatically.
 
-### Art has a 150-image budget
+### Art is generated in slots, then processed in code
 
-Every image costs money, so the pipeline spends it only on **composition**. Scale, palette,
+Every generation still needs a claim, because the ledger is the audit trail of what was
+generated and what it cost. Claims are spent on **composition** only. Scale, palette,
 outlines, recolours, damage states and every animation frame are produced deterministically
 in code.
 
 ```bash
-npm run art:status                  # used/150, per-slot attempts
+npm run art:status                  # images used, per-slot attempts
 npm run art:claim -- --slot <id>    # reserve an image, print the exact run_model call
 npm run art:process -- --slot <id>  # slice, quantise, score
 npm run art:select -- --slot <id>   # pick the best attempt
 npm run art:atlas                   # repack the game assets
 ```
 
-Twenty fixed slots, one ledger, a 150-image ceiling. Full rules in
-[`pipeline/BUDGET.md`](pipeline/BUDGET.md); the visual contract in
+Twenty-five fixed slots, one ledger, no lifetime image ceiling and no per-slot attempt cap.
+Full rules in
+[`pipeline/BUDGET.md`](pipeline/BUDGET.md); the style guide in
 [`docs/ART_BIBLE.md`](docs/ART_BIBLE.md).
 
 fal MCP connection and token recovery: [`docs/MCP_SETUP.md`](docs/MCP_SETUP.md).
@@ -105,7 +107,7 @@ inside a single agent's context. See [`AGENTS.md`](AGENTS.md).
 | `npm run typecheck` | TypeScript, strict |
 | `npm run test` | Unit tests (includes the 5,000-level matrix) |
 | `npm run test:e2e` | Playwright smoke against the production build |
-| `npm run art:validate` | Assert generated art is in-palette, correctly sized, tiles wrap |
+| `npm run art:validate` | Technical gate on generated art (grid, frames, keying, tiling); palette is a warning |
 | `npm run lint` | ESLint |
 
 ## Deploying

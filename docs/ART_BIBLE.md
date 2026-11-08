@@ -1,8 +1,9 @@
 # DEADLANE — Art Bible
 
-The single source of truth for every image decision. Prompts, post-processing and review
-rubrics all derive from this document. If a generated image disagrees with this file, the
-image is wrong.
+A style guide for the art, not a rejection gate. It describes the look the game is going
+for, the technical constraints the atlas actually needs, and the preferences a reviewer
+should raise. Only [section 2.1](#21-hard--atlas-compatibility) can reject a sheet;
+everything else is guidance, and disagreeing with it is a warning, not a failure.
 
 ## 1. Read of the world
 
@@ -15,32 +16,54 @@ Tone words, in priority order:
 
 `COLD · FAST · INDUSTRIAL · COVERT · LOUD`
 
-Anti-tone words — an image containing any of these is rejected:
+Anti-tone words — art that reads this way will usually be asked to change:
 
 `cute · pastel · painterly · glossy plastic · isometric · photographic · 3D render · soft
 gradient · thin outline · anti-aliased`
 
-## 2. Technical contract
+## 2. Technical requirements and preferences
 
-| Property | Value | Why |
+### 2.1 Hard — atlas compatibility
+
+These are the only hard rules. A sheet that breaks one cannot ship, because the atlas
+builder, the sprite lookup or the keying step would break with it.
+
+| Requirement | What it means | Why it is hard |
 | --- | --- | --- |
-| Internal canvas | 640 × 360 | 16:9, integer-scales to 1280/1920/2560 |
-| Tile grid | 32 × 32 | Road, terrain, walls |
-| Vehicle cell | 64 × 64 | 2×2 tiles, leaves room for a shadow |
-| Icon cell | 16 × 16 or 32 × 32 | HUD |
-| Pixel density | 1 px = 1 px | No sub-pixel. Ever. |
-| Outlines | Exactly 1 px, darker-than-fill | Reads against any background |
-| Transparency | Binary alpha only | No semi-transparent edge pixels |
-| Rotation | Only 90° increments | Anything else creates off-grid pixels |
-| Lighting | Top-left key, flat fill | Consistent across every asset |
-| Shadows | Dropped 2 px down-right, 1 colour | Grounds vehicles without soft shading |
+| **Fixed cell grid** | The declared columns × rows, equal cell size, one subject centred per cell, nothing crossing a cell boundary. | `pipeline/steps/` slices by equal cells. A subject on a boundary becomes two half-sprites. |
+| **Background keying** | A flat, saturated key colour (currently `#FF00FF` magenta) behind every subject, connected to the image border. | Background removal is a flood key. A backdrop the key cannot reach ships as an opaque plate. |
+| **Frame bounds** | Every shipped frame is non-empty and lies wholly inside its sheet. | An empty or out-of-sheet frame is a missing sprite and a wrong read. |
+| **No text in UI icons** | No letters, numbers or labels baked into the icon and chrome sheets. | The game renders its own text at runtime; baked text cannot be localised and reads as noise at 32 px. |
+| **No magenta bleed** | No opaque pixel of the key colour inside a shipped sprite. | A key-coloured pixel inside an outline means keying did not finish and the sprite will carry a hole or a plate. |
+
+Grid, keying, frame bounds and magenta bleed are checked by `npm run art:validate`, which
+fails the gate on them. "No text in UI icons" is a review requirement: a checker cannot
+read a label, so the reviewer looks for it on `art-19` and `art-20`.
+
+### 2.2 Preferences — style warnings
+
+The following are the house style. `art:validate` reports deviations as **warnings**, and a
+reviewer may ask for a retry, but a sheet is not rejected on any of them alone. Quantisation
+and outlining remain the default post-processing pass in `pipeline/steps/`, which is how the
+preferences usually get honoured without a retry.
+
+| Preference | Usual value | Warn when |
+| --- | --- | --- |
+| **Palette** | The 16 indexed colours in section 3. | More than ~1% of opaque pixels land off-palette after quantisation. |
+| **Outline** | Exactly 1 px, darker than the fill, on every subject. | No outline, or more than one outline weight on a sheet. |
+| **Pixel density** | 1 px = 1 px at the final sprite size. | Detail that only survives downscaling by smearing. |
+| **Rotation** | 90° increments only. | A sprite would need an arbitrary angle to face its direction of travel. |
+| **Alpha** | Binary alpha; no semi-transparent edge pixels. | Soft or feathered edges survive processing. |
+| **Shadow** | A 1-colour offset to the lower right, or none at all. | A soft, blurred or baked-in background shadow. |
 
 Everything ships at **1×**. Display scaling is the game's job, never the artist's.
 
 ## 3. Palette
 
-Sixteen colours, indexed. Locked. `pipeline/registry/palette.json` is generated from this
-table and every sprite is quantised to it.
+Sixteen colours, indexed. `pipeline/registry/palette.json` is generated from this table and
+is what the default style pass quantises to. Using it is a **preference**: a sheet that
+drifts off the table still ships, with a warning, and the quantiser will pull it back to the
+nearest colour anyway.
 
 | Index | Hex | Name | Role |
 | --- | --- | --- | --- |
@@ -62,7 +85,8 @@ table and every sprite is quantised to it.
 | 15 | `#ff2e63` | Hot pink | Player accent, critical UI only |
 
 **Usage ratios:** roughly 60% neutrals (0–6), 25% one accent family, 15% everything else.
-Hot pink is reserved for the player and must never appear on an enemy.
+Hot pink is the player accent. Enemy art that uses it is a warning rather than a failure:
+it blurs the read of who is who, so it usually earns a retry.
 
 ### Approved palette order
 
@@ -107,12 +131,13 @@ nose. Pink tail-light pixels at the stern. Reads as an arrow from above.
 16 px** to imply altitude. A helicopter is always drawn with its rotor as a 4-pixel cross,
 never as a blurred disc.
 
-**Division water.** Gunboats and speedboats are drawn at a slight 3/4 angle so they read
-as floating rather than hovering — the only permitted angle deviation in the game.
+**Division water.** Boats read best bow-up and square to the frame, exactly like the land
+vehicles. A painted wake or water ring is scenery, not part of the hull, and tends to read
+as an opaque plate once keyed — keep it out of the cell.
 
 **Civilians.** Rounded, weaker silhouettes: sedans, wagons, vans, pickups, buses. Muted
-factory colours, always lower contrast than any combatant. Civilians must never look
-threatening.
+factory colours, always lower contrast than any combatant. Civilians should not look
+threatening — their job is to be avoided, not feared.
 
 ## 5. Sprite sheets
 
@@ -121,22 +146,21 @@ fixed per slot, not globally:
 
 | Sheet family | Grid | Cell size |
 | --- | --- | --- |
-| Player vehicle (`art-02`), bosses (`art-07`), enemy vehicles (`art-03` – `art-06`) | **2 × 2, 4 cells** | **128 × 128** |
-| Civilian and prop sheets (`art-08` – `art-12`) | 4 × 4, 16 cells | 64 × 64 |
+| Player vehicle (`art-02`), bosses (`art-07`), enemy vehicles (`art-03` – `art-06`), transporter (`art-21`) | **2 × 2, 4 cells** | **128 × 128** |
+| Civilian, prop, scenery and effect sheets (`art-08` – `art-12`, `art-22` – `art-25`) | 4 × 4, 16 cells | 64 × 64 |
 | Tile and UI sheets (`art-13` – `art-20`) | 4 × 4, 16 cells | 32 × 32 |
 | Single-image slots (`art-01`) | 1 × 1 | full frame |
 
-**Vehicle sheets are 2 × 2 at 128 px and carry axis-aligned subjects only.** A vehicle
+**Vehicle sheets are 2 × 2 at 128 px and read best with axis-aligned subjects.** A vehicle
 cell is a hero sprite, not a catalogue of every state: at 64 px a car that keeps its
 road surface trims down to roughly a third of its cell, and rotated states cannot be
 gridded at all.
 
-Required sheet properties — this is the prompt spec, not a suggestion:
+What the atlas needs from a sheet — **hard**, checked by `art:validate`:
 
 - Exactly the declared number of columns and rows, equal cell size, no grid lines.
-- Every sprite centred in its cell, un-rotated, un-angled, top-down.
-- Vehicle sheets carry axis-aligned subjects only: every vehicle nose up and square to
-  the frame, never side-on, never three-quarter, with no scenery painted behind it.
+- Every sprite wholly inside its own cell: no opaque pixel on a cell boundary.
+- Empty cells are acceptable; the slicer discards them and they cost nothing.
 - Flat solid `#FF00FF` background — magenta is never in the palette, so background removal
   is a pure chroma-key with zero risk of eating a sprite pixel. The key is a
   **hue-and-saturation** predicate, not a distance from one hex: a pixel is backdrop when
@@ -147,12 +171,18 @@ Required sheet properties — this is the prompt spec, not a suggestion:
   Manhattan distance — a radius test cannot separate them from palette `15 hot-pink`
   (`#ff2e63`, 345°, 0.82), which survives only because it never touches the border. Pale
   lane paint the model draws has saturation 0.18–0.30 and is therefore kept, by design.
+
+What the prompt asks for — **preferred**, and a warning when it is missing:
+
+- Every sprite centred in its cell, un-rotated, un-angled, top-down.
+- Vehicle sheets carry axis-aligned subjects: every vehicle nose up and square to
+  the frame, never side-on, never three-quarter, with no scenery painted behind it.
 - No text, no labels, no numbers, no borders, no drop shadows outside the sprite.
 - Consistent scale across the sheet: one vehicle occupies the same footprint in every cell.
-- Empty cells are acceptable; the slicer discards them and they cost nothing.
 
 Sheets are sliced, quantised, outlined and re-packed by `pipeline/steps/`. Model output is
 never shipped.
+
 
 ### Gate: sheet yield on `art-02-player-vehicle` attempt 2 (WO-11, 2 × 2 @ 128 px per WO-21)
 
@@ -440,7 +470,7 @@ procedural placeholder art.
 
 ## 6. Motion
 
-We do **not** ask a diffusion model for animation. Animation is assembled in code:
+We prefer **not** to ask a diffusion model for animation. Animation is assembled in code:
 
 | Motion | Technique |
 | --- | --- |
@@ -454,28 +484,35 @@ We do **not** ask a diffusion model for animation. Animation is assembled in cod
 | Rotors | 2-frame code-drawn cross |
 | Exhaust | Emitter reusing 2 pixels of the palette |
 
-This keeps the image budget at 20 slots instead of 200, and keeps motion crisp, because
-no frame has resampled pixels.
+This keeps the art in a small number of slots instead of hundreds of animation frames,
+and keeps motion crisp, because no frame has resampled pixels.
 
 ## 7. Review rubric
 
-The reviewer scores every attempt 0–5 on each axis. **Any axis below 3 fails the attempt.**
+The reviewer scores every attempt 0–5 on each axis and records the score in the verdict.
+**Technical axes fail the attempt when they are unsafe to ship; style axes are warnings the
+reviewer weighs.**
 
-1. **Grid integrity** — 4×4 cells, centred, no bleed between cells.
-2. **Silhouette** — readable at 64×64, distinguishable from the other sprites on the sheet.
-3. **Palette** — after quantisation, ≤ 1% of pixels deviate from the 16-colour table.
-4. **Perspective** — top-down, top-left key light, no isometric drift.
-5. **Consistency** — same scale and outline weight as previously approved sheets.
-6. **Background** — flat magenta, no gradients, no stray marks.
+| Axis | Kind | What good looks like |
+| --- | --- | --- |
+| Grid integrity | technical | Declared grid, centred subjects, no bleed between cells. |
+| Background and bounds | technical | Flat key colour, no key residue, every frame whole. |
+| Silhouette | style | Readable at its final size, distinguishable from the other sprites on the sheet. |
+| Palette | style | After quantisation, close to the 16-colour table. |
+| Perspective | style | Top-down, top-left key light, no isometric drift. |
+| Consistency | style | Same scale and outline weight as previously approved sheets. |
 
 If two attempts both pass, prefer the one with the higher automated score from
 `pipeline/steps/score.ts`, then the earlier attempt.
 
-## 8. Things that are always wrong
+## 8. Things that are usually wrong
 
-- Vehicles drawn at an angle on a road sheet (they must be axis-aligned).
+Preferences, not prohibitions — but each of these costs the reviewer a second look:
+
+- Vehicles drawn at an angle on a road sheet; axis-aligned reads better and keeps motion cheap.
 - More than one outline weight on a sheet.
-- Gradients, glows, or soft shadows.
-- Any text baked into a sprite.
-- Sprites that use hot pink (reserved for the player).
-- Sprites that straddle a cell boundary.
+- Gradients, glows or soft shadows; they do not survive quantisation.
+- Text baked into a sprite; it cannot be localised and reads as noise at small sizes.
+  (Baked text on the UI icon and chrome sheets is a hard failure — see 2.1.)
+- Hot pink on an enemy; it is the player's accent.
+- Sprites that straddle a cell boundary (hard — see 2.1).

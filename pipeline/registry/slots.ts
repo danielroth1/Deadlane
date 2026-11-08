@@ -1,12 +1,13 @@
 /**
- * The 20 art slots.
+ * The 25 art slots.
  *
- * A "slot" is a permanent reservation in the 150-image budget. Slots are fixed for the
- * life of the project; re-scoping art means re-allocating cells inside a slot, not adding
- * new slots. Everything the game can draw is ultimately addressed by a sprite id that
+ * A "slot" is a permanent, named unit of work in the image ledger. Slots are fixed for
+ * the life of the project; re-scoping art means re-allocating cells inside a slot, not
+ * renaming one. Everything the game can draw is ultimately addressed by a sprite id that
  * belongs to exactly one slot.
  *
- * See docs/ART_BIBLE.md for the visual contract these prompts encode.
+ * The ledger has no lifetime image ceiling and no per-slot attempt cap; every image still
+ * needs a claim. See docs/ART_BIBLE.md for the style guide these prompts encode.
  */
 
 export type SlotKind = 'single' | 'sheet';
@@ -667,6 +668,169 @@ export const SLOTS: readonly SlotSpec[] = [
       'grid pattern',
     ]),
     emphasis: ['grid-aligned so tiles can be nine-sliced', 'no text of any kind'],
+  },
+  {
+    id: 'art-21-transporter',
+    title: 'Transporter states',
+    kind: 'sheet',
+    target: 'vehicle',
+    grid: { cols: 2, rows: 2 },
+    finalSize: 128,
+    subject:
+      'four separate heavy transport trucks seen from directly above: one whole truck per cell, every truck drawn at the same scale and in the same nose-up pose, centred in its own cell — the transporter closed, the same transporter with its rear ramp lowered, the same transporter with a vehicle on the ramp mid-load, and the same transporter damaged and smoking',
+    cells: padCells([
+      'transporter closed',
+      'transporter ramp open',
+      'transporter loading',
+      'transporter damaged',
+    ]),
+    emphasis: [
+      'the ramp is drawn as a flat rectangle hinged at the rear, never as a side view',
+      'every state is the same truck at the same scale, only the rear and damage change',
+      'every truck is axis-aligned with its nose pointing up',
+      'no rotation, no lean and no tilt: every truck sits square to the frame',
+      'no side-on view, only a pure square-on overhead view of each truck',
+      'no road markings, no lane paint and no terrain behind the trucks',
+      'no smoke, no exhaust plume and no shadow cast onto the background',
+    ],
+  },
+  {
+    id: 'art-22-scenery-roadside',
+    title: 'Roadside scenery',
+    kind: 'sheet',
+    target: 'prop',
+    grid: { cols: 4, rows: 4 },
+    finalSize: 64,
+    subject:
+      'sixteen top-down roadside scenery objects for a highway and a desert road: trees, bushes, rock outcrops, fences, signs, wrecks and pylons, one whole object per cell, centred in its cell',
+    cells: padCells([
+      'tree roadside',
+      'tree blown',
+      'bush cluster',
+      'dry hedge',
+      'rock outcrop',
+      'rock pile small',
+      'wooden fence',
+      'chain link fence',
+      'warning sign blank',
+      'direction sign blank',
+      'billboard blank',
+      'wrecked sedan',
+      'wrecked van',
+      'burnt car',
+      'pylon lattice',
+      'pylon concrete',
+    ]),
+    emphasis: [
+      'every object is seen from directly above: an upright object shows its footprint, never its side',
+      'must read at 64x64',
+      'no text, no letters and no numbers on any sign',
+      'no road surface, no lane paint and no terrain painted behind the objects',
+      'no shadow cast onto the background',
+    ],
+  },
+  {
+    id: 'art-23-scenery-water',
+    title: 'Waterside scenery',
+    kind: 'sheet',
+    target: 'prop',
+    grid: { cols: 4, rows: 4 },
+    finalSize: 64,
+    subject:
+      'sixteen top-down waterside scenery objects for a river delta: reed banks, docks, buoys, moored boats, rocks and bridge piers, one whole object per cell, centred in its cell',
+    cells: padCells([
+      'reed bank',
+      'reed clump',
+      'wooden dock',
+      'dock ladder',
+      'channel buoy',
+      'marker buoy',
+      'moored dinghy',
+      'moored skiff',
+      'moored barge',
+      'water rock',
+      'stone jetty',
+      'bridge pier',
+      'tall bridge pier',
+      'tire fender',
+      'mooring post',
+      'floating pontoon',
+    ]),
+    emphasis: [
+      'every object is seen from directly above: an upright object shows its footprint, never its side',
+      'must read at 64x64',
+      'no water texture, no ripples and no spray painted around the objects',
+      'no road markings and no terrain painted behind the objects',
+      'no shadow cast onto the background',
+    ],
+  },
+  {
+    id: 'art-24-scenery-urban',
+    title: 'Urban scenery',
+    kind: 'sheet',
+    target: 'prop',
+    grid: { cols: 4, rows: 4 },
+    finalSize: 64,
+    subject:
+      'sixteen top-down urban scenery objects for a city block: roofs, signs, air-conditioning units, dumpsters, streetlights and planters, one whole object per cell, centred in its cell',
+    cells: padCells([
+      'apartment roof',
+      'house roof',
+      'roof skylight',
+      'roof stair hatch',
+      'neon sign blank',
+      'billboard blank',
+      'AC unit',
+      'AC unit bank',
+      'dumpster',
+      'skip container',
+      'streetlight head',
+      'streetlight twin',
+      'planter box',
+      'planter tree',
+      'roof water tank',
+      'satellite dish',
+    ]),
+    emphasis: [
+      'every object is seen from directly above: a roof reads as a roof, never as a wall',
+      'must read at 64x64',
+      'no text, no letters and no numbers on any sign',
+      'no street surface and no terrain painted behind the objects',
+      'no shadow cast onto the background',
+    ],
+  },
+  {
+    id: 'art-25-fx-expanded',
+    title: 'Expanded effects',
+    kind: 'sheet',
+    target: 'prop',
+    grid: { cols: 4, rows: 4 },
+    finalSize: 64,
+    subject:
+      'sixteen top-down effects on magenta at a larger size: three flame-stream animation frames, three explosion variants, three smoke shapes, two debris bursts, two shockwaves, two water splashes and a spark burst',
+    cells: padCells([
+      'flame stream a',
+      'flame stream b',
+      'flame stream c',
+      'explosion small',
+      'explosion medium',
+      'explosion large',
+      'smoke puff',
+      'smoke cloud',
+      'smoke ring',
+      'debris burst',
+      'debris chunk',
+      'shockwave ring',
+      'shockwave arc',
+      'water splash small',
+      'water splash large',
+      'sparks burst',
+    ]),
+    emphasis: [
+      'the three flame-stream frames are one animation, drawn in the same orientation and scale',
+      'flat colour, hard edges',
+      'no glow, no soft gradients and no anti-aliasing',
+    ],
   },
 ];
 

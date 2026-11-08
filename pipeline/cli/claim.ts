@@ -8,9 +8,11 @@ import { bad, banner, info, numberFlag, ok, parseArgs, printSummary, requireFlag
 /**
  * Reserve one image, then print the exact `run_model` call to make.
  *
- * This is the only sanctioned way to spend budget. Nothing in the pipeline calls a
- * generation model directly — the agent does that through the fal MCP server, using the
- * arguments printed here.
+ * This is the only sanctioned way to generate: every image is claimed first, so the
+ * ledger stays the audit trail. Nothing in the pipeline calls a generation model
+ * directly — the agent does that through the fal MCP server, using the arguments
+ * printed here. There is no lifetime ceiling and no per-slot attempt cap; the only
+ * refusals left are an approved/skipped slot and a duplicate seed.
  */
 run(async () => {
   const { flags } = parseArgs(process.argv.slice(2));
@@ -38,7 +40,7 @@ run(async () => {
   if (!result.ok) {
     bad(result.reason);
     console.log('');
-    info('Current budget:');
+    info('Current ledger:');
     printSummary(ledger);
     process.exitCode = 2;
     return;
@@ -55,7 +57,7 @@ run(async () => {
   console.log('');
   console.log(`    run_model(${JSON.stringify(model.endpointId, null, 0)}, {`);
   console.log(`      prompt: ${JSON.stringify(prompt)},`);
-  console.log(`      ${model.params.count}: 1,   \x1b[90m// exactly one image — the budget counts images\x1b[0m`);
+  console.log(`      ${model.params.count}: 1,   \x1b[90m// exactly one image — the ledger counts images\x1b[0m`);
   console.log(`      ${model.params.seed}: ${seed},`);
   console.log(`      ${model.params.imageSize}: "square_hd"`);
   console.log(`    })`);

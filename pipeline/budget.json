@@ -1,7 +1,5 @@
 {
   "version": 1,
-  "limit": 150,
-  "perSlotLimit": 6,
   "createdAt": "2026-11-06T20:00:35.336Z",
   "slots": {
     "art-01-style-anchor": {
@@ -178,6 +176,22 @@
           "requestId": "01a1bc06-90e6-7193-9587-f7177a57cbad",
           "url": "https://v3b.fal.media/files/b/0ab1aa27/LDb4LFZJXeLFA8pYmOfmj_jqMBYJu4.png",
           "costUsd": 0.0084
+        },
+        {
+          "attempt": 2,
+          "seed": 766530582,
+          "promptHash": "1a2cc2aa6eafdf85",
+          "state": "released",
+          "claimedAt": "2026-11-08T18:52:43.059Z",
+          "notes": "WO-51 smoke test: claim path, no image generated"
+        },
+        {
+          "attempt": 3,
+          "seed": 766530582,
+          "promptHash": "1a2cc2aa6eafdf85",
+          "state": "released",
+          "claimedAt": "2026-11-08T18:53:21.240Z",
+          "notes": "WO-51 smoke test: claim path, no image generated"
         }
       ],
       "status": "open"
@@ -375,6 +389,31 @@
     },
     "art-20-ui-chrome": {
       "id": "art-20-ui-chrome",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-21-transporter": {
+      "id": "art-21-transporter",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-22-scenery-roadside": {
+      "id": "art-22-scenery-roadside",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-23-scenery-water": {
+      "id": "art-23-scenery-water",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-24-scenery-urban": {
+      "id": "art-24-scenery-urban",
+      "attempts": [],
+      "status": "open"
+    },
+    "art-25-fx-expanded": {
+      "id": "art-25-fx-expanded",
       "attempts": [],
       "status": "open"
     }
