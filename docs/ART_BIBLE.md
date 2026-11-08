@@ -381,6 +381,46 @@ and `enemy-sea/speedboat-hostile` are absent from `assets.json`. The game draws 
 art for those two ids. Fourteen enemy sprites are shipped from these four slots. No claim
 beyond these numbers is made here.
 
+### Measured yield: civilian sheet 08 (WO-40, one attempt, gate applied as a drop)
+
+One attempt of `art-08-civilians` (4 × 4 @ 64 px, seed `1473907335`) was paid for and
+pulled; the order forbids a retry, so the gate is applied as a drop rather than a re-roll.
+`art:process` reports `usableCells 16/16`, which as stated above is only the non-empty
+counter and is **not** the yield.
+
+| Cell | Declared subject | Gate |
+| --- | --- | --- |
+| 0 | sedan | pass — top-down, nose up |
+| 1 | sedan alt | **fail — three vehicles fused into a cross** |
+| 2 | estate wagon | **fail — three vehicles fused into a cross** |
+| 3 | hatchback | **fail — drawn side-on** |
+| 4 | pickup truck | pass — top-down, nose up |
+| 5 | delivery van | **fail — three vehicles fused into a cross** |
+| 6 | box truck | **fail — drawn side-on** |
+| 7 | taxi | pass — top-down, nose up |
+| 8 | city bus | pass — top-down, nose up |
+| 9 | skiff | **fail — a side-on red sedan, not a watercraft** |
+| 10 | civilian sports car | **fail — a side-view motorboat ringed with water** |
+| 11 | small lorry | pass — top-down, nose up |
+| 12 | limousine | pass — top-down, nose up |
+| 13 | barge | **fail — side-on, ringed with water and ripple** |
+| 14 | flatbed lorry | **fail — side-on, ringed with water and ripple** |
+| 15 | pleasure boat | **fail — side-on, ringed with water and ripple** |
+
+**Gate outcome: 6 of 16 cells pass, and zero watercraft.** The water civilian ids are the
+entire civilian pool of the `river` level, so `skiff`, `barge` and `boat` stay on the
+procedural placeholder — the gap this sheet was generated to close is still open and needs
+a **new** 4 × 4 attempt, not a re-roll of this one.
+
+The ten failures are declared as `droppedCells` in `pipeline/registry/slots.ts`, which
+`build-atlas` enforces: the cells are excluded even though their processed PNGs are still in
+`pipeline/work/`, so no `rm` step and no ordering constraint is involved. The packed sheet
+carries 6 frames — `civilians/sedan`, `civilians/pickup-truck`, `civilians/taxi`,
+`civilians/city-bus`, `civilians/small-lorry`, `civilians/limousine` — and
+`src/content/civilians.json` declares `art` for exactly those six civilians. The other eight
+(`wagon`, `hatchback`, `coupe`, `van`, `box-truck`, `skiff`, `barge`, `boat`) declare no
+`art` and draw their placeholder. No claim beyond these numbers is made here.
+
 ## 6. Motion
 
 We do **not** ask a diffusion model for animation. Animation is assembled in code:

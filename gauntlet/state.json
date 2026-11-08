@@ -451,10 +451,10 @@
       "title": "art-08 civilians: traffic from the atlas",
       "file": "gauntlet/work-orders/WO-40-art-civilians.md",
       "status": "pending",
-      "round": 1,
+      "round": 2,
       "dependsOn": [],
       "lastVerdict": "fail",
-      "note": "sheet unusable: 10/16 cells side-on or fused, no usable watercraft, failing frames shipped in atlas"
+      "note": "permanent droppedCells bans the subjects a retry needs; 8 of 14 civilians still placeholder incl all watercraft"
     },
     {
       "id": "WO-41",

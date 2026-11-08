@@ -168,24 +168,23 @@ describe('civilian art ids', () => {
     }
   });
 
-  it('declares art for every civilian, and only shipped frames', () => {
-    const ids = declared.map(({ id }) => id).sort();
-    expect(ids).toHaveLength(CIVILIANS.length);
-    expect(ids).toEqual([
-      'barge',
-      'boat',
-      'box-truck',
-      'bus',
-      'coupe',
-      'hatchback',
-      'limo',
-      'lorry',
-      'pickup',
-      'sedan',
-      'skiff',
-      'taxi',
-      'van',
-      'wagon',
+  /**
+   * `pipeline/registry/slots.ts` declares ten `droppedCells` for `art-08-civilians`: the
+   * attempt fused three vehicles into a cross in cells 1, 2 and 5, drew cells 3 and 6
+   * side-on, put a sedan in the `skiff` cell, a motorboat in the sports-car cell, and
+   * ringed the three watercraft cells with model-drawn water. Only six cells passed the
+   * gate, so only six frames may reach the atlas. A civilian whose subject has no
+   * surviving cell declares no `art` and draws its procedural placeholder instead.
+   */
+  it('ships only the six cells that passed the art-08 gate', () => {
+    const frames = Object.keys(manifest.sheets['art-08-civilians']?.frames ?? {}).sort();
+    expect(frames).toEqual([
+      'civilians/city-bus',
+      'civilians/limousine',
+      'civilians/pickup-truck',
+      'civilians/sedan',
+      'civilians/small-lorry',
+      'civilians/taxi',
     ]);
   });
 

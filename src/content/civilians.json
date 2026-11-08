@@ -2,18 +2,18 @@
   "$comment": "Neutral traffic. Hitting a civilian costs score but never armour; shooting one destroys it and costs more. That is the whole point of having them. Colors are assigned at runtime from the muted civilian subset.",
   "civilians": [
     { "id": "sedan", "label": "SEDAN", "art": "civilians/sedan", "shape": "wedge", "size": 60, "speed": 0.30, "weight": 10 },
-    { "id": "wagon", "label": "ESTATE", "art": "civilians/estate-wagon", "shape": "wedge", "size": 62, "speed": 0.28, "weight": 8 },
-    { "id": "hatchback", "label": "HATCHBACK", "art": "civilians/hatchback", "shape": "wedge", "size": 54, "speed": 0.34, "weight": 8 },
-    { "id": "coupe", "label": "COUPE", "art": "civilians/civilian-sports-car", "shape": "wedge", "size": 58, "speed": 0.40, "weight": 6 },
+    { "id": "wagon", "label": "ESTATE", "shape": "wedge", "size": 62, "speed": 0.28, "weight": 8 },
+    { "id": "hatchback", "label": "HATCHBACK", "shape": "wedge", "size": 54, "speed": 0.34, "weight": 8 },
+    { "id": "coupe", "label": "COUPE", "shape": "wedge", "size": 58, "speed": 0.40, "weight": 6 },
     { "id": "taxi", "label": "TAXI", "art": "civilians/taxi", "shape": "wedge", "size": 60, "speed": 0.32, "weight": 6 },
     { "id": "pickup", "label": "PICKUP", "art": "civilians/pickup-truck", "shape": "truck", "size": 62, "speed": 0.26, "weight": 7 },
-    { "id": "van", "label": "DELIVERY VAN", "art": "civilians/delivery-van", "shape": "truck", "size": 64, "speed": 0.24, "weight": 6 },
-    { "id": "box-truck", "label": "BOX TRUCK", "art": "civilians/box-truck", "shape": "truck", "size": 64, "speed": 0.20, "weight": 4 },
+    { "id": "van", "label": "DELIVERY VAN", "shape": "truck", "size": 64, "speed": 0.24, "weight": 6 },
+    { "id": "box-truck", "label": "BOX TRUCK", "shape": "truck", "size": 64, "speed": 0.20, "weight": 4 },
     { "id": "lorry", "label": "LORRY", "art": "civilians/small-lorry", "shape": "truck", "size": 64, "speed": 0.18, "weight": 3 },
     { "id": "bus", "label": "CITY BUS", "art": "civilians/city-bus", "shape": "truck", "size": 64, "speed": 0.22, "weight": 3 },
     { "id": "limo", "label": "LIMOUSINE", "art": "civilians/limousine", "shape": "wedge", "size": 66, "speed": 0.30, "weight": 2 },
-    { "id": "skiff", "label": "SKIFF", "art": "civilians/skiff", "shape": "boat", "size": 56, "speed": 0.24, "weight": 4 },
-    { "id": "barge", "label": "BARGE", "art": "civilians/barge", "shape": "boat", "size": 64, "speed": 0.14, "weight": 2 },
-    { "id": "boat", "label": "PLEASURE BOAT", "art": "civilians/pleasure-boat", "shape": "boat", "size": 60, "speed": 0.20, "weight": 3 }
+    { "id": "skiff", "label": "SKIFF", "shape": "boat", "size": 56, "speed": 0.24, "weight": 4 },
+    { "id": "barge", "label": "BARGE", "shape": "boat", "size": 64, "speed": 0.14, "weight": 2 },
+    { "id": "boat", "label": "PLEASURE BOAT", "shape": "boat", "size": 60, "speed": 0.20, "weight": 3 }
   ]
 }

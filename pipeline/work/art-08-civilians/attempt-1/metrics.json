@@ -1,0 +1,167 @@
+{
+  "slotId": "art-08-civilians",
+  "attempt": 1,
+  "sourcePath": "pipeline/raw/art-08-civilians/attempt-1.png",
+  "processedAt": "2026-11-08T11:34:32.782Z",
+  "grid": {
+    "cols": 4,
+    "rows": 4
+  },
+  "finalSize": 64,
+  "cells": [
+    {
+      "index": 0,
+      "name": "sedan",
+      "empty": false,
+      "fill": 0.368896484375,
+      "meanPaletteDistance": 53.09065680641086,
+      "distinctColors": 13,
+      "symmetry": 0.9078282828282829
+    },
+    {
+      "index": 1,
+      "name": "sedan alt",
+      "empty": false,
+      "fill": 0.51806640625,
+      "meanPaletteDistance": 45.92530794289903,
+      "distinctColors": 11,
+      "symmetry": 0.9776328052190121
+    },
+    {
+      "index": 2,
+      "name": "estate wagon",
+      "empty": false,
+      "fill": 0.46728515625,
+      "meanPaletteDistance": 67.96000468292851,
+      "distinctColors": 13,
+      "symmetry": 0.937246963562753
+    },
+    {
+      "index": 3,
+      "name": "hatchback",
+      "empty": false,
+      "fill": 0.334716796875,
+      "meanPaletteDistance": 70.41027203797717,
+      "distinctColors": 12,
+      "symmetry": 0.9585714285714285
+    },
+    {
+      "index": 4,
+      "name": "pickup truck",
+      "empty": false,
+      "fill": 0.367431640625,
+      "meanPaletteDistance": 23.48195277207279,
+      "distinctColors": 12,
+      "symmetry": 0.8859649122807017
+    },
+    {
+      "index": 5,
+      "name": "delivery van",
+      "empty": false,
+      "fill": 0.546630859375,
+      "meanPaletteDistance": 37.67820550767619,
+      "distinctColors": 13,
+      "symmetry": 0.9235395189003437
+    },
+    {
+      "index": 6,
+      "name": "box truck",
+      "empty": false,
+      "fill": 0.37646484375,
+      "meanPaletteDistance": 38.98710223271908,
+      "distinctColors": 12,
+      "symmetry": 0.8533653846153846
+    },
+    {
+      "index": 7,
+      "name": "taxi",
+      "empty": false,
+      "fill": 0.36279296875,
+      "meanPaletteDistance": 67.77176771481714,
+      "distinctColors": 13,
+      "symmetry": 0.9682119205298013
+    },
+    {
+      "index": 8,
+      "name": "city bus",
+      "empty": false,
+      "fill": 0.386962890625,
+      "meanPaletteDistance": 38.17817824237766,
+      "distinctColors": 13,
+      "symmetry": 0.8801897983392646
+    },
+    {
+      "index": 9,
+      "name": "skiff",
+      "empty": false,
+      "fill": 0.320556640625,
+      "meanPaletteDistance": 70.95891161546533,
+      "distinctColors": 11,
+      "symmetry": 0.9337260677466863
+    },
+    {
+      "index": 10,
+      "name": "civilian sports car",
+      "empty": false,
+      "fill": 0.22998046875,
+      "meanPaletteDistance": 78.26461330292717,
+      "distinctColors": 15,
+      "symmetry": 0.7509293680297398
+    },
+    {
+      "index": 11,
+      "name": "small lorry",
+      "empty": false,
+      "fill": 0.340576171875,
+      "meanPaletteDistance": 40.24096327141863,
+      "distinctColors": 10,
+      "symmetry": 0.9731258840169731
+    },
+    {
+      "index": 12,
+      "name": "limousine",
+      "empty": false,
+      "fill": 0.358642578125,
+      "meanPaletteDistance": 39.095969927284585,
+      "distinctColors": 11,
+      "symmetry": 0.9456953642384106
+    },
+    {
+      "index": 13,
+      "name": "barge",
+      "empty": false,
+      "fill": 0.3212890625,
+      "meanPaletteDistance": 79.7802874933814,
+      "distinctColors": 15,
+      "symmetry": 0.8354253835425384
+    },
+    {
+      "index": 14,
+      "name": "flatbed lorry",
+      "empty": false,
+      "fill": 0.319580078125,
+      "meanPaletteDistance": 76.38681984549287,
+      "distinctColors": 15,
+      "symmetry": 0.8436619718309859
+    },
+    {
+      "index": 15,
+      "name": "pleasure boat",
+      "empty": false,
+      "fill": 0.399658203125,
+      "meanPaletteDistance": 82.33174705888422,
+      "distinctColors": 15,
+      "symmetry": 0.7195378151260504
+    }
+  ],
+  "summary": {
+    "totalCells": 16,
+    "usableCells": 16,
+    "meanPaletteDistance": 56.90892252842079,
+    "sizeVariance": 0.1324432101789113,
+    "meanSymmetry": 0.8934158043361473,
+    "meanSeamError": 0,
+    "meanDistinctColors": 12.75,
+    "score": 86.01
+  }
+}

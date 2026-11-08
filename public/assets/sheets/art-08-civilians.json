@@ -12,38 +12,8 @@
       "w": 64,
       "h": 64
     },
-    "civilians/sedan-alt": {
-      "x": 64,
-      "y": 0,
-      "w": 64,
-      "h": 64
-    },
-    "civilians/estate-wagon": {
-      "x": 128,
-      "y": 0,
-      "w": 64,
-      "h": 64
-    },
-    "civilians/hatchback": {
-      "x": 192,
-      "y": 0,
-      "w": 64,
-      "h": 64
-    },
     "civilians/pickup-truck": {
       "x": 0,
-      "y": 64,
-      "w": 64,
-      "h": 64
-    },
-    "civilians/delivery-van": {
-      "x": 64,
-      "y": 64,
-      "w": 64,
-      "h": 64
-    },
-    "civilians/box-truck": {
-      "x": 128,
       "y": 64,
       "w": 64,
       "h": 64
@@ -60,18 +30,6 @@
       "w": 64,
       "h": 64
     },
-    "civilians/skiff": {
-      "x": 64,
-      "y": 128,
-      "w": 64,
-      "h": 64
-    },
-    "civilians/civilian-sports-car": {
-      "x": 128,
-      "y": 128,
-      "w": 64,
-      "h": 64
-    },
     "civilians/small-lorry": {
       "x": 192,
       "y": 128,
@@ -80,24 +38,6 @@
     },
     "civilians/limousine": {
       "x": 0,
-      "y": 192,
-      "w": 64,
-      "h": 64
-    },
-    "civilians/barge": {
-      "x": 64,
-      "y": 192,
-      "w": 64,
-      "h": 64
-    },
-    "civilians/flatbed-lorry": {
-      "x": 128,
-      "y": 192,
-      "w": 64,
-      "h": 64
-    },
-    "civilians/pleasure-boat": {
-      "x": 192,
       "y": 192,
       "w": 64,
       "h": 64

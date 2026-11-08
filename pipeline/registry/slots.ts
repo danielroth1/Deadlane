@@ -239,6 +239,15 @@ export const SLOTS: readonly SlotSpec[] = [
       'flatbed lorry',
       'pleasure boat',
     ]),
+    // Gate read of attempt 1, cell by cell (WO-40). Only cells 0, 4, 7, 8, 11 and 12 are
+    // whole, square-on, nose-up vehicles on a clean key: sedan, pickup truck, taxi, city
+    // bus, small lorry, limousine. Cells 1, 2 and 5 fuse three vehicles into a cross;
+    // cells 3 and 6 are drawn side-on; cell 9 (declared skiff) is a side-on sedan; cell 10
+    // (declared civilian sports car) is a side-view motorboat; and cells 13, 14 and 15 are
+    // side-on watercraft ringed with model-drawn water. Dropping them means no watercraft
+    // ships this round — the water civilian ids stay on the placeholder — but a side-on
+    // truck must not ship in a top-down game.
+    droppedCells: [1, 2, 3, 5, 6, 9, 10, 13, 14, 15],
     emphasis: [
       'muted factory paint colours',
       'lower contrast than any combat vehicle',

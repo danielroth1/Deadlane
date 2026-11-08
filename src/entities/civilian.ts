@@ -3,7 +3,6 @@ import { GAME, PLAYER, SPAWN } from '@/config';
 import { laneCenter, type RoadProfile } from '@/levels/types';
 import type { CivilianDef } from '@/content';
 import { civilianColorFor, type Art } from '@/art';
-import type { VehicleShape } from '@/art/placeholders';
 
 /**
  * Neutral traffic.
@@ -12,16 +11,6 @@ import type { VehicleShape } from '@/art/placeholders';
  * one costs score, and shooting one destroys it for a larger penalty. Neither ever costs
  * armour. They never attack and never chase.
  */
-
-const ART_SLOTS = ['civilians', 'civilians-a'];
-const SLOT_BY_SHAPE: Readonly<Record<VehicleShape, string>> = {
-  wedge: 'sedan',
-  truck: 'delivery-van',
-  boat: 'boat',
-  bike: 'sedan',
-  heli: 'sedan',
-  block: 'sedan',
-};
 
 export class CivilianVehicle {
   readonly sprite: Phaser.GameObjects.Image;
@@ -46,15 +35,12 @@ export class CivilianVehicle {
 
     const x = laneCenter(road, lane);
 
-    // An explicit `def.art` names a real manifest frame id and wins outright. The
-    // shape-derived `<slot>/<shape>` candidates stay as a fallback for civilians whose
-    // cell slug happens to match, and the placeholder covers a missing sheet.
-    const artCandidates = [
-      ...(def.art ? [def.art] : []),
-      ...ART_SLOTS.map((slot) => `${slot}/${SLOT_BY_SHAPE[def.shape]}`),
-    ];
-
-    this.sprite = art.imageAny(artCandidates, x, -80, () => ({
+    // An explicit `def.art` names a real manifest frame id and wins outright. Everything
+    // else draws the procedural placeholder under its own id: the old shape-derived
+    // `<slot>/<shape>` guess is gone because `civilians/sedan` and `civilians/delivery-van`
+    // exist now, so a wagon, a hatchback or a coupe would silently wear a sedan sprite.
+    // The leading `placeholder/` keeps that id out of the manifest's namespace forever.
+    this.sprite = art.image(def.art ?? `placeholder/${def.id}`, x, -80, () => ({
       shape: def.shape,
       bodyColor: civilianColorFor(def.id),
       faction: 'civilian',
