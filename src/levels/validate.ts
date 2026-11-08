@@ -1,5 +1,5 @@
-import { SPAWN, WORLD } from '@/config';
-import { LEVEL_PROFILES, laneCenter, type LevelBlueprint } from './types';
+import { DECOR, ROAD, SPAWN, WORLD } from '@/config';
+import { LEVEL_PROFILES, decorX, laneCenter, roadAt, type LevelBlueprint } from './types';
 
 /**
  * Playability invariants for a generated level.
@@ -16,21 +16,44 @@ export interface ValidationIssue {
 
 export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] {
   const issues: ValidationIssue[] = [];
-  const { road, events, challenges, length, type } = blueprint;
+  const { road: shape, events, challenges, length, type } = blueprint;
 
   if (length <= SPAWN.safeStartPixels) {
     issues.push({ code: 'too-short', message: `Level length ${length} is inside the safe start` });
   }
 
-  if (road.lanes < 2) {
-    issues.push({ code: 'lanes', message: `Only ${road.lanes} lane(s); road is impassable` });
+  if (shape.lanes < 2) {
+    issues.push({ code: 'lanes', message: `Only ${shape.lanes} lane(s); road is impassable` });
   }
 
-  if (road.left < 0 || road.left + road.width > WORLD.width) {
-    issues.push({
-      code: 'road-bounds',
-      message: `Road spans ${road.left}..${road.left + road.width}, outside the ${WORLD.width}px aperture`,
-    });
+  // The road is a shape now, not one cross-section, so the geometry is sampled across the
+  // whole sector as well as at every keyframe: a keyframe can fall between two samples
+  // and is the one place the width can be at its most extreme.
+  const samples = new Set<number>([0, length]);
+  for (const key of shape.keyframes) samples.add(key.at);
+  for (let at = 0; at <= length; at += 256) samples.add(at);
+
+  for (const at of [...samples].sort((a, b) => a - b)) {
+    const profile = roadAt(shape, at);
+    const right = profile.left + profile.width;
+
+    if (profile.left < 0 || right > WORLD.width) {
+      issues.push({
+        code: 'road-bounds',
+        message: `Road spans ${profile.left.toFixed(1)}..${right.toFixed(1)} at ${at}, outside the ${WORLD.width.toFixed(0)}px aperture`,
+        at,
+      });
+    }
+
+    if (profile.laneWidth < ROAD.minLaneWidth) {
+      issues.push({
+        code: 'lane-width',
+        message: `Lane width ${profile.laneWidth.toFixed(1)} at ${at} is below the ${ROAD.minLaneWidth}px minimum`,
+        at,
+      });
+    }
+
+    if (issues.some((issue) => issue.code === 'road-bounds' || issue.code === 'lane-width')) break;
   }
 
   for (const event of events) {
@@ -44,30 +67,55 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
         at: event.at,
       });
     }
-    if (event.lane < 0 || event.lane >= road.lanes) {
+
+    // Decor is the one event with no lane: it stands outside the road by construction, so
+    // the questions are whether it is far enough out to clear the shoulder and still
+    // inside the aperture.
+    if (event.kind === 'decor') {
+      if (event.offset < DECOR.minOffset) {
+        issues.push({
+          code: 'decor-offset',
+          message: `Decor ${event.prop} sits ${event.offset}px outside the edge, inside the ${DECOR.minOffset}px clearance`,
+          at: event.at,
+        });
+      }
+
+      const x = decorX(shape, event.at, event.side, event.offset);
+      if (x < 0 || x > WORLD.width) {
+        issues.push({
+          code: 'decor-bounds',
+          message: `Decor ${event.prop} sits at x ${x.toFixed(1)}, outside the aperture`,
+          at: event.at,
+        });
+      }
+      continue;
+    }
+
+    if (event.lane < 0 || event.lane >= shape.lanes) {
       issues.push({
         code: 'lane-out-of-range',
-        message: `${event.kind} in lane ${event.lane} of ${road.lanes}`,
+        message: `${event.kind} in lane ${event.lane} of ${shape.lanes}`,
         at: event.at,
       });
     }
 
-    const center = laneCenter(road, Math.max(0, Math.min(road.lanes - 1, event.lane)));
-    if (center < road.left || center > road.left + road.width) {
+    const profile = roadAt(shape, event.at);
+    const center = laneCenter(profile, Math.max(0, Math.min(shape.lanes - 1, event.lane)));
+    if (center < profile.left || center > profile.left + profile.width) {
       issues.push({ code: 'lane-center', message: `Lane ${event.lane} centre is off-road`, at: event.at });
     }
   }
 
-  // Hostile and neutral content must not appear during the safe start.
+  // Hostile and neutral content must not appear during the safe start. Decor cannot block
+  // anything, but a prop popping in beside the car at spawn still reads as a glitch.
   for (const event of events) {
-    if (event.kind === 'traffic' || event.kind === 'enemy') {
-      if (event.at < SPAWN.safeStartPixels - 1) {
-        issues.push({
-          code: 'safe-start-violation',
-          message: `${event.kind} at ${event.at} is inside the safe start (${SPAWN.safeStartPixels})`,
-          at: event.at,
-        });
-      }
+    if (event.kind !== 'traffic' && event.kind !== 'enemy' && event.kind !== 'decor') continue;
+    if (event.at < SPAWN.safeStartPixels - 1) {
+      issues.push({
+        code: 'safe-start-violation',
+        message: `${event.kind} at ${event.at} is inside the safe start (${SPAWN.safeStartPixels})`,
+        at: event.at,
+      });
     }
   }
 
@@ -82,10 +130,10 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
       if (e.kind === 'enemy' || e.kind === 'prop') lanes.add(e.lane);
     }
     // Every lane blocked leaves no line through.
-    if (lanes.size >= road.lanes) {
+    if (lanes.size >= shape.lanes) {
       issues.push({
         code: 'full-block',
-        message: `All ${road.lanes} lanes blocked within ${window}px at ${start}`,
+        message: `All ${shape.lanes} lanes blocked within ${window}px at ${start}`,
         at: start,
       });
       break;

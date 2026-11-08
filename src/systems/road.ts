@@ -3,7 +3,7 @@ import type { Art, SpriteRef } from '@/art';
 import type { TileArtByKind, TileKind } from '@/art/ids';
 import { WORLD } from '@/config';
 import { PALETTE } from '@/palette';
-import type { LevelType, RoadProfile } from '@/levels/types';
+import { roadAt, type LevelType, type RoadProfile, type RoadShape } from '@/levels/types';
 import {
   ROAD_EDGE_SPECS,
   ROAD_TILE_SPECS,
@@ -22,9 +22,14 @@ import {
  * The road is drawn from the locked palette as the baseline: the game must look correct
  * before any AI tiles exist, and a drawn road scrolls at any speed without texture seams.
  * When a level type's tile sheet is approved, a tile layer is inserted between the fills
- * and the markings. The profile geometry (`left`, `width`, `lanes`, `laneWidth`) stays
- * authoritative in both modes — the tile planner only chooses where frames sit, never
- * where the road is.
+ * and the markings.
+ *
+ * The geometry comes from the sector's `RoadShape`: every frame samples
+ * `roadAt(shape, distance)` and draws that one cross-section, centred on the world
+ * aperture. That is what lets the surface tighten and open again as the car drives — the
+ * fills, the tile bands and the painted markings all move together, because they are all
+ * read from the same sample. The tile planner only chooses where frames sit, never where
+ * the road is.
  */
 
 interface RoadTheme {
@@ -158,7 +163,6 @@ function windowFrame(
 
 /** The tiled road surface, scrolled by the same distance the drawn road uses. */
 class RoadTileLayer {
-  private readonly road: RoadProfile;
   private readonly windows: RoadTileTheme;
   private readonly sprites: Phaser.GameObjects.TileSprite[];
   private readonly edgeSpec: EdgeTileSpec | null;
@@ -172,7 +176,6 @@ class RoadTileLayer {
     edgeSpec: EdgeTileSpec | null,
     edgeFrame: SpriteRef | null,
   ) {
-    this.road = road;
     this.windows = windows;
     const edge = edgeSpec && edgeFrame ? { spec: edgeSpec, frame: edgeFrame } : null;
     this.edgeSpec = edge?.spec ?? null;
@@ -232,18 +235,31 @@ class RoadTileLayer {
     return sprite;
   }
 
-  render(distance: number): void {
-    const bands = planRoadTiles(this.road, distance, this.windows);
+  /**
+   * Follow the road's current cross-section.
+   *
+   * The band plan is geometry, not texture: a `TileSprite` repeats its window at native
+   * size, so moving the band and resizing it reveals more or less of the same repeat and
+   * nothing is ever scaled. That is what lets a variable-width road keep its generated
+   * tiles instead of falling back to the drawn theme.
+   */
+  render(road: RoadProfile, distance: number): void {
+    const bands = planRoadTiles(road, distance, this.windows);
     bands.forEach((band, index) => {
       const sprite = this.sprites[index];
-      if (sprite) sprite.tilePositionY = band.offset;
+      if (!sprite) return;
+      sprite.setPosition(band.x, 0);
+      if (sprite.width !== band.width) sprite.setSize(band.width, WORLD.height);
+      sprite.tilePositionY = band.offset;
     });
 
     if (!this.edgeSpec) return;
-    const edges = planRoadEdges(this.road, distance, this.edgeSpec);
+    const edges = planRoadEdges(road, distance, this.edgeSpec);
     edges.forEach((band, index) => {
       const sprite = this.edgeSprites[index];
-      if (sprite) sprite.tilePositionY = band.offset;
+      if (!sprite) return;
+      sprite.setPosition(band.x, 0);
+      sprite.tilePositionY = band.offset;
     });
   }
 
@@ -263,7 +279,8 @@ export class RoadSystem {
   private readonly markings: Phaser.GameObjects.Graphics;
   private readonly tiles: RoadTileLayer | null;
   private readonly theme: RoadTheme;
-  private readonly road: RoadProfile;
+  /** The sector's width plan. Every band is sampled out of it at render time. */
+  private readonly shape: RoadShape;
   /**
    * Whether the drawn markings are painted over the tiles.
    *
@@ -276,40 +293,48 @@ export class RoadSystem {
 
   constructor(
     scene: Phaser.Scene,
-    road: RoadProfile,
+    shape: RoadShape,
     type: LevelType,
     art: Art,
   ) {
-    this.road = road;
+    this.shape = shape;
     this.theme = THEMES[type];
 
     // Three layers, back to front: drawn fills, generated tiles, drawn markings. The
     // fills stay underneath so the road still reads when a sheet is missing or rejected,
     // and so a band that has no frame for one lane divider cannot leave a hole.
     this.base = scene.add.graphics().setDepth(0);
+    const profile = roadAt(shape, 0);
     const spec = ROAD_TILE_SPECS[type];
     const frames = spec ? tileFrames(art, spec.art) : null;
     const edgeSpec = ROAD_EDGE_SPECS[type] ?? null;
     const edgeFrame = edgeSpec ? firstFrame(art, edgeSpec.art) : null;
     this.tiles =
       spec && frames
-        ? new RoadTileLayer(scene, road, frames, spec.windows, edgeSpec, edgeFrame)
+        ? new RoadTileLayer(scene, profile, frames, spec.windows, edgeSpec, edgeFrame)
         : null;
     this.painted = !(type === 'river' && this.tiles !== null);
     this.markings = scene.add.graphics().setDepth(2);
   }
 
-  /** Redraw for the current scroll offset. Cheap: a few dozen rects plus tile offsets. */
+  /**
+   * Redraw for the current scroll offset.
+   *
+   * `distance` is the car's own world position, which is also the cross-section the whole
+   * screen is drawn from: the road is centred on the aperture, so the band under the camera
+   * is the one the driver is on. Cheap: a few dozen rects plus a band plan.
+   */
   render(distance: number): void {
-    this.drawBase();
-    this.tiles?.render(distance);
-    this.drawMarkings(distance);
+    const profile = roadAt(this.shape, distance);
+    this.drawBase(profile);
+    this.tiles?.render(profile, distance);
+    this.drawMarkings(profile, distance);
   }
 
   /** Terrain, shoulders and surface. Covers the screen; always drawn, tiled or not. */
-  private drawBase(): void {
+  private drawBase(road: RoadProfile): void {
     const g = this.base;
-    const { road, theme } = this;
+    const { theme } = this;
     const right = road.left + road.width;
 
     g.clear();
@@ -337,9 +362,9 @@ export class RoadSystem {
    * channel is marked by the sheet's shoulders. The lane dashes are skipped when tiles are
    * drawing them, so the marking is not painted twice at two phases.
    */
-  private drawMarkings(distance: number): void {
+  private drawMarkings(road: RoadProfile, distance: number): void {
     const g = this.markings;
-    const { road, theme } = this;
+    const { theme } = this;
     const right = road.left + road.width;
 
     g.clear();

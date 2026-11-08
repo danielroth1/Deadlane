@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T18:54:15.361Z",
+  "generatedAt": "2026-11-08T20:49:05.301Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -1326,6 +1326,324 @@
         "tiles-transition/grass-to-rock",
         "tiles-transition/vignette-corner"
       ]
+    },
+    "art-22-scenery-roadside": {
+      "slot": "art-22-scenery-roadside",
+      "code": "scenery-roadside",
+      "cellSize": 64,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-22-scenery-roadside.png",
+      "frames": {
+        "scenery-roadside/tree-roadside": {
+          "x": 0,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/tree-blown": {
+          "x": 64,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/bush-cluster": {
+          "x": 128,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/dry-hedge": {
+          "x": 192,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/rock-outcrop": {
+          "x": 0,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/rock-pile-small": {
+          "x": 64,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/wooden-fence": {
+          "x": 128,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/chain-link-fence": {
+          "x": 192,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/warning-sign-blank": {
+          "x": 0,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/direction-sign-blank": {
+          "x": 64,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/billboard-blank": {
+          "x": 128,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/wrecked-sedan": {
+          "x": 192,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/wrecked-van": {
+          "x": 0,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/burnt-car": {
+          "x": 64,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/pylon-lattice": {
+          "x": 128,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-roadside/pylon-concrete": {
+          "x": 192,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        }
+      }
+    },
+    "art-23-scenery-water": {
+      "slot": "art-23-scenery-water",
+      "code": "scenery-water",
+      "cellSize": 64,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-23-scenery-water.png",
+      "frames": {
+        "scenery-water/reed-bank": {
+          "x": 0,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/reed-clump": {
+          "x": 64,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/wooden-dock": {
+          "x": 128,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/dock-ladder": {
+          "x": 192,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/channel-buoy": {
+          "x": 0,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/marker-buoy": {
+          "x": 64,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/moored-dinghy": {
+          "x": 128,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/moored-skiff": {
+          "x": 192,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/moored-barge": {
+          "x": 0,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/water-rock": {
+          "x": 64,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/stone-jetty": {
+          "x": 128,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/bridge-pier": {
+          "x": 192,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/tall-bridge-pier": {
+          "x": 0,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/tire-fender": {
+          "x": 64,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/mooring-post": {
+          "x": 128,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-water/floating-pontoon": {
+          "x": 192,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        }
+      }
+    },
+    "art-24-scenery-urban": {
+      "slot": "art-24-scenery-urban",
+      "code": "scenery-urban",
+      "cellSize": 64,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-24-scenery-urban.png",
+      "frames": {
+        "scenery-urban/apartment-roof": {
+          "x": 0,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/house-roof": {
+          "x": 64,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/roof-skylight": {
+          "x": 128,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/roof-stair-hatch": {
+          "x": 192,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/neon-sign-blank": {
+          "x": 0,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/billboard-blank": {
+          "x": 64,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/ac-unit": {
+          "x": 128,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/ac-unit-bank": {
+          "x": 192,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/dumpster": {
+          "x": 0,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/skip-container": {
+          "x": 64,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/streetlight-head": {
+          "x": 128,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/streetlight-twin": {
+          "x": 192,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/planter-box": {
+          "x": 0,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/planter-tree": {
+          "x": 64,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/roof-water-tank": {
+          "x": 128,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "scenery-urban/satellite-dish": {
+          "x": 192,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        }
+      }
     }
   },
   "sprites": {
@@ -2623,6 +2941,342 @@
       "y": 96,
       "w": 32,
       "h": 32
+    },
+    "scenery-roadside/tree-roadside": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/tree-blown": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/bush-cluster": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/dry-hedge": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/rock-outcrop": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/rock-pile-small": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/wooden-fence": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/chain-link-fence": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/warning-sign-blank": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/direction-sign-blank": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/billboard-blank": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/wrecked-sedan": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/wrecked-van": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/burnt-car": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/pylon-lattice": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/pylon-concrete": {
+      "sheet": "art-22-scenery-roadside",
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/reed-bank": {
+      "sheet": "art-23-scenery-water",
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/reed-clump": {
+      "sheet": "art-23-scenery-water",
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/wooden-dock": {
+      "sheet": "art-23-scenery-water",
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/dock-ladder": {
+      "sheet": "art-23-scenery-water",
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/channel-buoy": {
+      "sheet": "art-23-scenery-water",
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/marker-buoy": {
+      "sheet": "art-23-scenery-water",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/moored-dinghy": {
+      "sheet": "art-23-scenery-water",
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/moored-skiff": {
+      "sheet": "art-23-scenery-water",
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/moored-barge": {
+      "sheet": "art-23-scenery-water",
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/water-rock": {
+      "sheet": "art-23-scenery-water",
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/stone-jetty": {
+      "sheet": "art-23-scenery-water",
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/bridge-pier": {
+      "sheet": "art-23-scenery-water",
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/tall-bridge-pier": {
+      "sheet": "art-23-scenery-water",
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/tire-fender": {
+      "sheet": "art-23-scenery-water",
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/mooring-post": {
+      "sheet": "art-23-scenery-water",
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/floating-pontoon": {
+      "sheet": "art-23-scenery-water",
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/apartment-roof": {
+      "sheet": "art-24-scenery-urban",
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/house-roof": {
+      "sheet": "art-24-scenery-urban",
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/roof-skylight": {
+      "sheet": "art-24-scenery-urban",
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/roof-stair-hatch": {
+      "sheet": "art-24-scenery-urban",
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/neon-sign-blank": {
+      "sheet": "art-24-scenery-urban",
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/billboard-blank": {
+      "sheet": "art-24-scenery-urban",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/ac-unit": {
+      "sheet": "art-24-scenery-urban",
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/ac-unit-bank": {
+      "sheet": "art-24-scenery-urban",
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/dumpster": {
+      "sheet": "art-24-scenery-urban",
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/skip-container": {
+      "sheet": "art-24-scenery-urban",
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/streetlight-head": {
+      "sheet": "art-24-scenery-urban",
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/streetlight-twin": {
+      "sheet": "art-24-scenery-urban",
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/planter-box": {
+      "sheet": "art-24-scenery-urban",
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/planter-tree": {
+      "sheet": "art-24-scenery-urban",
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/roof-water-tank": {
+      "sheet": "art-24-scenery-urban",
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-urban/satellite-dish": {
+      "sheet": "art-24-scenery-urban",
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
     }
   }
 }

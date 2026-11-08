@@ -1,4 +1,7 @@
 import { ROAD, WORLD } from '@/config';
+import type { ScenerySurface } from '@/art/ids';
+
+export type { ScenerySurface };
 
 /**
  * Level data model.
@@ -22,11 +25,53 @@ export interface RoadProfile {
   readonly obstructableLanes: readonly number[];
 }
 
+/** One width keyframe: from `at` the drivable surface is `width` px wide. */
+export interface RoadWidthKey {
+  readonly at: number;
+  readonly width: number;
+}
+
+/**
+ * A sector's road as a shape, not one cross-section.
+ *
+ * The lane count is fixed for the whole sector, so a lane index stays valid at every `at`;
+ * what changes is how wide the surface is. Width is interpolated between keyframes and the
+ * road re-centres itself on the world aperture at every sample, which is what lets a sector
+ * tighten and open again without ever leaving the viewport or moving a lane boundary the
+ * collision code disagrees with.
+ *
+ * `RoadShape` is the data the blueprint carries; `roadAt()` is the only sanctioned way to
+ * read geometry out of it, so no subsystem can hold a stale profile.
+ */
+export interface RoadShape {
+  readonly lanes: number;
+  /** Lane width at the sector's nominal width, px. */
+  readonly laneWidth: number;
+  readonly obstructableLanes: readonly number[];
+  /** Sorted ascending by `at`; the first key is at 0 and covers everything before it. */
+  readonly keyframes: readonly RoadWidthKey[];
+  readonly minWidth: number;
+  readonly maxWidth: number;
+}
+
+/** Which scenery sheet a decor prop is drawn from. */
+export type DecorSide = 'left' | 'right';
+
 export type LevelEvent =
   | { readonly kind: 'traffic'; readonly at: number; readonly lane: number; readonly vehicle: string; readonly speed: number }
   | { readonly kind: 'enemy'; readonly at: number; readonly lane: number; readonly enemy: string }
   | { readonly kind: 'prop'; readonly at: number; readonly lane: number; readonly prop: string }
-  | { readonly kind: 'pickup'; readonly at: number; readonly lane: number; readonly pickup: string };
+  | { readonly kind: 'pickup'; readonly at: number; readonly lane: number; readonly pickup: string }
+  | {
+      readonly kind: 'decor';
+      readonly at: number;
+      readonly side: DecorSide;
+      /** Distance outside the surface edge at `at`, px. Always at least `DECOR.minOffset`. */
+      readonly offset: number;
+      /** Scenery prop id, resolved through `SCENERY_ART`. */
+      readonly prop: string;
+      readonly surface: ScenerySurface;
+    };
 
 export type ChallengeKind = 'survive' | 'destroy' | 'collect' | 'clean' | 'reach';
 
@@ -47,7 +92,7 @@ export interface LevelBlueprint {
   readonly index: number;
   /** Length in world pixels. */
   readonly length: number;
-  readonly road: RoadProfile;
+  readonly road: RoadShape;
   /** Sorted ascending by `at`. */
   readonly events: readonly LevelEvent[];
   readonly challenges: readonly ChallengePlan[];
@@ -71,6 +116,10 @@ export interface LevelProfile {
   readonly enemyWeights: Readonly<Record<string, number>>;
   readonly vehiclePool: readonly string[];
   readonly propPool: readonly string[];
+  /** Which scenery sheet this level type lines its road with. */
+  readonly scenerySurface: ScenerySurface;
+  /** Scenery prop ids placed outside the shoulder. Empty when there is nowhere to put them. */
+  readonly sceneryPool: readonly string[];
 }
 
 export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
@@ -94,6 +143,19 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     },
     vehiclePool: ['sedan', 'wagon', 'van', 'pickup', 'taxi', 'coupe', 'box-truck', 'bus'],
     propPool: ['cone', 'barrier', 'tyre-stack', 'sign'],
+    scenerySurface: 'roadside',
+    sceneryPool: [
+      'tree',
+      'tree',
+      'dead-tree',
+      'bush',
+      'dry-hedge',
+      'fence',
+      'warning-sign',
+      'billboard',
+      'wrecked-car',
+      'pylon',
+    ],
   },
   canyon: {
     type: 'canyon',
@@ -108,6 +170,19 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     enemyWeights: { enforcer: 3, switchblade: 3, roadlord: 2, hauler: 0.6 },
     vehiclePool: ['pickup', 'wagon', 'lorry', 'sedan'],
     propPool: ['boulder', 'rock-pile', 'cactus', 'dry-bush', 'crater'],
+    scenerySurface: 'roadside',
+    sceneryPool: [
+      'dead-tree',
+      'dead-tree',
+      'bush',
+      'dry-hedge',
+      'dry-hedge',
+      'fence',
+      'warning-sign',
+      'burnt-car',
+      'pylon',
+      'billboard',
+    ],
   },
   river: {
     type: 'river',
@@ -122,6 +197,21 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     enemyWeights: { gunboat: 4, speedboat: 3, jetski: 2, dredger: 0.7 },
     vehiclePool: ['skiff', 'barge', 'boat'],
     propPool: ['buoy', 'reed-bed', 'pier', 'rock-pile'],
+    scenerySurface: 'water',
+    sceneryPool: [
+      'reeds',
+      'reeds',
+      'dock',
+      'buoy',
+      'buoy',
+      'boat',
+      'water-rock',
+      'jetty',
+      'bridge-pier',
+      'tire-fender',
+      'mooring-post',
+      'pontoon',
+    ],
   },
   city: {
     type: 'city',
@@ -143,6 +233,22 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     },
     vehiclePool: ['taxi', 'sedan', 'bus', 'van', 'hatchback', 'limo'],
     propPool: ['barrier', 'cone', 'roadblock', 'dumpster', 'manhole'],
+    scenerySurface: 'urban',
+    sceneryPool: [
+      'apartment-roof',
+      'house-roof',
+      'skylight',
+      'hatch',
+      'neon-sign',
+      'billboard',
+      'ac-unit',
+      'dumpster',
+      'streetlight',
+      'streetlight',
+      'planter',
+      'water-tank',
+      'satellite-dish',
+    ],
   },
   tunnel: {
     type: 'tunnel',
@@ -157,6 +263,9 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     enemyWeights: { enforcer: 4, switchblade: 4, turret: 1.6 },
     vehiclePool: ['sedan', 'van', 'box-truck'],
     propPool: ['pillar', 'rubble', 'hazard-stripe'],
+    scenerySurface: 'roadside',
+    // A tunnel is wall on both sides: there is no verge to stand a prop on.
+    sceneryPool: [],
   },
 };
 
@@ -185,6 +294,88 @@ export function roadProfileFor(type: LevelType): RoadProfile {
 /** Centre X of a lane, in world coordinates. */
 export function laneCenter(road: RoadProfile, lane: number): number {
   return road.left + road.laneWidth * (lane + 0.5);
+}
+
+/** Centre X of a lane at one world distance, in world coordinates. */
+export function laneCenterAt(shape: RoadShape, at: number, lane: number): number {
+  return laneCenter(roadAt(shape, at), lane);
+}
+
+/**
+ * A sector's road with a single keyframe: the nominal width for its level type.
+ *
+ * The generator widens this into a width plan; everything that only needs a valid shape —
+ * tests, fixtures, a level with no width variation — can start here.
+ */
+export function roadShapeFor(type: LevelType): RoadShape {
+  const profile = roadProfileFor(type);
+  return {
+    lanes: profile.lanes,
+    laneWidth: profile.laneWidth,
+    obstructableLanes: profile.obstructableLanes,
+    keyframes: [{ at: 0, width: profile.width }],
+    minWidth: profile.width,
+    maxWidth: profile.width,
+  };
+}
+
+/**
+ * Width of the drivable surface at `at`, px.
+ *
+ * Linear between keyframes, constant before the first and after the last. A keyframe's own
+ * `at` reports that keyframe's width exactly, which is what makes a width plan testable
+ * without floating-point tolerance.
+ */
+export function roadWidthAt(shape: RoadShape, at: number): number {
+  const keys = shape.keyframes;
+  const first = keys[0];
+  if (!first) return shape.minWidth;
+  if (at <= first.at) return first.width;
+
+  for (let i = 1; i < keys.length; i += 1) {
+    const next = keys[i];
+    const prev = keys[i - 1];
+    if (!next || !prev) break;
+    if (at > next.at) continue;
+
+    const span = next.at - prev.at;
+    if (span <= 0) return next.width;
+    const t = (at - prev.at) / span;
+    return prev.width + (next.width - prev.width) * t;
+  }
+
+  return keys[keys.length - 1]?.width ?? first.width;
+}
+
+/**
+ * The road cross-section at one world distance.
+ *
+ * The surface is always centred on the world aperture, so widening and narrowing moves both
+ * edges symmetrically and the car's start position stays the middle of the road. `laneWidth`
+ * is derived, never stored: the lane count is fixed for a sector, so dividing the width by
+ * it keeps every lane index valid at every `at`.
+ */
+export function roadAt(shape: RoadShape, at: number): RoadProfile {
+  const width = roadWidthAt(shape, at);
+  const lanes = Math.max(1, shape.lanes);
+  return {
+    left: (WORLD.width - width) / 2,
+    width,
+    lanes: shape.lanes,
+    laneWidth: width / lanes,
+    obstructableLanes: shape.obstructableLanes,
+  };
+}
+
+/** World x of a decor prop standing `offset` px outside one edge of the road at `at`. */
+export function decorX(
+  shape: RoadShape,
+  at: number,
+  side: DecorSide,
+  offset: number,
+): number {
+  const profile = roadAt(shape, at);
+  return side === 'left' ? profile.left - offset : profile.left + profile.width + offset;
 }
 
 /** Clamp a lane index into a road profile's range. */

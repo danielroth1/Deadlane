@@ -1,14 +1,17 @@
-import { LEVEL, MOTION, SPAWN } from '@/config';
+import { DECOR, LEVEL, MOTION, ROAD, SPAWN, WORLD } from '@/config';
 import { CHALLENGE_TEMPLATES, type ChallengeDef } from '@/content';
 import { createRng, type Rng } from '@/rng';
 import {
   LEVEL_PROFILES,
-  clampLane,
-  roadProfileFor,
+  roadShapeFor,
   type ChallengePlan,
+  type DecorSide,
   type LevelBlueprint,
   type LevelEvent,
   type LevelType,
+  type RoadShape,
+  type RoadWidthKey,
+  type ScenerySurface,
 } from '../types';
 
 /**
@@ -21,7 +24,6 @@ import {
  *
  * Stages: layout → traffic → encounters → props → pickups → challenges → sort.
  */
-
 export interface GenerateOptions {
   readonly type: LevelType;
   readonly seed: number;
@@ -39,7 +41,6 @@ export const PICKUP_POOL: readonly string[] = ['oil', 'smoke', 'armour', 'shield
 
 export function generateLevel({ type, seed, index }: GenerateOptions): LevelBlueprint {
   const profile = LEVEL_PROFILES[type];
-  const road = roadProfileFor(type);
 
   // Separate streams: tuning traffic must not shift enemy placement.
   const layoutRng = createRng(seed);
@@ -52,17 +53,24 @@ export function generateLevel({ type, seed, index }: GenerateOptions): LevelBlue
   const length = LEVEL.lengthPixels + layoutRng.int(0, 4000);
   const difficulty = 1 + (index - 1) * 0.12;
 
+  // The road's shape has its own stream too: adding width variation must not move a
+  // single car, and a change to traffic density must not change the road.
+  const roadRng = createRng((seed ^ 0x85ebca6b) >>> 0);
+  const decorRng = createRng((seed ^ 0xc2b2ae35) >>> 0);
+  const road = buildRoadShape(type, roadRng, length);
+
   const events: LevelEvent[] = [];
 
   events.push(...placeTraffic(trafficRng, road, length, profile.trafficDensity * difficulty, profile.vehiclePool));
   events.push(...placeEnemies(enemyRng, road, length, profile.enemyDensity * difficulty, profile.enemyWeights));
   events.push(...placeProps(propRng, road, length, profile.propDensity, profile.propPool));
   events.push(...placePickups(pickupRng, road, length, profile.pickupDensity));
+  events.push(...placeDecor(decorRng, length, profile.scenerySurface, profile.sceneryPool));
 
   // Clamp: the placement loops deliberately overshoot the end so the last stretch is not
   // empty, but an event beyond `length` can never be reached and breaks the streamer.
   const inRange = events.filter((event) => event.at <= length);
-  inRange.sort((a, b) => a.at - b.at || a.lane - b.lane);
+  inRange.sort((a, b) => a.at - b.at);
 
   const challenges = buildChallenges(challengeRng, type, length, index);
 
@@ -81,13 +89,84 @@ export function generateLevel({ type, seed, index }: GenerateOptions): LevelBlue
 
 /* --------------------------------- stages ---------------------------------- */
 
+/**
+ * The sector's width plan.
+ *
+ * The first keyframe is the level type's nominal width, so a sector always opens on the
+ * road its profile declares; after that each span picks one step from `ROAD.widthSteps`.
+ * The bounds are lane-based rather than width-based: no keyframe may make a lane narrower
+ * than `ROAD.minLaneWidth` or wider than `ROAD.maxLaneWidth`, which is what keeps a wave
+ * placed against a lane index solvable at every distance in the sector.
+ */
+function buildRoadShape(type: LevelType, rng: Rng, length: number): RoadShape {
+  const base = roadShapeFor(type);
+  const nominal = base.keyframes[0]?.width ?? base.minWidth;
+  const minWidth = base.lanes * ROAD.minLaneWidth;
+  // Never widen the surface past the point where the terrain band leaves the aperture.
+  const maxWidth = Math.min(base.lanes * ROAD.maxLaneWidth, WORLD.width - 2 * ROAD.terrainMargin);
+
+  const keyframes: RoadWidthKey[] = [{ at: 0, width: nominal }];
+
+  for (let at = ROAD.widthSpan; at < length; at += ROAD.widthSpan) {
+    const step = rng.pick(ROAD.widthSteps);
+    const width = Math.round(Math.max(minWidth, Math.min(maxWidth, nominal * step)));
+    // Jitter, so two sectors of one run do not change width on the same beat.
+    keyframes.push({ at: Math.round(at + rng.range(-500, 500)), width });
+  }
+
+  keyframes.sort((a, b) => a.at - b.at);
+
+  const widths = keyframes.map((key) => key.width);
+  return {
+    ...base,
+    keyframes,
+    minWidth: Math.min(...widths),
+    maxWidth: Math.max(...widths),
+  };
+}
+
+/**
+ * Scenery outside the shoulder.
+ *
+ * Deterministic data, like every other event: a side, a distance outside the surface edge
+ * and a prop id from the level type's own scenery pool. The generator never has to know
+ * how wide the road is — the event carries the offset, and whoever draws it samples the
+ * road at that `at`.
+ */
+function placeDecor(
+  rng: Rng,
+  length: number,
+  surface: ScenerySurface,
+  pool: readonly string[],
+): LevelEvent[] {
+  const out: LevelEvent[] = [];
+  if (pool.length === 0) return out;
+
+  let at = SPAWN.safeStartPixels;
+
+  while (at < length) {
+    const side: DecorSide = rng.chance(0.5) ? 'left' : 'right';
+    out.push({
+      kind: 'decor',
+      at: Math.round(at),
+      side,
+      offset: Math.round(rng.range(DECOR.minOffset, DECOR.maxOffset)),
+      prop: rng.pick(pool),
+      surface,
+    });
+    at += DECOR.spacing * rng.range(0.6, 1.6);
+  }
+
+  return out;
+}
+
 function laneRange(rng: Rng, road: { lanes: number }): number {
   return rng.int(0, road.lanes - 1);
 }
 
 function placeTraffic(
   rng: Rng,
-  road: ReturnType<typeof roadProfileFor>,
+  road: RoadShape,
   length: number,
   density: number,
   pool: readonly string[],
@@ -129,7 +208,7 @@ function placeTraffic(
 
 function placeEnemies(
   rng: Rng,
-  road: ReturnType<typeof roadProfileFor>,
+  road: RoadShape,
   length: number,
   density: number,
   weights: Readonly<Record<string, number>>,
@@ -158,7 +237,7 @@ function placeEnemies(
 
 function placeProps(
   rng: Rng,
-  road: ReturnType<typeof roadProfileFor>,
+  road: RoadShape,
   length: number,
   density: number,
   pool: readonly string[],
@@ -175,7 +254,7 @@ function placeProps(
     out.push({
       kind: 'prop',
       at: Math.round(at),
-      lane: clampLane(road, lane),
+      lane: Math.max(0, Math.min(road.lanes - 1, lane)),
       prop: rng.pick(pool),
     });
 
@@ -187,7 +266,7 @@ function placeProps(
 
 function placePickups(
   rng: Rng,
-  road: ReturnType<typeof roadProfileFor>,
+  road: RoadShape,
   length: number,
   density: number,
 ): LevelEvent[] {

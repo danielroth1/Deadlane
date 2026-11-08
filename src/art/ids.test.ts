@@ -9,14 +9,18 @@ import {
   PICKUP_ART,
   PROP_ART,
   PROP_PLACEHOLDER,
+  SCENERY_ART,
   TRANSITION_PLACEHOLDER,
   TRANSITION_TILE_ART,
   TUNNEL_TILE_ART,
   WATER_TILE_ART,
+  pickSceneryVariant,
   propArtIds,
+  sceneryArtIds,
   type EffectKind,
   type PickupKind,
   type PropKind,
+  type ScenerySurface,
   type TileArtByKind,
   type TileKind,
   type TransitionKind,
@@ -356,6 +360,7 @@ describe('art id manifest seam', () => {
       ...Object.values(PICKUP_ART).flat(),
       ...Object.values(EFFECT_ART).flat(),
       ...Object.values(PROP_ART).flat(),
+      ...Object.values(SCENERY_ART).flatMap((table) => Object.values(table).flat()),
       ...Object.values(HIGHWAY_TILE_ART).flat(),
       ...Object.values(CANYON_TILE_ART).flat(),
       ...Object.values(WATER_TILE_ART).flat(),
@@ -365,5 +370,55 @@ describe('art id manifest seam', () => {
     for (const id of allIds) {
       expect(id.startsWith('placeholder/'), `${id} must be a manifest frame id`).toBe(false);
     }
+  });
+});
+
+describe('scenery art ids', () => {
+  const surfaces = Object.keys(SCENERY_ART) as ScenerySurface[];
+
+  it('resolves every scenery id a level profile can place', () => {
+    for (const profile of Object.values(LEVEL_PROFILES)) {
+      for (const id of profile.sceneryPool) {
+        const ids = sceneryArtIds(profile.scenerySurface, id);
+
+        expect(ids.length, `${profile.type}: ${id} has no art ids`).toBeGreaterThan(0);
+        for (const frame of ids) {
+          expect(
+            sprites.has(frame),
+            `${profile.type}: ${id} → ${frame} is not a key of .sprites in public/assets/assets.json`,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('declares no scenery id that no level profile places', () => {
+    const placed = new Set(
+      Object.values(LEVEL_PROFILES).flatMap((profile) =>
+        profile.sceneryPool.map((id) => `${profile.scenerySurface}:${id}`),
+      ),
+    );
+
+    for (const surface of surfaces) {
+      for (const id of Object.keys(SCENERY_ART[surface])) {
+        expect(placed.has(`${surface}:${id}`), `${surface}:${id} is never placed`).toBe(true);
+      }
+    }
+  });
+
+  it('picks the same variant for the same prop position', () => {
+    const ids = SCENERY_ART.water.reeds ?? [];
+    expect(ids.length).toBeGreaterThan(1);
+
+    // Deterministic by position: no runtime RNG, and a prop cannot flicker while it scrolls.
+    expect(pickSceneryVariant(ids, 1234)).toEqual(pickSceneryVariant(ids, 1234));
+    expect(pickSceneryVariant(ids, 0)[0]).toBe(ids[0]);
+    expect(pickSceneryVariant(ids, 1)[0]).toBe(ids[1]);
+    // Every candidate survives as a fallback, so a missing cell still draws something.
+    expect(new Set(pickSceneryVariant(ids, 7))).toEqual(new Set(ids));
+  });
+
+  it('answers an unknown prop with no ids, so the placeholder wins', () => {
+    expect(sceneryArtIds('roadside', 'not-a-prop')).toEqual([]);
   });
 });

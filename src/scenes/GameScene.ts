@@ -6,6 +6,7 @@ import {
   GAME,
   LEVEL,
   MOTION,
+  OFFROAD,
   PLAYER,
   SCORE,
   SPAWN,
@@ -15,7 +16,13 @@ import {
 } from '@/config';
 import { PALETTE } from '@/palette';
 import { Art } from '@/art';
-import { EFFECT_ART, pickupArtIds, propArtIds } from '@/art/ids';
+import {
+  EFFECT_ART,
+  pickSceneryVariant,
+  pickupArtIds,
+  propArtIds,
+  sceneryArtIds,
+} from '@/art/ids';
 import { flatTexture, pickupTexture, propTexture } from '@/art/placeholders';
 import { PlayerVehicle, displayScale } from '@/entities/player';
 import { EnemyVehicle } from '@/entities/enemy';
@@ -32,7 +39,7 @@ import {
   worldAtFromScreenY,
 } from '@/systems/weapons';
 import { levelForSeed, levelLabelFor, type LevelBlueprint } from '@/levels';
-import { laneCenter, type LevelEvent } from '@/levels/types';
+import { decorX, laneCenter, roadAt, type LevelEvent, type RoadProfile } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
 import type { AudioSystem } from '@/systems/audio';
@@ -106,6 +113,8 @@ export interface HudState {
   challengeProgress: number;
   challengeTarget: number;
   muted: boolean;
+  /** True while the car is off the drivable surface. Drives the HUD's off-road warning. */
+  offRoad: boolean;
   /** The live boss, while one is on the road. Drives the name plate and the health bar. */
   boss: BossHudState | null;
 }
@@ -174,7 +183,28 @@ export interface RunDebugState {
   readonly boss: { readonly id: string; readonly hp: number; readonly maxHp: number } | null;
   /** What the run read from the keyboard and the touch pad this frame. */
   readonly input: InputDebugState;
+  /** True while the car is off the drivable surface. */
+  readonly offRoad: boolean;
+  /**
+   * The road cross-section at the car's own `at`, in world pixels.
+   *
+   * Exposed because the surface width is no longer a constant per level type: a spec that
+   * measures the drawn road has to know which width it is looking at, and the width
+   * keyframes are what let it jump to the narrow and the wide stretch deliberately.
+   */
+  readonly road: RoadDebugState;
   readonly hud: HudState;
+}
+
+/** The live road geometry, plus the sector's width plan. */
+export interface RoadDebugState {
+  readonly left: number;
+  readonly width: number;
+  readonly lanes: number;
+  readonly laneWidth: number;
+  readonly minWidth: number;
+  readonly maxWidth: number;
+  readonly keyframes: readonly { readonly at: number; readonly width: number }[];
 }
 
 /**
@@ -236,6 +266,19 @@ export class GameScene extends Phaser.Scene {
   private pickups: Pickup[] = [];
   private props: { readonly sprite: Phaser.GameObjects.Image; readonly at: number }[] = [];
   /**
+   * Scenery outside the shoulder.
+   *
+   * Deliberately its own list: decor never collides, never blocks a lane and never appears
+   * in the enemy, prop or pickup passes, so nothing can accidentally give it physics.
+   */
+  private decor: { readonly sprite: Phaser.GameObjects.Image; readonly at: number }[] = [];
+  /** True while the car's centre is outside the surface. Read by the HUD. */
+  private offRoad = false;
+  /** Scene-clock time the car first went off the road this spell, or null when it is on it. */
+  private offRoadSince: number | null = null;
+  /** Scene-clock time the next rough-terrain damage tick is due. */
+  private nextOffRoadHitAt = 0;
+  /**
    * The act boss, while one is on the road.
    *
    * Deliberately not part of `enemies`: a boss is an encounter, and `clearWorld()` must not
@@ -286,6 +329,10 @@ export class GameScene extends Phaser.Scene {
     this.hazards = [];
     this.pickups = [];
     this.props = [];
+    this.decor = [];
+    this.offRoad = false;
+    this.offRoadSince = null;
+    this.nextOffRoadHitAt = 0;
     this.boss = null;
     this.victoryAt = null;
     this.paused = false;
@@ -374,6 +421,7 @@ export class GameScene extends Phaser.Scene {
       challengeProgress: this.challengeProgress,
       challengeTarget: this.challengeTarget,
       muted: this.audio?.isMuted ?? false,
+      offRoad: this.offRoad,
       boss: this.boss
         ? { label: this.boss.def.label, hp: Math.max(0, this.boss.hp), maxHp: this.boss.maxHp }
         : null,
@@ -405,7 +453,23 @@ export class GameScene extends Phaser.Scene {
         brake: this.brakeHeld,
         fire: this.fireHeld,
       },
+      offRoad: this.offRoad,
+      road: this.roadDebugState(),
       hud: this.hudState,
+    };
+  }
+
+  /** The live road geometry and the width plan behind it. Observation only. */
+  private roadDebugState(): RoadDebugState {
+    const profile = roadAt(this.blueprint.road, this.distance);
+    return {
+      left: profile.left,
+      width: profile.width,
+      lanes: profile.lanes,
+      laneWidth: profile.laneWidth,
+      minWidth: this.blueprint.road.minWidth,
+      maxWidth: this.blueprint.road.maxWidth,
+      keyframes: this.blueprint.road.keyframes.map((key) => ({ at: key.at, width: key.width })),
     };
   }
 
@@ -434,10 +498,12 @@ export class GameScene extends Phaser.Scene {
       getCivilian('sedan'),
       this.distance + 60,
       0,
-      this.blueprint.road,
+      roadAt(this.blueprint.road, this.distance),
       MOTION.cruiseSpeed * 0.3,
     );
-    civilian.sprite.x = this.player.x;
+    // Pin it into the gun line: the car follows the lane centre as the road changes width,
+    // so the offset has to be held by the vehicle, not by one assignment to `x`.
+    civilian.pinTo(this.player.x, roadAt(this.blueprint.road, civilian.at));
     civilian.sprite.y = PLAYER.y + this.distance - civilian.at;
     this.civilians.push(civilian);
   }
@@ -556,10 +622,16 @@ export class GameScene extends Phaser.Scene {
       dt,
       this.cruiseSpeed,
     );
+    // Rough ground: the car is held to a share of its own cruise while it is off the paint,
+    // so leaving the road costs time before it costs armour.
+    if (this.offRoad) this.speed = Math.min(this.speed, this.cruiseSpeed * OFFROAD.speedFactor);
+
     const speed = this.worldSpeed;
     this.distance += speed * dt;
 
-    this.player.update(dt, this.steer, time);
+    const road = roadAt(this.blueprint.road, this.distance);
+    this.player.update(dt, this.steer, time, road);
+    this.updateOffRoad(time, road);
     this.road.render(this.distance);
     this.audio.updateEngine(speedRatio(this.speed));
 
@@ -571,6 +643,7 @@ export class GameScene extends Phaser.Scene {
     this.updateHazards(time);
     this.updatePickups(dt);
     this.updateProps();
+    this.updateDecor();
 
     this.resolveCollisions(time);
     this.updateChallenge();
@@ -690,7 +763,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnEvent(event: LevelEvent): void {
-    const road = this.blueprint.road;
+    const shape = this.blueprint.road;
+    const road = roadAt(shape, event.at);
 
     switch (event.kind) {
       case 'enemy': {
@@ -732,6 +806,22 @@ export class GameScene extends Phaser.Scene {
         this.props.push({ sprite, at: event.at });
         break;
       }
+      case 'decor': {
+        // Scenery stands outside the surface edge at its own `at`, so it follows the road as
+        // the road widens. The variant is picked from the prop's own position rather than
+        // from a runtime RNG: a seeded run stays reproducible and a prop cannot flicker
+        // between two cells while it scrolls.
+        const sprite = this.art
+          .imageFrom(
+            pickSceneryVariant(sceneryArtIds(event.surface, event.prop), event.at),
+            decorX(shape, event.at, event.side, event.offset),
+            PLAYER.y + this.distance - event.at,
+            () => propTexture(this, event.prop, 'olive'),
+          )
+          .setDepth(12);
+        this.decor.push({ sprite, at: event.at });
+        break;
+      }
       default:
         break;
     }
@@ -748,7 +838,9 @@ export class GameScene extends Phaser.Scene {
     };
 
     for (const enemy of this.enemies) {
-      const wantsToFire = enemy.update(ctx, this.blueprint.road);
+      // The hostile is drawn, clamped and steered against the cross-section at its own `at`,
+      // not the one the car is on: the road changes width under both of them.
+      const wantsToFire = enemy.update(ctx, roadAt(this.blueprint.road, enemy.at));
       // `hostiles behind the cloud stop firing` — the cloud eats the shot, not the turn.
       if (wantsToFire && !this.isBlindedBySmoke(enemy)) this.enemyFire(enemy);
     }
@@ -768,12 +860,15 @@ export class GameScene extends Phaser.Scene {
     const boss = this.boss;
     if (!boss) return;
 
-    const action = boss.update({
-      now: time,
-      dt,
-      distance: this.distance,
-      playerX: this.player.x,
-    });
+    const action = boss.update(
+      {
+        now: time,
+        dt,
+        distance: this.distance,
+        playerX: this.player.x,
+      },
+      roadAt(this.blueprint.road, this.distance),
+    );
 
     if (action?.kind === 'fire') this.bossFire(boss, action.pattern);
   }
@@ -784,7 +879,14 @@ export class GameScene extends Phaser.Scene {
     // act index that unlocks the higher-act variants in the content table.
     const act = this.levelIndex;
     const def = bossForLevel(this.blueprint.type, act);
-    this.boss = new BossVehicle(this, this.art, def, this.distance, this.blueprint.road, time);
+    this.boss = new BossVehicle(
+      this,
+      this.art,
+      def,
+      this.distance,
+      roadAt(this.blueprint.road, this.distance),
+      time,
+    );
     this.showBanner(`ACT ${act} · ${def.label}`);
   }
 
@@ -875,7 +977,7 @@ export class GameScene extends Phaser.Scene {
 
   private updateCivilians(dt: number): void {
     for (const civilian of this.civilians) {
-      civilian.update(dt, this.distance);
+      civilian.update(dt, this.distance, roadAt(this.blueprint.road, civilian.at));
     }
     this.civilians = this.civilians.filter((c) => {
       if (c.isOffscreen(this.distance)) {
@@ -942,6 +1044,25 @@ export class GameScene extends Phaser.Scene {
     this.props = this.props.filter((prop) => {
       if (prop.sprite.y > WORLD.height + 60) {
         prop.sprite.destroy();
+        return false;
+      }
+      return true;
+    });
+  }
+
+  /**
+   * Scroll the scenery outside the shoulder.
+   *
+   * Position only: decor has no collision, no damage and no interaction with any gameplay
+   * pass, which is what keeps a cosmetic prop from ever blocking a lane.
+   */
+  private updateDecor(): void {
+    for (const item of this.decor) {
+      item.sprite.y = PLAYER.y + this.distance - item.at;
+    }
+    this.decor = this.decor.filter((item) => {
+      if (item.sprite.y > WORLD.height + 120) {
+        item.sprite.destroy();
         return false;
       }
       return true;
@@ -1218,11 +1339,41 @@ export class GameScene extends Phaser.Scene {
     );
   }
 
+  /**
+   * The rough-ground rules, run every frame the world moves.
+   *
+   * Off the paint the car is not destroyed outright: it is warned, slowed, and then hit on
+   * a fixed cadence once `OFFROAD.graceMs` has passed. Every tick goes through
+   * `damagePlayer`, so rough ground spends armour exactly like a shell does and a final
+   * tick at zero armour spends a life and respawns the car on the road it was on.
+   */
+  private updateOffRoad(time: number, road: RoadProfile): void {
+    if (!this.player.isOffRoad(road)) {
+      if (this.offRoad) this.showBanner('BACK ON THE ROAD');
+      this.offRoad = false;
+      this.offRoadSince = null;
+      return;
+    }
+
+    this.offRoad = true;
+    if (this.offRoadSince === null) {
+      // Grace: a steering correction that clips the shoulder is recoverable, and the warning
+      // is what tells the player the clock has started.
+      this.offRoadSince = time;
+      this.nextOffRoadHitAt = time + OFFROAD.graceMs;
+      this.showBanner('OFF ROAD');
+      return;
+    }
+
+    if (time < this.nextOffRoadHitAt) return;
+    this.nextOffRoadHitAt = time + OFFROAD.damageIntervalMs;
+    this.damagePlayer(time);
+  }
+
   private damagePlayer(time: number): void {
     // The scene keeps ticking during the game-over delay, and two collisions can land on
     // the same frame: once the run is over, nothing else may touch the wreck.
-    if (this.runEnded) return;
-    if (!this.player.takeHit(time)) return;
+    if (this.runEnded) return;    if (!this.player.takeHit(time)) return;
     this.cameras.main.shake(160, 0.008);
     this.audio.play('hit');
     // Armour and score are separate resources: a hit that the car survives costs no
@@ -1262,9 +1413,14 @@ export class GameScene extends Phaser.Scene {
    * run that just ended are not the ones the player is holding now.
    */
   private respawn(time: number): void {
-    this.player.respawn(time);
+    // Recentre on the road the wreck happened on: the car may have died on the dirt beside
+    // it, and a fresh life spent in the same hedge would be the same mistake twice.
+    this.player.respawn(time, roadAt(this.blueprint.road, this.distance));
     this.speed = MOTION.cruiseSpeed;
     this.steer = 0;
+    this.offRoad = false;
+    this.offRoadSince = null;
+    this.nextOffRoadHitAt = 0;
     this.touchInput.reset();
     this.clearNearbyThreats();
     this.audio.play('pickup');
@@ -1444,6 +1600,7 @@ export class GameScene extends Phaser.Scene {
     for (const hazard of this.hazards) hazard.sprite.destroy();
     for (const pickup of this.pickups) pickup.sprite.destroy();
     for (const prop of this.props) prop.sprite.destroy();
+    for (const item of this.decor) item.sprite.destroy();
 
     this.enemies = [];
     this.civilians = [];
@@ -1451,6 +1608,7 @@ export class GameScene extends Phaser.Scene {
     this.hazards = [];
     this.pickups = [];
     this.props = [];
+    this.decor = [];
   }
 
   /** Darken the world for the run. `visibility` 1 is clear; a tunnel is 0.45. */

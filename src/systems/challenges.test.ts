@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { CHALLENGE_TEMPLATES } from '@/content';
-import { roadProfileFor, type ChallengePlan, type LevelBlueprint } from '@/levels/types';
+import { roadShapeFor, type ChallengePlan, type LevelBlueprint } from '@/levels/types';
 import { ChallengeSystem } from './challenges';
 
 /**
@@ -15,7 +15,7 @@ function blueprintWith(challenges: readonly ChallengePlan[]): LevelBlueprint {
     type: 'highway',
     index: 1,
     length: 10_000,
-    road: roadProfileFor('highway'),
+    road: roadShapeFor('highway'),
     events: [],
     challenges,
     scrollMultiplier: 1,

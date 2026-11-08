@@ -1,0 +1,106 @@
+{
+  "slot": "art-23-scenery-water",
+  "code": "scenery-water",
+  "cellSize": 64,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-23-scenery-water.png",
+  "frames": {
+    "scenery-water/reed-bank": {
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/reed-clump": {
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/wooden-dock": {
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/dock-ladder": {
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/channel-buoy": {
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/marker-buoy": {
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/moored-dinghy": {
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/moored-skiff": {
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/moored-barge": {
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/water-rock": {
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/stone-jetty": {
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/bridge-pier": {
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/tall-bridge-pier": {
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/tire-fender": {
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/mooring-post": {
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-water/floating-pontoon": {
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  "slot": "art-22-scenery-roadside",
+  "code": "scenery-roadside",
+  "cellSize": 64,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-22-scenery-roadside.png",
+  "frames": {
+    "scenery-roadside/tree-roadside": {
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/tree-blown": {
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/bush-cluster": {
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/dry-hedge": {
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/rock-outcrop": {
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/rock-pile-small": {
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/wooden-fence": {
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/chain-link-fence": {
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/warning-sign-blank": {
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/direction-sign-blank": {
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/billboard-blank": {
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/wrecked-sedan": {
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/wrecked-van": {
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/burnt-car": {
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/pylon-lattice": {
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "scenery-roadside/pylon-concrete": {
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    }
+  }
+}

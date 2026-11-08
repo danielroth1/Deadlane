@@ -155,6 +155,115 @@ export const PROP_ART: Record<PropKind, readonly string[]> = {
  */
 export const PROP_PLACEHOLDER: readonly PropKind[] = [];
 
+/**
+ * The scenery surface a decor prop is drawn from.
+ *
+ * One surface per sheet: `art-22` for open road and desert, `art-23` for the delta and
+ * `art-24` for the city block. A level profile names its surface and the generator only
+ * ever places props from that surface's pool.
+ */
+export type ScenerySurface = 'roadside' | 'water' | 'urban';
+
+/**
+ * Scenery prop id → candidate frame ids, most specific first.
+ *
+ * Every entry was matched on the processed cells in `pipeline/work/<slot>/attempt-1/`, not
+ * on the declared cell labels, because the scenery sheets drifted from theirs.
+ *
+ * art-22 attempt 1 (4 × 4, row-major) draws:
+ *   0 tree with a baked sign · 1 dead tree · 2 bush cluster · 3 dry grass tuft ·
+ *   4 rock plus the top half of a fence · 5 bush plus fence · 6 rock plus a chain-link
+ *   panel · 7 rock pile plus fence · 8 warning sign · 9 chain-link fence panel ·
+ *   10 blank billboard · 11 a whole van · 12 a burnt wreck · 13 a wreck with debris ·
+ *   14 pylon with power lines and fire · 15 pylon on a concrete base.
+ * Cells 4–7 are deliberately **not** referenced: each carries a second, half-drawn object
+ * below its own subject, so slicing them ships a fence fragment. The real fence on the
+ * sheet is cell 9, whose label says `direction sign blank`; the whole van in cell 11 is
+ * labelled `wrecked sedan` and is skipped for the same reason — it is not a wreck.
+ *
+ * art-23 attempt 1 is close to its labels: reeds (0–1), a plank dock cross (2), a moored
+ * hull (3), two buoys (4–5), two moored boats (6–7), a rock in water (8), a brick jetty
+ * corner (9), a bridge pier frame (10), a dock ladder (11), a tyre fender (12), a mooring
+ * bollard (13), a second bollard (14) and a floating pontoon (15).
+ *
+ * art-24 attempt 1 matches its labels throughout: roofs (0–3), blank signs (4–5), AC units
+ * (6–7), a dumpster and a skip (8–9), lamp heads (10–11), planters (12–13), a water tank
+ * (14) and a satellite dish (15).
+ *
+ * Several ids list two candidates, so the scene can vary a stretch of road without a second
+ * sheet: `pickSceneryVariant()` chooses between them from the prop's own world position.
+ */
+export const SCENERY_ART: Readonly<
+  Record<ScenerySurface, Readonly<Record<string, readonly string[]>>>
+> = {
+  roadside: {
+    tree: ['scenery-roadside/tree-roadside'],
+    'dead-tree': ['scenery-roadside/tree-blown'],
+    bush: ['scenery-roadside/bush-cluster'],
+    'dry-hedge': ['scenery-roadside/dry-hedge'],
+    // Cell 9 — the chain-link panel, labelled `direction sign blank`.
+    fence: ['scenery-roadside/direction-sign-blank'],
+    // Cell 8.
+    'warning-sign': ['scenery-roadside/warning-sign-blank'],
+    // Cell 10.
+    billboard: ['scenery-roadside/billboard-blank'],
+    // Cell 12 — a burnt wreck, labelled `wrecked van`.
+    'wrecked-car': ['scenery-roadside/wrecked-van'],
+    // Cell 13 — a wreck with debris, labelled `burnt car`.
+    'burnt-car': ['scenery-roadside/burnt-car'],
+    // Cell 15 first: a pylon standing on its own base reads better than the wired one.
+    pylon: ['scenery-roadside/pylon-concrete', 'scenery-roadside/pylon-lattice'],
+  },
+  water: {
+    reeds: ['scenery-water/reed-bank', 'scenery-water/reed-clump'],
+    dock: ['scenery-water/wooden-dock'],
+    buoy: ['scenery-water/channel-buoy', 'scenery-water/marker-buoy'],
+    boat: ['scenery-water/moored-dinghy', 'scenery-water/moored-skiff'],
+    'water-rock': ['scenery-water/water-rock'],
+    jetty: ['scenery-water/stone-jetty'],
+    'bridge-pier': ['scenery-water/bridge-pier'],
+    'tire-fender': ['scenery-water/tire-fender'],
+    'mooring-post': ['scenery-water/mooring-post'],
+    pontoon: ['scenery-water/floating-pontoon'],
+  },
+  urban: {
+    'apartment-roof': ['scenery-urban/apartment-roof'],
+    'house-roof': ['scenery-urban/house-roof'],
+    skylight: ['scenery-urban/roof-skylight'],
+    hatch: ['scenery-urban/roof-stair-hatch'],
+    'neon-sign': ['scenery-urban/neon-sign-blank'],
+    billboard: ['scenery-urban/billboard-blank'],
+    'ac-unit': ['scenery-urban/ac-unit', 'scenery-urban/ac-unit-bank'],
+    dumpster: ['scenery-urban/dumpster', 'scenery-urban/skip-container'],
+    streetlight: ['scenery-urban/streetlight-head', 'scenery-urban/streetlight-twin'],
+    planter: ['scenery-urban/planter-box', 'scenery-urban/planter-tree'],
+    'water-tank': ['scenery-urban/roof-water-tank'],
+    'satellite-dish': ['scenery-urban/satellite-dish'],
+  },
+};
+
+/** Frame ids for a scenery prop, or none when the id is unknown and the fallback wins. */
+export function sceneryArtIds(surface: ScenerySurface, prop: string): readonly string[] {
+  const table = SCENERY_ART[surface];
+  return Object.prototype.hasOwnProperty.call(table, prop) ? (table[prop] ?? []) : [];
+}
+
+/**
+ * Put the candidate a prop at `at` should wear first, keeping the rest as fallbacks.
+ *
+ * Deterministic by construction: the choice is a pure function of the prop's own world
+ * position and its candidate count, so the same prop always wears the same frame while it
+ * scrolls — no runtime randomness enters a seeded run, and a sprite cannot flicker between
+ * two cells as it moves.
+ */
+export function pickSceneryVariant(ids: readonly string[], at: number): readonly string[] {
+  if (ids.length <= 1) return ids;
+  const index = Math.abs(Math.round(at)) % ids.length;
+  const chosen = ids[index];
+  if (!chosen) return ids;
+  return [chosen, ...ids];
+}
+
 /** The tile roles the road tile layer can draw from a tile sheet. */
 export type TileKind = 'surface' | 'dash' | 'shoulder' | 'terrain';
 

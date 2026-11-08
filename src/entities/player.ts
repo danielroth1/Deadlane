@@ -1,6 +1,7 @@
 import type Phaser from 'phaser';
-import { PLAYER, ROAD, WORLD } from '@/config';
+import { OFFROAD, PLAYER, WORLD } from '@/config';
 import { PALETTE } from '@/palette';
+import type { RoadProfile } from '@/levels/types';
 import type { Art, VehicleOptions } from '@/art';
 
 /**
@@ -163,11 +164,16 @@ export class PlayerVehicle {
    * the road projection is anchored there, so nothing here may nudge `y`. The old 1 px engine
    * jitter was written for a car pinned to the bottom edge; at dead centre it reads as the
    * whole frame shaking rather than the engine idling.
+   *
+   * The car is no longer pinned to the paint. It may cross the shoulder onto the apron —
+   * `OFFROAD.apron` px of rough ground past each edge — and the scene decides what that
+   * costs. The clamp is still here so a steering mistake cannot leave the world, and it is
+   * the only thing that limits how far out the car can get.
    */
-  update(dt: number, steer: number, time: number): void {
+  update(dt: number, steer: number, time: number, road: RoadProfile): void {
     const dx = steer * PLAYER.lateralSpeed * dt;
-    const minX = ROAD.left + this.sprite.displayWidth * 0.28;
-    const maxX = ROAD.left + ROAD.width - this.sprite.displayWidth * 0.28;
+    const minX = road.left - OFFROAD.apron;
+    const maxX = road.left + road.width + OFFROAD.apron;
 
     this.sprite.x = Math.max(minX, Math.min(maxX, this.sprite.x + dx));
 
@@ -183,6 +189,11 @@ export class PlayerVehicle {
     } else {
       this.sprite.setAlpha(1);
     }
+  }
+
+  /** True when the car's centre is outside the drivable surface at `road`. */
+  isOffRoad(road: RoadProfile): boolean {
+    return this.sprite.x < road.left || this.sprite.x > road.left + road.width;
   }
 
   /** True when `cooldown` ms have passed since this weapon last fired. */
@@ -246,12 +257,17 @@ export class PlayerVehicle {
    * Armour returns to the starting loadout and the wrecked frame is released, so a respawn
    * is the only thing that can undo `showWrecked()`. The longer respawn grace window is what
    * keeps the player from being hit again before they have read the banner.
+   *
+   * A wreck can happen off the shoulder, so the respawn recentres the car on the road it is
+   * handed: coming back on the same patch of rough ground would spend the next life on the
+   * same mistake.
    */
-  respawn(time: number): void {
+  respawn(time: number, road?: RoadProfile): void {
     this.armor = PLAYER.startArmor;
     // Clear the terminal wreck state first: `setArtState()` refuses to repaint a wreck.
     this.wrecked = false;
     this.invulnerableUntil = time + PLAYER.respawnIFrames;
+    if (road) this.sprite.x = road.left + road.width / 2;
     this.refreshArt();
   }
 

@@ -27,6 +27,14 @@ export class CivilianVehicle {
   wrecked = false;
   /** True once the car has been drawn inside the aperture. */
   private entered = false;
+  /**
+   * Lateral distance from the lane centre the car holds, px.
+   *
+   * Zero for generated traffic. Kept because the lane centre moves as the surface widens
+   * and narrows, and a car that was deliberately placed a few pixels off centre — the
+   * debug stage in `GameScene` puts one in the gun line — must stay where it was put.
+   */
+  private laneOffset = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -60,6 +68,17 @@ export class CivilianVehicle {
   }
 
   /**
+   * Pin the car `x` px of world x, keeping it there as the lane centre moves.
+   *
+   * Used by the debug stage, which puts one civilian in the gun line: assigning
+   * `sprite.x` alone would be undone by the next `update()` re-deriving the lane centre.
+   */
+  pinTo(x: number, road: RoadProfile): void {
+    this.laneOffset = x - laneCenter(road, this.lane);
+    this.sprite.x = x;
+  }
+
+  /**
    * Past either edge of the play aperture.
    *
    * Screen `y` alone is not enough: a unit that has fallen behind the player is still on
@@ -82,11 +101,20 @@ export class CivilianVehicle {
     return this.sprite.displayHeight * 0.4;
   }
 
-  update(dt: number, distance: number): void {
+  /**
+   * Drive on, holding the lane.
+   *
+   * The lane centre is re-derived from the road at the car's own `at` every frame: the
+   * surface widens and narrows, and traffic that kept the x it spawned with would end up
+   * straddling a lane boundary on the narrow stretches. A wreck stays where it came to
+   * rest — it is debris, not a driver.
+   */
+  update(dt: number, distance: number, road: RoadProfile): void {
     if (!this.wrecked) {
       this.at += this.speed * dt;
       // Gentle sway so a lane of traffic does not look like a conveyor belt.
       this.sprite.rotation = Math.sin(this.at * 0.004) * 0.02;
+      this.sprite.x = laneCenter(road, this.lane) + this.laneOffset;
     }
     this.sprite.y = PLAYER.y + distance - this.at;
     if (this.sprite.y >= 0 && this.sprite.y <= WORLD.height) this.entered = true;

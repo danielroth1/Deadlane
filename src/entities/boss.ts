@@ -109,8 +109,11 @@ export class BossVehicle {
    * fight lasts, so a boss pinned to a world `at` would slide off the bottom of the screen
    * within a second. `at` is then derived from how far ahead the boss is drawn, which is
    * exactly the number shells and collision need.
+   *
+   * `road` is the cross-section at the car's own distance, not the one the boss spawned on:
+   * a fight can run for a minute while the sector's surface widens around it.
    */
-  update(ctx: BossUpdateContext): BossAction | null {
+  update(ctx: BossUpdateContext, road: RoadProfile = this.road): BossAction | null {
     this.phase += ctx.dt;
 
     const stationY = PLAYER.y - BOSS.stationAhead;
@@ -123,9 +126,9 @@ export class BossVehicle {
 
     // Weave across the road with a bias toward the player's half, so the boss is a moving
     // target rather than a turret the player parks in front of.
-    const halfWidth = this.road.width / 2;
+    const halfWidth = road.width / 2;
     const weave = Math.min(BOSS.weaveAmplitude, halfWidth - this.sprite.displayWidth * 0.4);
-    const centre = this.road.left + halfWidth;
+    const centre = road.left + halfWidth;
     const bias =
       Math.max(-1, Math.min(1, (ctx.playerX - centre) / Math.max(1, halfWidth))) * weave * 0.35;
     const targetX =
@@ -136,8 +139,8 @@ export class BossVehicle {
 
     const margin = this.sprite.displayWidth * 0.4;
     this.currentX = Math.max(
-      this.road.left + margin,
-      Math.min(this.road.left + this.road.width - margin, this.currentX),
+      road.left + margin,
+      Math.min(road.left + road.width - margin, this.currentX),
     );
     this.sprite.x = this.currentX;
 

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type Phaser from 'phaser';
 import type { Art } from '@/art';
-import { PLAYER } from '@/config';
+import { OFFROAD, PLAYER } from '@/config';
+import { roadProfileFor } from '@/levels/types';
 import {
   displayScale,
   HALF_HEIGHT_RATIO,
@@ -219,11 +220,13 @@ describe('lean', () => {
   }
 
   const thresholdSteer = PLAYER.leanThreshold / PLAYER.lateralSpeed;
+  /** The road the car leans on: the highway's nominal cross-section. */
+  const ROAD = roadProfileFor('highway');
 
   it('does not lean below PLAYER.leanThreshold', () => {
     const { player, image } = playerAt();
 
-    player.update(0, thresholdSteer * 0.99, 0);
+    player.update(0, thresholdSteer * 0.99, 0, ROAD);
 
     expect(image.rotation).toBe(0);
   });
@@ -231,7 +234,7 @@ describe('lean', () => {
   it('leans above PLAYER.leanThreshold', () => {
     const { player, image } = playerAt();
 
-    player.update(0, thresholdSteer * 1.01, 0);
+    player.update(0, thresholdSteer * 1.01, 0, ROAD);
 
     expect(image.rotation).toBeCloseTo((2.5 * Math.PI) / 180);
   });
@@ -239,9 +242,26 @@ describe('lean', () => {
   it('leans the other way for negative steer', () => {
     const { player, image } = playerAt();
 
-    player.update(0, -1, 0);
+    player.update(0, -1, 0, ROAD);
 
     expect(image.rotation).toBeCloseTo((-2.5 * Math.PI) / 180);
+  });
+
+  it('may leave the surface, but only as far as the apron', () => {
+    const { player, image } = playerAt();
+    // The stub image is not placed by `imageAny`, so start the car where the road is.
+    image.x = ROAD.left + ROAD.width / 2;
+
+    // A full second of full steer is 260 px, far past the right edge.
+    for (let i = 0; i < 60; i += 1) player.update(1 / 60, 1, 0, ROAD);
+
+    expect(player.isOffRoad(ROAD)).toBe(true);
+    expect(image.x).toBeCloseTo(ROAD.left + ROAD.width + OFFROAD.apron);
+
+    for (let i = 0; i < 120; i += 1) player.update(1 / 60, -1, 0, ROAD);
+
+    expect(player.isOffRoad(ROAD)).toBe(true);
+    expect(image.x).toBeCloseTo(ROAD.left - OFFROAD.apron);
   });
 });
 

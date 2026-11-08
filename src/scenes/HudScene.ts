@@ -53,6 +53,7 @@ export class HudScene extends Phaser.Scene {
   private distanceText!: PixelText;
   private challengeText!: PixelText;
   private muteText!: PixelText;
+  private offRoadText!: PixelText;
   private bossText!: PixelText;
   private bossBar!: Phaser.GameObjects.Graphics;
   private pips!: Phaser.GameObjects.Graphics;
@@ -119,6 +120,15 @@ export class HudScene extends Phaser.Scene {
       align: 'right',
     });
 
+    // Rough-ground warning, in the free middle of the bottom strip.
+    this.offRoadText = new PixelText(this, {
+      x: GAME.width / 2,
+      y: GAME.height - 20,
+      color: PALETTE.signalRed,
+      scale: 1,
+      align: 'center',
+    });
+
     // Boss name plate and health bar, directly under the top strip. Empty until an act
     // boss is on the road.
     this.bossText = new PixelText(this, {
@@ -170,6 +180,11 @@ export class HudScene extends Phaser.Scene {
     }
 
     this.muteText.setText(state.muted ? 'MUTED' : '');
+
+    // Rough-ground warning. It sits in the free middle of the bottom strip, between the
+    // weapon counters and the speed bar, so it never covers a readout the player needs
+    // while steering back onto the road.
+    this.offRoadText.setText(state.offRoad ? 'OFF ROAD' : '');
 
     this.drawPips(state);
     this.drawSpeed(state);

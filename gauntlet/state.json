@@ -615,12 +615,14 @@
       "title": "Road edges: variable width, generated scenery, off-road damage",
       "file": "gauntlet/work-orders/WO-54-road-edges.md",
       "status": "pending",
-      "round": 0,
+      "round": 1,
       "dependsOn": [
         "WO-51",
         "WO-52",
         "WO-53"
-      ]
+      ],
+      "lastVerdict": "fail",
+      "note": "engine half done; art-23 ids map 4 water props to drifted cells, plus 3 nits"
     },
     {
       "id": "WO-55",

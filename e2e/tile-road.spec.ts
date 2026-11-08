@@ -34,7 +34,6 @@ const SEED = 424242;
  * units `roadProfileFor` uses; every pixel this spec reads is converted here, once.
  */
 const ZOOM = 0.75;
-const WORLD_WIDTH = 640 / ZOOM;
 
 /** The screen column a world x is drawn in. */
 function toScreen(worldX: number): number {
@@ -42,31 +41,16 @@ function toScreen(worldX: number): number {
 }
 
 /**
- * Mirrors of `roadProfileFor` in `src/levels/types.ts`, in world pixels: the road is centred
- * on the world aperture and tunnel and river lanes are 76 px, everything else `ROAD.laneWidth`.
- * Canyon is 5 × 64, river is 5 × 76, city is 6 × 64, tunnel is 4 × 76.
+ * The road the run is drawing right now.
+ *
+ * The surface is no longer a constant per level type: a sector carries width keyframes and
+ * re-centres itself on the aperture at every distance, so the only honest source of
+ * geometry is the live snapshot. Reading it after a frame is grabbed keeps the columns this
+ * spec samples within a pixel of the widths they were drawn at.
  */
-const highwayRoad = { width: 384, lanes: 6, laneWidth: 64 } as const;
-const canyonRoad = { width: 320, lanes: 5, laneWidth: 64 } as const;
-const riverRoad = { width: 380, lanes: 5, laneWidth: 76 } as const;
-const cityRoad = { width: 384, lanes: 6, laneWidth: 64 } as const;
-const tunnelRoad = { width: 304, lanes: 4, laneWidth: 76 } as const;
-
-/** A world road, centred on the aperture the way `roadProfileFor` centres it. */
-function worldRoad(road: {
-  readonly width: number;
-  readonly lanes: number;
-  readonly laneWidth: number;
-}): RoadProfile {
-  return { left: (WORLD_WIDTH - road.width) / 2, ...road };
+async function liveRoad(page: Page): Promise<RoadProfile> {
+  return (await readSnapshot(page)).road;
 }
-
-const HIGHWAY = worldRoad(highwayRoad);
-const CANYON = worldRoad(canyonRoad);
-const RIVER = worldRoad(riverRoad);
-const CITY = worldRoad(cityRoad);
-const TUNNEL = worldRoad(tunnelRoad);
-
 /**
  * Mirrors of the level darkening WO-33 draws at `1 - visibility`, and of the palette entry
  * it draws with. A tunnel is the only road strong enough to matter to a screenshot.
@@ -111,6 +95,8 @@ interface DeadlaneSnapshot {
   worldDistance: number;
   /** The live act boss, or null between encounters. */
   boss: { id: string; hp: number; maxHp: number } | null;
+  /** The road cross-section at the car's own `at`, in world pixels. */
+  road: RoadProfile & { minWidth: number; maxWidth: number };
   hud: { distance: number; speed: number; level: number };
 }
 
@@ -599,6 +585,7 @@ async function expectPatternScrolls(
 test('the highway is drawn from the art-13 tile sheet, without a grid', async ({ page }) => {
   await startRun(page);
   const frame = await grab(page);
+  const HIGHWAY = await liveRoad(page);
 
   // 1. Tiles are actually on screen. The drawn fallback fills each terrain band with one
   //    flat palette colour, whereas the generated grass tile is olive plus a scatter of
@@ -664,6 +651,7 @@ test('the highway is drawn from the art-13 tile sheet, without a grid', async ({
 test('the highway shoulder is drawn from the art-18 grass/road blend', async ({ page }) => {
   await startRun(page);
   const frame = await grab(page);
+  const HIGHWAY = await liveRoad(page);
 
   // The transition strip outside each edge line is `art-18` cell 4 through the
   // `HIGHWAY_EDGE_BLEND` window: a grass verge that meets a worn road edge. The drawn
@@ -704,6 +692,7 @@ test('the canyon road is drawn from the art-14 tile sheet, with no marking insid
   await startRun(page);
   await crossSector(page, 'REDLINE CANYON');
   const frame = await grab(page);
+  const CANYON = await liveRoad(page);
 
   // 1. The terrain is the sheet's sand, not the drawn rust band. `rust` is what the
   //    fallback fills those 160 px with, so any of it is a fallback leak; the sand plain is
@@ -781,6 +770,7 @@ test('the canyon shoulder is drawn from the art-18 chevron cell', async ({ page 
   await startRun(page);
   await crossSector(page, 'REDLINE CANYON');
   const frame = await grab(page);
+  const CANYON = await liveRoad(page);
 
   // The canyon shoulder is the sheet's chevron cell, windowed to the 8 px strip. The drawn
   // fallback shoulder is flat rust with sand guardrail ticks, so amber paint in the strip
@@ -819,6 +809,7 @@ test('the river is drawn from the art-15 water sheet, with no road markings at a
   await crossSector(page, 'REDLINE CANYON');
   await crossSector(page, 'DELTA RUN');
   const frame = await grab(page);
+  const RIVER = await liveRoad(page);
 
   // 1. The road is water, and it is not asphalt. `asphalt` is the colour the drawn road
   //    fill paints across the channel and it appears in no band of the water sheet except
@@ -960,6 +951,7 @@ test('the city street is drawn from the art-16 tile sheet', async ({ page }) => 
   await crossSector(page, 'DELTA RUN');
   await crossSector(page, 'DOWNTOWN BLOCK');
   const frame = await grab(page);
+  const CITY = await liveRoad(page);
 
   // 1. The pavement is the sheet's plaza tile, not the drawn `asphaltLight` fill the city
   //    theme paints outside the road. The plaza is bone paving with steelLight grout, so
@@ -1047,6 +1039,7 @@ test('the tunnel is drawn from the art-17 sheet, darkened once by the visibility
   await crossSector(page, 'DOWNTOWN BLOCK');
   await crossSector(page, 'SERVICE TUNNEL 4');
   const frame = await grab(page);
+  const TUNNEL = await liveRoad(page);
 
   // WO-33 draws one void rectangle at `1 - visibility` over the world. The sheet is sampled
   // at its authored brightness and the tile layer is never tinted, so that overlay is the

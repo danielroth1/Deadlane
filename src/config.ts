@@ -60,6 +60,68 @@ export const ROAD = {
   width: ROAD_WIDTH,
   laneWidth: 64,
   lanes: 6,
+  /**
+   * World pixels between road-width keyframes.
+   *
+   * A sector is 24 000–28 000 px long, so this gives seven or eight width changes: enough
+   * for a road to read as a place that tightens and opens again, slow enough that the
+   * driver is never asked to read a new width and a new wave at the same moment.
+   */
+  widthSpan: 3400,
+  /**
+   * Narrowest and widest lane a keyframe may ask for, px.
+   *
+   * The lane count never changes, so these bounds are what keep every lane index valid and
+   * every lane wide enough to thread: 48 px is three quarters of the player's 64 px
+   * footprint, and 84 px is the widest a six-lane road can be without eating the terrain.
+   */
+  minLaneWidth: 48,
+  maxLaneWidth: 84,
+  /**
+   * Width a keyframe may take, as a share of the sector's nominal width.
+   *
+   * Deliberately discrete: a road that picks a continuous width drifts into values no
+   * author chose. 0.84 is the tightest a six-lane highway gets before it stops reading as
+   * a highway, and the repeats of 1 keep most stretches at their authored width.
+   */
+  widthSteps: [0.84, 0.9, 1, 1, 1.06] as const,
+  /** Terrain that must stay visible each side of the surface, px. */
+  terrainMargin: 80,
+} as const;
+
+/**
+ * Driving off the road.
+ *
+ * The car is no longer pinned to the paint: it may cross the shoulder onto the rough
+ * ground beside it, and the rough ground is what punishes the mistake — a speed penalty
+ * immediately, then armour through the ordinary damage path once the grace window runs
+ * out. Nothing here spends a life directly; a wreck at zero armour does that on its own.
+ */
+export const OFFROAD = {
+  /** How far past the surface the car may travel before the clamp stops it, px. */
+  apron: 24,
+  /** Grace between leaving the surface and the first damage tick, ms. */
+  graceMs: 800,
+  /** Gap between damage ticks while the car stays off the road, ms. */
+  damageIntervalMs: 500,
+  /** Share of cruise speed the car is held to on rough ground. */
+  speedFactor: 0.55,
+} as const;
+
+/**
+ * Scenery placed outside the shoulder.
+ *
+ * Decor is cosmetic data: it never collides, never blocks a lane and never spawns inside
+ * the safe start. These numbers only decide where the props sit relative to the road edge
+ * and how far apart they are.
+ */
+export const DECOR = {
+  /** Closest a prop may sit to the surface edge, px. Clear of the 8 px shoulder. */
+  minOffset: 26,
+  /** Furthest a prop may sit from the surface edge, px. Inside the aperture. */
+  maxOffset: 150,
+  /** World pixels between decor props, before jitter. */
+  spacing: 260,
 } as const;
 
 export const PLAYER = {

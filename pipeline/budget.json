@@ -399,18 +399,54 @@
     },
     "art-22-scenery-roadside": {
       "id": "art-22-scenery-roadside",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1342708414,
+          "promptHash": "dd5639b1e7977143",
+          "state": "generated",
+          "claimedAt": "2026-11-08T20:16:05.670Z",
+          "requestId": "01a1bccd-ebb5-7d80-9f82-359ef1aa6a1b",
+          "url": "https://v3b.fal.media/files/b/0ab1af41/RJ6MmOsYgR68coQfoUS-v_1OSmPO2C.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-23-scenery-water": {
       "id": "art-23-scenery-water",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1508963973,
+          "promptHash": "71f2b2451b8767db",
+          "state": "generated",
+          "claimedAt": "2026-11-08T20:16:42.418Z",
+          "requestId": "01a1bcce-79f4-7570-8d82-c4cfc244d324",
+          "url": "https://v3b.fal.media/files/b/0ab1af45/lfLMRjYRhE6lYsoBlfUA2_tdmM4lKC.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-24-scenery-urban": {
       "id": "art-24-scenery-urban",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1975687642,
+          "promptHash": "eac875f77f03e404",
+          "state": "generated",
+          "claimedAt": "2026-11-08T20:17:09.901Z",
+          "requestId": "01a1bcce-e6a2-70d0-ad92-b0088f7b02a6",
+          "url": "https://v3b.fal.media/files/b/0ab1af48/5pY9NNa-AXNxOyxbeHZ_Q_m3kNUjo6.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-25-fx-expanded": {
       "id": "art-25-fx-expanded",
