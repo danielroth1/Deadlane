@@ -270,7 +270,7 @@ export const COLLISION = {
   wobbleMs: 340,
   wobbleHz: 6,
   /**
-   * Camera kick after a hard hit: scroll travel in world px, length, rate.
+   * Camera kick on a hit: scroll travel in world px, length, rate.
    *
    * Written as a decaying sine on the camera scroll rather than through Phaser's
    * `Camera.shake()`, which offsets the frame with `Math.random()`.

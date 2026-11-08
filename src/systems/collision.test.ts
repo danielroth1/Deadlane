@@ -3,6 +3,7 @@ import { COLLISION } from '@/config';
 import {
   closingSpeed,
   contactBetween,
+  contactCost,
   resolveContact,
   type CollisionBox,
   type ContactBody,
@@ -194,5 +195,74 @@ describe('resolveContact', () => {
     expect(backward.deltaAX).toBeCloseTo(forward.deltaBX);
     expect(backward.deltaBX).toBeCloseTo(forward.deltaAX);
     expect(backward.approach).toBeCloseTo(forward.approach);
+  });
+});
+
+/**
+ * What a contact costs, once the cars have been parted.
+ *
+ * These are the rules that make neutral traffic worth having at all: hitting a civilian
+ * costs score and never armour, and the i-frame window that buys armour must not also
+ * swallow that penalty. A ram is the one cost the window owns.
+ */
+describe('contactCost', () => {
+  const HARD_TRAFFIC = {
+    hard: true,
+    hostile: false,
+    runEnded: false,
+    invulnerable: false,
+  } as const;
+
+  const HARD_RAM = { ...HARD_TRAFFIC, hostile: true } as const;
+
+  it('never spends armour on neutral traffic, whatever the window is doing', () => {
+    expect(contactCost(HARD_TRAFFIC).armour).toBe(false);
+    expect(contactCost({ ...HARD_TRAFFIC, invulnerable: true }).armour).toBe(false);
+    expect(contactCost({ ...HARD_TRAFFIC, runEnded: true }).armour).toBe(false);
+  });
+
+  it('marks the rammed car only on a hostile hit, never on traffic', () => {
+    expect(contactCost(HARD_TRAFFIC).damageOther).toBe(false);
+    expect(contactCost(HARD_RAM).damageOther).toBe(true);
+  });
+
+  it('pays the traffic penalty during i-frames and after the run has ended', () => {
+    expect(contactCost({ ...HARD_TRAFFIC, invulnerable: true }).trafficPenalty).toBe(true);
+    expect(contactCost({ ...HARD_TRAFFIC, runEnded: true }).trafficPenalty).toBe(true);
+    expect(contactCost(HARD_TRAFFIC).trafficPenalty).toBe(true);
+  });
+
+  it('spends exactly one armour hit on a hard ram', () => {
+    expect(contactCost(HARD_RAM)).toEqual({
+      armour: true,
+      damageOther: true,
+      trafficPenalty: false,
+      jolt: true,
+    });
+  });
+
+  it('costs a ram nothing while the window is open: parted, not spent', () => {
+    const free = contactCost({ ...HARD_RAM, invulnerable: true });
+    expect(free).toEqual({
+      armour: false,
+      damageOther: false,
+      trafficPenalty: false,
+      jolt: false,
+    });
+  });
+
+  it('costs nothing at all on a glance, from either kind of car', () => {
+    const glance = {
+      armour: false,
+      damageOther: false,
+      trafficPenalty: false,
+      jolt: false,
+    };
+    expect(contactCost({ ...HARD_TRAFFIC, hard: false })).toEqual(glance);
+    expect(contactCost({ ...HARD_RAM, hard: false })).toEqual(glance);
+  });
+
+  it('is deterministic: the same contact costs the same twice', () => {
+    expect(contactCost(HARD_RAM)).toEqual(contactCost(HARD_RAM));
   });
 });

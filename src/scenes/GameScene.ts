@@ -45,7 +45,7 @@ import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
 import type { AudioSystem } from '@/systems/audio';
 import { speedRatio, stepSpeed } from '@/systems/motion';
-import { resolveContact } from '@/systems/collision';
+import { contactCost, resolveContact } from '@/systems/collision';
 import { ChallengeSystem } from '@/systems/challenges';
 import { scoreDelta, type ScoreEventKind } from '@/systems/scoring';
 import { TouchInput, buttonAt } from '@/systems/touch-input';
@@ -1488,13 +1488,16 @@ export class GameScene extends Phaser.Scene {
    * The resolver does the whole of the contact first — both cars are parted, both get an
    * impulse — because a collision that leaves two cars overlapping, or deletes one on the
    * spot, is the bug this exists to prevent. Only then does the contact cost anything, and
-   * only if it was a hard one:
+   * what it costs is decided by `contactCost`:
    *
-   * - the car takes a hit through `damagePlayer`, which owns the i-frame window, so a contact
-   *   cannot spend armour twice in one frame or at all while invulnerable;
-   * - the hit that landed leaves the wheel wobbling and the camera kicked;
-   * - the other car takes `COLLISION.impactDamage`, which wrecks a light one and only marks a
-   *   heavy one — a hard hit *may* wreck the car it lands on, it does not erase it.
+   * - a hostile ram spends one armour hit through `damagePlayer`, which owns the i-frame
+   *   window, so a contact cannot spend armour twice in one frame or at all while
+   *   invulnerable; the hit that landed leaves the wheel wobbling and the camera kicked;
+   *   and the car that was rammed takes `COLLISION.impactDamage`, which wrecks a light one
+   *   and only marks a heavy one — a hard hit *may* wreck the car it lands on, it does not
+   *   erase it;
+   * - traffic never costs armour, and its penalty is paid by the contact rather than by the
+   *   damage window, so an i-frame cannot swallow it; see `content/civilians.json`.
    *
    * A glance from a sideswipe is neither: the cars are pushed apart and both drive on.
    */
@@ -1524,31 +1527,47 @@ export class GameScene extends Phaser.Scene {
       otherVx: hit.deltaBX,
     };
 
-    if (!hit.hard) return;
-    if (!this.damagePlayer(time)) return;
+    const cost = contactCost({
+      hard: hit.hard,
+      hostile,
+      runEnded: this.runEnded,
+      invulnerable: this.player.isInvulnerable,
+    });
 
-    this.player.wobble(time);
-    this.kickCamera(time);
+    // The penalty for clattering a neutral car belongs to the contact, not to the damage
+    // window: an i-frame buys the player armour, never a free pass through a bus.
+    if (cost.trafficPenalty && other instanceof CivilianVehicle) {
+      this.applyScore('civilianContact');
+      this.wreckCivilian(other, 'CIVILIAN HIT');
+    }
+
+    if (cost.jolt) {
+      // A hostile hit kicks the camera inside `damagePlayer`; a traffic hit spends no
+      // armour, so it is not on that path and its jolt is applied here.
+      this.player.wobble(time);
+      if (!cost.armour) this.kickCamera(time);
+    }
+
+    // Armour, and only armour, is what the window buys: `damagePlayer` owns it and answers
+    // whether the hit landed, so a hard ram cannot spend twice in one frame.
+    if (!cost.armour || !this.damagePlayer(time)) return;
 
     // A wreck at zero armour respawns and sweeps the road around the car, so the car that
     // was just hit may already be gone.
+    if (!cost.damageOther || !(other instanceof EnemyVehicle)) return;
     if (!other.sprite.active) return;
 
-    if (hostile) {
-      if (other.hit(COLLISION.impactDamage)) this.killEnemy(other);
-      return;
-    }
-    this.applyScore('civilianContact');
-    this.wreckCivilian(other, 'CIVILIAN HIT');
+    if (other.hit(COLLISION.impactDamage)) this.killEnemy(other);
   }
 
   /**
-   * Start the deterministic camera kick a hard contact leaves behind.
+   * Start the deterministic camera kick a hit leaves behind.
    *
-   * Phaser's `Camera.shake()` offsets the frame with `Math.random()`, which would make a
-   * seeded run irreproducible frame for frame. This is the same beat written as a decaying
-   * sine on the camera's scroll: no randomness, no clock reads beyond the frame time, so a
-   * replay of the same run shakes exactly the same way.
+   * Every armour hit goes through here — a shell, rough ground, a ram, the debug control —
+   * rather than through Phaser's `Camera.shake()`, which offsets the frame with
+   * `Math.random()` and would make a seeded run irreproducible frame for frame. This is the
+   * same beat written as a decaying sine on the camera's scroll: no randomness, no clock
+   * reads beyond the frame time, so a replay of the same run shakes exactly the same way.
    */
   private kickCamera(time: number): void {
     this.shakeFrom = time;
@@ -1615,7 +1634,10 @@ export class GameScene extends Phaser.Scene {
     // the same frame: once the run is over, nothing else may touch the wreck.
     if (this.runEnded) return false;
     if (!this.player.takeHit(time)) return false;
-    this.cameras.main.shake(160, 0.008);
+    // Every damage path kicks the camera through `kickCamera`, never `Camera.shake()`: the
+    // shake offsets the frame with `Math.random()`, and a seeded run has to replay the same
+    // way.
+    this.kickCamera(time);
     this.audio.play('hit');
     // Armour and score are separate resources: a hit that the car survives costs no
     // points, so only a destroyed vehicle moves the score.

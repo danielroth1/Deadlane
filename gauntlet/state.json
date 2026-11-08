@@ -629,13 +629,13 @@
       "title": "Collision response: push apart, not delete",
       "file": "gauntlet/work-orders/WO-55-collisions.md",
       "status": "pending",
-      "round": 1,
+      "round": 2,
       "dependsOn": [
         "WO-52",
         "WO-54"
       ],
       "lastVerdict": "fail",
-      "note": "neutral traffic now costs armour; traffic penalty swallowed by i-frame gate; double shake"
+      "note": "Camera.shake still reachable via wreckCivilian/killEnemy/endRun; trivially-true determinism test"
     },
     {
       "id": "WO-56",

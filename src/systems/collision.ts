@@ -115,6 +115,74 @@ export function closingSpeed(contact: Contact, a: Velocity, b: Velocity): number
   return Math.max(0, -(relativeX * contact.nx + relativeY * contact.ny));
 }
 
+/** The facts about a contact that decide what it costs. */
+export interface ContactFacts {
+  /** True when the closing speed reached `COLLISION.hardImpactSpeed`. */
+  readonly hard: boolean;
+  /** True when the other car is an enemy rather than neutral traffic. */
+  readonly hostile: boolean;
+  /** True once the run has ended: nothing else may touch the wreck. */
+  readonly runEnded: boolean;
+  /** True while the player's i-frame window is open. */
+  readonly invulnerable: boolean;
+}
+
+/**
+ * What a contact costs, once the cars have already been parted.
+ *
+ * The separation and the impulse are unconditional — the resolver does those whatever else
+ * happens. This is the second, separate question: who pays, and for what.
+ */
+export interface ContactCost {
+  /** Spend one armour hit on the player. */
+  readonly armour: boolean;
+  /** The hostile car that was rammed takes `COLLISION.impactDamage`. */
+  readonly damageOther: boolean;
+  /** Score the neutral-traffic penalty and wreck the neutral car. */
+  readonly trafficPenalty: boolean;
+  /** Steering wobble and camera kick for the jolt the player felt. */
+  readonly jolt: boolean;
+}
+
+/** A contact that costs nothing beyond parting the cars. */
+const NO_COST: ContactCost = {
+  armour: false,
+  damageOther: false,
+  trafficPenalty: false,
+  jolt: false,
+};
+
+/**
+ * Decide what one contact costs.
+ *
+ * A glance is free: the cars are pushed apart and both drive on. Past that the two kinds of
+ * car cost different things, and the difference is the whole reason neutral traffic exists:
+ *
+ * - **A hostile ram is armour.** It is the only cost the i-frame window buys, so a ram that
+ *   lands inside the window parts the cars and spends nothing — and wrecks nothing either,
+ *   because nothing hit.
+ * - **Traffic is never armour.** Hitting a civilian costs score and wrecks it; it never
+ *   costs armour, and that includes while the window is open and while the run is ending.
+ *   The penalty belongs to the contact, so the window cannot swallow it.
+ */
+export function contactCost(facts: ContactFacts): ContactCost {
+  if (!facts.hard) return NO_COST;
+
+  if (!facts.hostile) {
+    return {
+      armour: false,
+      damageOther: false,
+      trafficPenalty: true,
+      // A wrecked run is not shaken: the jolt is feedback for a car still on the road.
+      jolt: !facts.runEnded,
+    };
+  }
+
+  if (facts.runEnded || facts.invulnerable) return NO_COST;
+
+  return { armour: true, damageOther: true, trafficPenalty: false, jolt: true };
+}
+
 /**
  * Resolve one contact between two bodies.
  *
