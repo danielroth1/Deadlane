@@ -15,10 +15,49 @@ export const GAME = {
   background: 0x0b0d10,
 } as const;
 
+/**
+ * The world camera's zoom.
+ *
+ * Below 1 the camera shows more world than the 640×360 canvas holds, which is the point:
+ * the road, its terrain and the stretch of highway ahead read as a place rather than a
+ * corridor. Only the world camera is zoomed — the HUD and the touch pad live in their own
+ * scene at 1:1, so screen-space UI never moves.
+ */
+export const CAMERA = {
+  zoom: 0.75,
+} as const;
+
+/**
+ * The authored world aperture, in world pixels.
+ *
+ * A camera zoomed to `z` sees `1 / z` screens of world, so the world is authored that big.
+ * Every world-space drawing and bound — road bands, terrain, the darkness overlay, the
+ * spawn horizon, the despawn edges — uses these numbers, which is what keeps the zoomed
+ * frame filled with road instead of showing black past the edge of the drawing.
+ *
+ * `scale` converts an authored *screen* pixel into world pixels: anything measured in the
+ * HUD's 640×360 space and applied in the world (a touch deadzone, a UI offset) multiplies
+ * by it.
+ */
+export const WORLD = {
+  width: GAME.width / CAMERA.zoom,
+  height: GAME.height / CAMERA.zoom,
+  scale: 1 / CAMERA.zoom,
+} as const;
+
+/** Drivable surface width, in world pixels: six lanes of 64 px. */
+const ROAD_WIDTH = 384;
+
 export const ROAD = {
-  /** X of the left road edge. */
-  left: 128,
-  width: 384,
+  /**
+   * X of the left road edge, in world pixels.
+   *
+   * Derived from the aperture so the road — and therefore the car starting in its centre —
+   * sits in the middle of the zoomed frame. A level profile may centre its own narrower or
+   * wider road the same way; see `roadProfileFor`.
+   */
+  left: (WORLD.width - ROAD_WIDTH) / 2,
+  width: ROAD_WIDTH,
   laneWidth: 64,
   lanes: 6,
 } as const;
@@ -33,8 +72,13 @@ export const PLAYER = {
    * cell for detail, but the car must still occupy one lane (64 px) on the road.
    */
   spriteSize: 64,
-  /** Forward bias: the player sits above the bottom edge to see oncoming traffic. */
-  y: GAME.height - 72,
+  /**
+   * Vertical world position of the car's centre.
+   *
+   * The centre of the aperture, not the bottom edge: the camera is centred on the world, so
+   * the car sits dead centre on screen and the road ahead and behind it are symmetric.
+   */
+  y: WORLD.height / 2,
   startArmor: 3,
   maxArmor: 5,
   /** Invulnerability window after taking a hit, in ms. */
@@ -71,15 +115,36 @@ export const WEAPON_FX = {
   maxShotDrift: 900,
 } as const;
 
-export const SPEED = {
-  /** World scroll speed at intensity 0. */
-  baseScroll: 220,
-  /** Additional scroll speed at intensity 1. */
-  maxScrollBonus: 260,
-  /** Player-forward bias added when holding accelerate. */
-  boost: 1.35,
-  /** Multiplier when braking. */
-  brake: 0.55,
+/**
+ * The car's motion model.
+ *
+ * Speed is one number in world px/s, advanced by `systems/motion.ts` every frame. The road,
+ * the engine note, the spawn horizon, the despawn edges and the distance score all read that
+ * same number, so nothing can be at one speed visually and another physically.
+ *
+ * There are deliberately no instant multipliers here: the old `SPEED` table snapped the
+ * scroll between three fixed values, which is why the car could not be driven smoothly and
+ * could never stop.
+ */
+export const MOTION = {
+  /** Speed the car settles at with no pedal held, px/s. The road is never frozen. */
+  cruiseSpeed: 220,
+  /** Ceiling with the throttle held, px/s. */
+  maxSpeed: 420,
+  /** Throttle acceleration, px/s². */
+  acceleration: 240,
+  /** Brake deceleration, px/s². Beats `coastDrag`, so a brake always wins the frame. */
+  brakeDeceleration: 640,
+  /** How fast the speed returns to cruise with no pedal held, px/s². */
+  coastDrag: 150,
+  /**
+   * Extra cruise speed at full intensity, px/s.
+   *
+   * The old model got its difficulty ramp from a scroll multiplier; with a real velocity the
+   * ramp belongs on the speed the car eases back to, so a late act still opens quick and the
+   * player's pedals keep working either way.
+   */
+  cruiseBonus: 120,
 } as const;
 
 /**

@@ -1,5 +1,18 @@
 import Phaser from 'phaser';
-import { BOSS, DIFFICULTY, GAME, LEVEL, PLAYER, SCORE, SPAWN, SPEED, WEAPON_FX } from '@/config';
+import {
+  BOSS,
+  CAMERA,
+  DIFFICULTY,
+  GAME,
+  LEVEL,
+  MOTION,
+  PLAYER,
+  SCORE,
+  SPAWN,
+  TOUCH,
+  WEAPON_FX,
+  WORLD,
+} from '@/config';
 import { PALETTE } from '@/palette';
 import { Art } from '@/art';
 import { EFFECT_ART, pickupArtIds, propArtIds } from '@/art/ids';
@@ -23,6 +36,7 @@ import { laneCenter, type LevelEvent } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
 import type { AudioSystem } from '@/systems/audio';
+import { speedRatio, stepSpeed } from '@/systems/motion';
 import { ChallengeSystem } from '@/systems/challenges';
 import { scoreDelta, type ScoreEventKind } from '@/systems/scoring';
 import { TouchInput, buttonAt } from '@/systems/touch-input';
@@ -38,6 +52,14 @@ import { SECTOR_INTRO_DONE_EVENT } from './LevelIntroScene';
 
 /** Emitted by this scene whenever the run is paused or resumed. The HUD owns the key. */
 export const RUN_PAUSED_EVENT = 'run:paused';
+
+/**
+ * Top of the run banner, in authored *screen* pixels.
+ *
+ * The scene draws in world pixels because its camera is zoomed, so this number is converted
+ * with `WORLD.scale` where it is used.
+ */
+const BANNER_Y = 58;
 
 interface Bullet {
   readonly sprite: Phaser.GameObjects.Image;
@@ -158,6 +180,14 @@ export interface RunDebugState {
  * World model: everything lives at a monotonically increasing world distance `at`, and the
  * player sits at `distance`. Screen Y is `PLAYER.y + distance - at`, so a single number
  * drives scrolling, spawning and collision without any physics body bookkeeping.
+ *
+ * That single number is the car's velocity: `speed` is advanced by the motion controller and
+ * `distance` by `worldSpeed`, so the road, the traffic, the spawn horizon and the distance
+ * score all agree about how fast the world is going.
+ *
+ * The world is authored in the camera's aperture (`WORLD`), which is larger than the canvas
+ * because the camera is zoomed out; anything that used to assume a 640×360 drawing surface
+ * now reads `WORLD`.
  */
 export class GameScene extends Phaser.Scene {
   private art!: Art;
@@ -178,6 +208,13 @@ export class GameScene extends Phaser.Scene {
   private intensity = 0;
   private score = 0;
   private spawner: SpawnerState = createSpawnerState();
+  /**
+   * The car's own forward speed, world px/s.
+   *
+   * Sector-neutral: `worldSpeed` applies the level's multiplier. Everything that moves with
+   * the road reads that one number, so a tunnel is faster for the traffic too.
+   */
+  private speed: number = MOTION.cruiseSpeed;
   /** Play time since the run started, across sectors. Drives the difficulty ramp. */
   private runSeconds = 0;
   private introActive = false;
@@ -243,6 +280,7 @@ export class GameScene extends Phaser.Scene {
     this.boss = null;
     this.victoryAt = null;
     this.paused = false;
+    this.speed = MOTION.cruiseSpeed;
     this.steer = 0;
     this.boostHeld = false;
     this.brakeHeld = false;
@@ -298,6 +336,10 @@ export class GameScene extends Phaser.Scene {
     this.installPointerControls();
 
     this.cameras.main.setBackgroundColor(GAME.background);
+    // The world camera is the only zoomed one: the HUD and the touch pad live in their own
+    // scene, so their pixels never scale and a pad button is always where it is drawn.
+    this.cameras.main.setZoom(CAMERA.zoom);
+    this.cameras.main.centerOn(WORLD.width / 2, WORLD.height / 2);
     this.cameras.main.fadeIn(300, 0, 0, 0);
 
     this.presentSector();
@@ -313,7 +355,7 @@ export class GameScene extends Phaser.Scene {
       maxArmor: PLAYER.maxArmor,
       oil: this.player?.oil ?? 0,
       smoke: this.player?.smoke ?? 0,
-      speed: this.currentScroll(),
+      speed: Math.round(this.worldSpeed),
       distance: Math.round(this.distance * LEVEL.metresPerPixel),
       level: this.levelIndex,
       levelLabel: this.blueprint ? levelLabelFor(this.blueprint.type) : '',
@@ -382,7 +424,7 @@ export class GameScene extends Phaser.Scene {
       this.distance + 60,
       0,
       this.blueprint.road,
-      0,
+      MOTION.cruiseSpeed * 0.3,
     );
     civilian.sprite.x = this.player.x;
     civilian.sprite.y = PLAYER.y + this.distance - civilian.at;
@@ -483,17 +525,25 @@ export class GameScene extends Phaser.Scene {
     this.readInput(time);
     this.intensity = this.computeIntensity(dt);
 
-    const scroll = this.currentScroll();
-    this.distance += scroll * dt;
+    // One velocity for the whole frame: the pedals move it, and the road, the traffic, the
+    // engine note, the spawn horizon and the distance score all advance off it.
+    this.speed = stepSpeed(
+      this.speed,
+      { throttle: this.boostHeld, brake: this.brakeHeld },
+      dt,
+      this.cruiseSpeed,
+    );
+    const speed = this.worldSpeed;
+    this.distance += speed * dt;
 
     this.player.update(dt, this.steer, time);
     this.road.render(this.distance);
-    this.audio.updateEngine(Math.min(1, scroll / (SPEED.baseScroll + SPEED.maxScrollBonus)));
+    this.audio.updateEngine(speedRatio(this.speed));
 
     this.spawnFromBlueprint();
-    this.updateEnemies(dt, scroll, time);
+    this.updateEnemies(dt, time);
     this.updateBoss(dt, time);
-    this.updateCivilians(dt, scroll);
+    this.updateCivilians(dt);
     this.updateBullets(dt);
     this.updateHazards(time);
     this.updatePickups(dt);
@@ -505,7 +555,7 @@ export class GameScene extends Phaser.Scene {
     // and only a destroyed boss releases the boundary.
     this.updateActBoundary(time);
 
-    this.score += dt * (this.currentScroll() / SCORE.distancePerPoint) * 0.15;
+    this.score += dt * (speed / SCORE.distancePerPoint) * 0.15;
   }
 
   /* --------------------------------- input --------------------------------- */
@@ -527,7 +577,9 @@ export class GameScene extends Phaser.Scene {
       this.audio.unlock();
       if (this.introActive || this.paused) return;
 
-      const button = this.touchPadActive ? buttonAt(pointer.worldX, pointer.worldY) : null;
+      // The pad is drawn by the HUD at 1:1, so a hit test happens in screen space; the steer
+      // drag is a world gesture and converts, because the world camera is zoomed.
+      const button = this.touchPadActive ? buttonAt(pointer.x, pointer.y) : null;
       if (button) {
         // Pause belongs to the HUD: it must work while this scene cannot see input at all.
         if (button.action !== 'pause') {
@@ -553,7 +605,8 @@ export class GameScene extends Phaser.Scene {
     let steer = 0;
     if (this.cursors.left?.isDown || this.keys['A']?.isDown) steer -= 1;
     if (this.cursors.right?.isDown || this.keys['D']?.isDown) steer += 1;
-    steer += this.touchInput.steerFor(this.player.x);
+    // A drag steers toward a world point, and the deadzone is authored in screen pixels.
+    steer += this.touchInput.steerFor(this.player.x, TOUCH.steerDeadzone * WORLD.scale);
 
     this.steer = Math.max(-1, Math.min(1, steer));
     this.boostHeld = Boolean(
@@ -579,11 +632,19 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  private currentScroll(): number {
-    const profile = this.blueprint?.scrollMultiplier ?? 1;
-    const base = SPEED.baseScroll + SPEED.maxScrollBonus * this.intensity;
-    const boost = this.boostHeld ? SPEED.boost : this.brakeHeld ? SPEED.brake : 1;
-    return base * profile * boost;
+  /**
+   * World px/s this frame.
+   *
+   * The car's own speed scaled by the sector's personality: a tunnel is quick and
+   * claustrophobic, the delta is slow. Everything that scrolls reads this, and nothing else.
+   */
+  private get worldSpeed(): number {
+    return this.speed * (this.blueprint?.scrollMultiplier ?? 1);
+  }
+
+  /** The speed the car eases back to with no pedal, which the difficulty ramp raises. */
+  private get cruiseSpeed(): number {
+    return MOTION.cruiseSpeed + MOTION.cruiseBonus * this.intensity;
   }
 
   private computeIntensity(dt: number): number {
@@ -598,7 +659,7 @@ export class GameScene extends Phaser.Scene {
 
   private spawnFromBlueprint(): void {
     const due = takeDueEvents(this.spawner, this.blueprint.events, {
-      horizon: this.distance + GAME.height + 120,
+      horizon: this.distance + WORLD.height + 120,
       behind: this.distance,
     });
 
@@ -655,11 +716,10 @@ export class GameScene extends Phaser.Scene {
 
   /* ------------------------------- entities -------------------------------- */
 
-  private updateEnemies(dt: number, scroll: number, time: number): void {
+  private updateEnemies(dt: number, time: number): void {
     const ctx = {
       now: time,
       dt,
-      scroll,
       distance: this.distance,
       playerX: this.player.x,
     };
@@ -722,7 +782,7 @@ export class GameScene extends Phaser.Scene {
           playerX: this.player.x,
           playerY: this.player.y,
           distance: this.distance,
-          scroll: this.currentScroll(),
+          scroll: this.worldSpeed,
           projectileSpeed: pattern.projectileSpeed,
           maxDrift: WEAPON_FX.maxShotDrift,
         }),
@@ -790,9 +850,9 @@ export class GameScene extends Phaser.Scene {
     this.spawnBoss(time);
   }
 
-  private updateCivilians(dt: number, scroll: number): void {
+  private updateCivilians(dt: number): void {
     for (const civilian of this.civilians) {
-      civilian.update(dt, scroll, this.distance);
+      civilian.update(dt, this.distance);
     }
     this.civilians = this.civilians.filter((c) => {
       if (c.isOffscreen(this.distance)) {
@@ -810,7 +870,7 @@ export class GameScene extends Phaser.Scene {
       bullet.sprite.y = screenYFromWorldAt(bullet.at, this.distance);
     }
     this.bullets = this.bullets.filter((bullet) => {
-      const visible = bullet.sprite.y > -40 && bullet.sprite.y < GAME.height + 40;
+      const visible = bullet.sprite.y > -40 && bullet.sprite.y < WORLD.height + 40;
       if (!visible) bullet.sprite.destroy();
       return visible;
     });
@@ -844,7 +904,7 @@ export class GameScene extends Phaser.Scene {
       void dt;
     }
     this.pickups = this.pickups.filter((pickup) => {
-      if (pickup.sprite.y > GAME.height + 40) {
+      if (pickup.sprite.y > WORLD.height + 40) {
         pickup.sprite.destroy();
         return false;
       }
@@ -857,7 +917,7 @@ export class GameScene extends Phaser.Scene {
       prop.sprite.y = PLAYER.y + this.distance - prop.at;
     }
     this.props = this.props.filter((prop) => {
-      if (prop.sprite.y > GAME.height + 60) {
+      if (prop.sprite.y > WORLD.height + 60) {
         prop.sprite.destroy();
         return false;
       }
@@ -904,7 +964,7 @@ export class GameScene extends Phaser.Scene {
         playerX: this.player.x,
         playerY: this.player.y,
         distance: this.distance,
-        scroll: this.currentScroll(),
+        scroll: this.worldSpeed,
         projectileSpeed: enemy.def.projectileSpeed ?? WEAPON_FX.enemyProjectileSpeed,
         maxDrift: WEAPON_FX.maxShotDrift,
       }),
@@ -1305,7 +1365,7 @@ export class GameScene extends Phaser.Scene {
 
     this.darkness.setVisible(true);
     this.darkness.fillStyle(PALETTE.void, alpha);
-    this.darkness.fillRect(0, 0, GAME.width, GAME.height);
+    this.darkness.fillRect(0, 0, WORLD.width, WORLD.height);
   }
 
   /** Freeze the run behind a card naming the sector and the level type. */
@@ -1356,15 +1416,20 @@ export class GameScene extends Phaser.Scene {
   private showBanner(text: string): void {
     this.lastBanner = text;
     const width = measureText(text, 1) + 16;
+    // This scene's camera is zoomed, so everything it draws is a world coordinate. The
+    // banner keeps its authored position by going through `WORLD.scale` (screen px → world
+    // px) rather than by drawing in the HUD's space.
+    const centreX = WORLD.width / 2;
+    const top = BANNER_Y * WORLD.scale;
     const plate = this.add.graphics().setDepth(199);
     plate.fillStyle(PALETTE.void, 0.9);
-    plate.fillRect(GAME.width / 2 - width / 2, 58, width, 22);
+    plate.fillRect(centreX - width / 2, top, width, 22);
     plate.fillStyle(PALETTE.hotPink, 1);
-    plate.fillRect(GAME.width / 2 - width / 2, 58, 1, 22);
+    plate.fillRect(centreX - width / 2, top, 1, 22);
 
     const label = new PixelText(this, {
-      x: GAME.width / 2,
-      y: 64,
+      x: centreX,
+      y: top + 6,
       color: PALETTE.bone,
       scale: 1,
       align: 'center',

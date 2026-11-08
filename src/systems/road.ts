@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import type { Art, SpriteRef } from '@/art';
 import type { TileArtByKind, TileKind } from '@/art/ids';
-import { GAME } from '@/config';
+import { WORLD } from '@/config';
 import { PALETTE } from '@/palette';
 import type { LevelType, RoadProfile } from '@/levels/types';
 import {
@@ -195,7 +195,7 @@ class RoadTileLayer {
       band.x,
       0,
       band.width,
-      GAME.height,
+      WORLD.height,
       frame.key,
       windowFrame(scene, frame, band),
     );
@@ -221,7 +221,7 @@ class RoadTileLayer {
       band.x,
       0,
       band.width,
-      GAME.height,
+      WORLD.height,
       frame.key,
       windowFrame(scene, frame, band),
     );
@@ -316,18 +316,18 @@ export class RoadSystem {
 
     // Terrain bands.
     g.fillStyle(theme.terrainLeft, 1);
-    g.fillRect(0, 0, road.left, GAME.height);
+    g.fillRect(0, 0, road.left, WORLD.height);
     g.fillStyle(theme.terrainRight, 1);
-    g.fillRect(right, 0, GAME.width - right, GAME.height);
+    g.fillRect(right, 0, WORLD.width - right, WORLD.height);
 
     // Shoulder strips.
     g.fillStyle(theme.shoulder, 1);
-    g.fillRect(road.left - 8, 0, 8, GAME.height);
-    g.fillRect(right, 0, 8, GAME.height);
+    g.fillRect(road.left - 8, 0, 8, WORLD.height);
+    g.fillRect(right, 0, 8, WORLD.height);
 
     // Road surface.
     g.fillStyle(theme.roadFill, 1);
-    g.fillRect(road.left, 0, road.width, GAME.height);
+    g.fillRect(road.left, 0, road.width, WORLD.height);
   }
 
   /**
@@ -347,8 +347,8 @@ export class RoadSystem {
     if (this.painted) {
       // Solid edge lines.
       g.fillStyle(theme.edgeLine, 1);
-      g.fillRect(road.left + 3, 0, 3, GAME.height);
-      g.fillRect(right - 6, 0, 3, GAME.height);
+      g.fillRect(road.left + 3, 0, 3, WORLD.height);
+      g.fillRect(right - 6, 0, 3, WORLD.height);
     }
 
     // Dashed lane dividers, scrolled.
@@ -359,7 +359,7 @@ export class RoadSystem {
 
       for (let lane = 1; lane < road.lanes; lane += 1) {
         const x = road.left + lane * road.laneWidth - 2;
-        for (let y = -DASH_LENGTH; y < GAME.height + DASH_LENGTH; y += period) {
+        for (let y = -DASH_LENGTH; y < WORLD.height + DASH_LENGTH; y += period) {
           g.fillRect(x, y + offset, 4, DASH_LENGTH);
         }
       }
@@ -370,7 +370,7 @@ export class RoadSystem {
     // Guardrail ticks on the shoulder, scrolling at the same rate: cheap speed cue.
     g.fillStyle(theme.edgeLine, 0.35);
     const railOffset = ((distance % 48) + 48) % 48;
-    for (let y = -48; y < GAME.height + 48; y += 48) {
+    for (let y = -48; y < WORLD.height + 48; y += 48) {
       g.fillRect(road.left - 7, y + railOffset, 5, 12);
       g.fillRect(right + 2, y + railOffset, 5, 12);
     }

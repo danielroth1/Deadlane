@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GAME, ROAD } from '@/config';
+import { ROAD, WORLD } from '@/config';
 import {
   CANYON_TILE_ART,
   CITY_TILE_ART,
@@ -146,7 +146,7 @@ describe('planRoadEdges', () => {
     expect(ROAD_EDGE_SPECS.tunnel).toBeUndefined();
   });
 
-  it('keeps both strips inside the screen', () => {
+  it('keeps both strips inside the world aperture', () => {
     for (const distance of DISTANCES) {
       for (const [label, spec] of specs) {
         for (const edge of planRoadEdges(HIGHWAY, distance, spec)) {
@@ -154,7 +154,7 @@ describe('planRoadEdges', () => {
           expect(
             edge.x + edge.width,
             `${label} strip ends off screen`,
-          ).toBeLessThanOrEqual(GAME.width);
+          ).toBeLessThanOrEqual(WORLD.width);
         }
       }
     }
@@ -185,7 +185,7 @@ describe('planRoadTiles', () => {
       expect(terrain[0]?.x).toBe(0);
       expect(terrain[0]?.width).toBe(HIGHWAY.left);
       expect(terrain[1]?.x).toBe(right);
-      expect(terrain[1]?.width).toBe(GAME.width - right);
+      expect(terrain[1]?.width).toBe(WORLD.width - right);
     }
   });
 
@@ -290,11 +290,11 @@ describe('planRoadTiles', () => {
     }
   });
 
-  it('keeps every band inside the screen', () => {
+  it('keeps every band inside the world aperture', () => {
     for (const distance of DISTANCES) {
       for (const band of planRoadTiles(HIGHWAY, distance)) {
         expect(band.x).toBeGreaterThanOrEqual(0);
-        expect(band.x + band.width).toBeLessThanOrEqual(GAME.width);
+        expect(band.x + band.width).toBeLessThanOrEqual(WORLD.width);
       }
     }
   });
@@ -411,7 +411,7 @@ describe('road tile specs', () => {
         ]);
         for (const band of bands) {
           expect(band.x).toBeGreaterThanOrEqual(0);
-          expect(band.x + band.width).toBeLessThanOrEqual(GAME.width);
+          expect(band.x + band.width).toBeLessThanOrEqual(WORLD.width);
           expect(band.sourceX + band.sourceWidth).toBeLessThanOrEqual(TILE_SIZE);
           expect(band.sourceY + band.sourceHeight).toBeLessThanOrEqual(TILE_SIZE);
           // Each band wraps at its own window height, so a trimmed surface still scrolls.

@@ -1,4 +1,4 @@
-import { LEVEL, SPEED, SPAWN } from '@/config';
+import { LEVEL, MOTION, SPAWN } from '@/config';
 import { CHALLENGE_TEMPLATES, type ChallengeDef } from '@/content';
 import { createRng, type Rng } from '@/rng';
 import {
@@ -113,8 +113,11 @@ function placeTraffic(
         at: Math.max(SPAWN.safeStartPixels, Math.round(at + rng.range(-40, 40))),
         lane,
         vehicle: rng.pick(pool),
-        // Civilian speed is expressed relative to world scroll, see GameScene.
-        speed: rng.range(0.18, 0.42),
+        // Absolute world speed in px/s, not a share of the player's scroll: traffic drives at
+        // its own pace whether the player is flat out or stopped. The band is the old
+        // 0.18–0.42 share of cruise, so a lane of traffic still slides past the car rather
+        // than racing it.
+        speed: Math.round(rng.range(0.18, 0.42) * MOTION.cruiseSpeed),
       });
     }
 
@@ -266,7 +269,7 @@ function challengeTarget(
     case 'survive':
       // Nominal seconds for the window at base scroll; the HUD fills against the same
       // number, so the gauge closes exactly as the window ends.
-      return Math.max(1, Math.round(windowPixels / (SPEED.baseScroll * scrollMultiplier)));
+      return Math.max(1, Math.round(windowPixels / (MOTION.cruiseSpeed * scrollMultiplier)));
     case 'reach':
     case 'clean':
     default:

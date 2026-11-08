@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { GAME, ROAD, TOUCH } from '@/config';
+import { CAMERA, GAME, ROAD, TOUCH } from '@/config';
 import {
   PAD_BUTTONS,
   TouchInput,
@@ -34,6 +34,18 @@ const centre = (button: PadButton): { x: number; y: number } => ({
   y: button.rect.y + button.rect.height / 2,
 });
 
+/**
+ * The road's extent as the player sees it.
+ *
+ * `ROAD` is authored in world pixels and the world camera is zoomed out, so the drawn road is
+ * `zoom` times narrower than its world width. The pad is drawn by the HUD at 1:1, so a gutter
+ * only has to clear the road on screen.
+ */
+const ROAD_ON_SCREEN = {
+  left: ROAD.left * CAMERA.zoom,
+  right: (ROAD.left + ROAD.width) * CAMERA.zoom,
+};
+
 describe('pad layout', () => {
   it('hits every button at its own centre and the play field in the middle of the road', () => {
     for (const button of PAD_BUTTONS) {
@@ -48,7 +60,7 @@ describe('pad layout', () => {
       const { x, y, width, height } = button.rect;
 
       // Play field.
-      const overlapsRoad = x < ROAD.left + ROAD.width && x + width > ROAD.left;
+      const overlapsRoad = x < ROAD_ON_SCREEN.right && x + width > ROAD_ON_SCREEN.left;
       expect(overlapsRoad, `${button.action} covers the road`).toBe(false);
 
       // The HUD owns the top 28 px and the bottom 24 px of the screen.

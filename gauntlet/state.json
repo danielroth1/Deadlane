@@ -592,9 +592,11 @@
       "id": "WO-52",
       "title": "Motion and framing: centred car, gradual speed, zoomed-out world",
       "file": "gauntlet/work-orders/WO-52-motion-framing.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "motion model + centred car + 0.75 world zoom; one velocity drives road/audio/spawn/score"
     },
     {
       "id": "WO-53",

@@ -152,13 +152,30 @@ test('Esc pauses the run, and Esc resumes it', async ({ page }) => {
   const resumed = await readSnapshot(page);
   expect(resumed.pauseCard).toBe(false);
 
-  // Input is live again: holding accelerate raises the recorded scroll speed.
-  await page.keyboard.down('ArrowUp');
+  // Input is live again: holding accelerate raises the recorded speed.
+  //
+  // The speed is a ramped value now (WO-52), not an instant scroll multiplier, so what this
+  // asserts is that 300 ms of throttle *moved* it — not that it jumped to a boosted number
+  // in one frame. The key is re-sent while polling because a keydown that lands in the
+  // window where a paused scene is coming back is dropped by Phaser; that race is this
+  // spec's known flake, and re-running the suite twice before believing a failure is the
+  // rule for it.
+  const cruising = resumed.hud.speed;
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.down('ArrowUp');
+        return (await readSnapshot(page)).input.boost;
+      },
+      { timeout: 5_000 },
+    )
+    .toBe(true);
+
   await page.waitForTimeout(300);
   const boosting = await readSnapshot(page);
   await page.keyboard.up('ArrowUp');
 
-  expect(boosting.hud.speed).toBeGreaterThan(resumed.hud.speed);
+  expect(boosting.hud.speed).toBeGreaterThan(cruising);
   expect(boosting.hud.distance).toBeGreaterThan(resumed.hud.distance);
   expect(errors).toEqual([]);
 });

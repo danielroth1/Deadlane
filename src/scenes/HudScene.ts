@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { BOSS, GAME } from '@/config';
+import { BOSS, GAME, MOTION } from '@/config';
 import { PALETTE } from '@/palette';
 import { PixelText } from '@/ui/pixel-text';
 import { toggleAudioMute } from '@/systems/audio-registry';
@@ -201,7 +201,7 @@ export class HudScene extends Phaser.Scene {
     const width = 96;
     const x = GAME.width - width - 8;
     const y = GAME.height - 16;
-    const ratio = Math.max(0, Math.min(1, state.speed / 520));
+    const ratio = Math.max(0, Math.min(1, state.speed / MOTION.maxSpeed));
 
     g.clear();
     g.fillStyle(PALETTE.asphalt, 1).fillRect(x, y, width, 6);

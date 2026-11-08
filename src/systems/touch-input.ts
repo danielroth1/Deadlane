@@ -130,9 +130,14 @@ export class TouchInput {
     return this.steerPointerId !== null;
   }
 
-  /** Steering intent toward the live drag, or 0 when nothing is dragging. */
-  steerFor(playerX: number): number {
-    return this.steerPointerId === null ? 0 : steerTowards(this.steerX, playerX);
+  /**
+   * Steering intent toward the live drag, or 0 when nothing is dragging.
+   *
+   * The deadzone is a parameter because the caller compares world-space X while the value is
+   * authored in screen pixels: a zoomed world camera has to scale it before asking.
+   */
+  steerFor(playerX: number, deadzone: number = TOUCH.steerDeadzone): number {
+    return this.steerPointerId === null ? 0 : steerTowards(this.steerX, playerX, deadzone);
   }
 
   isHeld(action: PadAction): boolean {

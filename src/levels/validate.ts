@@ -1,4 +1,4 @@
-import { SPAWN } from '@/config';
+import { SPAWN, WORLD } from '@/config';
 import { LEVEL_PROFILES, laneCenter, type LevelBlueprint } from './types';
 
 /**
@@ -26,10 +26,10 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
     issues.push({ code: 'lanes', message: `Only ${road.lanes} lane(s); road is impassable` });
   }
 
-  if (road.left < 0 || road.left + road.width > 640) {
+  if (road.left < 0 || road.left + road.width > WORLD.width) {
     issues.push({
       code: 'road-bounds',
-      message: `Road spans ${road.left}..${road.left + road.width}, outside the 640px viewport`,
+      message: `Road spans ${road.left}..${road.left + road.width}, outside the ${WORLD.width}px aperture`,
     });
   }
 

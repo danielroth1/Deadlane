@@ -1,4 +1,4 @@
-import { GAME } from '@/config';
+import { WORLD } from '@/config';
 import type { LevelType, RoadProfile } from '@/levels/types';
 import {
   CANYON_TILE_ART,
@@ -384,7 +384,7 @@ export function planRoadTiles(
 
   const bands: TileBandPlan[] = [
     band('terrain', 0, road.left, windows.terrain, distance),
-    band('terrain', right, GAME.width - right, windows.terrain, distance),
+    band('terrain', right, WORLD.width - right, windows.terrain, distance),
     band('shoulder', road.left - SHOULDER_WIDTH, SHOULDER_WIDTH, windows.shoulderLeft, distance),
     band('shoulder', right, SHOULDER_WIDTH, windows.shoulderRight, distance),
     band('surface', road.left, road.width, windows.surface, distance),

@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { GAME, PLAYER, SPAWN } from '@/config';
+import { PLAYER, SPAWN, WORLD } from '@/config';
 import { laneCenter, type RoadProfile } from '@/levels/types';
 import type { CivilianDef } from '@/content';
 import { civilianColorFor, type Art } from '@/art';
@@ -16,9 +16,17 @@ export class CivilianVehicle {
   readonly sprite: Phaser.GameObjects.Image;
   at: number;
   readonly lane: number;
-  /** Relative to world scroll: 0.3 means it crawls toward the player. */
-  readonly speedFactor: number;
+  /**
+   * The car's own forward speed, world px/s.
+   *
+   * Absolute, not a share of the player's scroll: traffic keeps driving at its own pace even
+   * when the player comes to a halt, so a stopped player is passed rather than being left in
+   * a frozen diorama.
+   */
+  readonly speed: number;
   wrecked = false;
+  /** True once the car has been drawn inside the aperture. */
+  private entered = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -27,11 +35,11 @@ export class CivilianVehicle {
     at: number,
     lane: number,
     road: RoadProfile,
-    speedFactor: number,
+    speed: number,
   ) {
     this.at = at;
     this.lane = lane;
-    this.speedFactor = speedFactor;
+    this.speed = speed;
 
     const x = laneCenter(road, lane);
 
@@ -56,13 +64,14 @@ export class CivilianVehicle {
    *
    * Screen `y` alone is not enough: a unit that has fallen behind the player is still on
    * screen for another stretch, and after a sector boundary its world `at` belongs to the
-   * previous sector, so it would never reach the bottom edge at all.
+   * previous sector, so it would never reach the bottom edge at all. The leading edge is
+   * culled on the same terms as the trailing one: traffic outruns a stopped player, and a car
+   * that has driven off the top of the frame is gone.
    */
   isOffscreen(distance: number): boolean {
-    return (
-      this.at < distance - SPAWN.despawnMargin ||
-      this.sprite.y > GAME.height + SPAWN.despawnMargin
-    );
+    if (this.at < distance - SPAWN.despawnMargin) return true;
+    if (this.sprite.y > WORLD.height + SPAWN.despawnMargin) return true;
+    return this.entered && this.sprite.y < -SPAWN.despawnMargin;
   }
 
   get halfWidth(): number {
@@ -73,13 +82,14 @@ export class CivilianVehicle {
     return this.sprite.displayHeight * 0.4;
   }
 
-  update(dt: number, scroll: number, distance: number): void {
+  update(dt: number, distance: number): void {
     if (!this.wrecked) {
-      this.at += scroll * this.speedFactor * dt;
+      this.at += this.speed * dt;
       // Gentle sway so a lane of traffic does not look like a conveyor belt.
       this.sprite.rotation = Math.sin(this.at * 0.004) * 0.02;
     }
     this.sprite.y = PLAYER.y + distance - this.at;
+    if (this.sprite.y >= 0 && this.sprite.y <= WORLD.height) this.entered = true;
   }
 
   wreck(distance: number): void {

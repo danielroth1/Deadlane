@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { PLAYER, ROAD } from '@/config';
+import { PLAYER, ROAD, WORLD } from '@/config';
 import { PALETTE } from '@/palette';
 import type { Art, VehicleOptions } from '@/art';
 
@@ -68,7 +68,6 @@ export class PlayerVehicle {
     oil: Number.NEGATIVE_INFINITY,
     smoke: Number.NEGATIVE_INFINITY,
   };
-  private baseY = PLAYER.y;
   private readonly baseX: number;
   private artState: PlayerArtState = 'clean';
   /** Wrecked is terminal: the run is over, so no later repair may swap the frame back. */
@@ -78,8 +77,9 @@ export class PlayerVehicle {
     private readonly scene: Phaser.Scene,
     private readonly art: Art,
   ) {
-    this.baseX = ROAD.left + ROAD.width / 2;
-    this.sprite = this.art.imageAny(ART_IDS_BY_STATE.clean, this.baseX, this.baseY, () =>
+    // The road is centred on the world aperture, so its middle is the aperture's middle.
+    this.baseX = WORLD.width / 2;
+    this.sprite = this.art.imageAny(ART_IDS_BY_STATE.clean, this.baseX, PLAYER.y, () =>
       this.placeholder(),
     );
     // Draw at a fixed on-screen footprint regardless of the source frame size: the art
@@ -156,7 +156,14 @@ export class PlayerVehicle {
     return this.sprite.displayHeight * HALF_HEIGHT_RATIO;
   }
 
-  /** Steering with a speed-dependent lean, plus a constant engine jitter. */
+  /**
+   * Steering with a speed-dependent lean.
+   *
+   * The car holds its vertical station exactly: `PLAYER.y` is the centre of the aperture and
+   * the road projection is anchored there, so nothing here may nudge `y`. The old 1 px engine
+   * jitter was written for a car pinned to the bottom edge; at dead centre it reads as the
+   * whole frame shaking rather than the engine idling.
+   */
   update(dt: number, steer: number, time: number): void {
     const dx = steer * PLAYER.lateralSpeed * dt;
     const minX = ROAD.left + this.sprite.displayWidth * 0.28;
@@ -169,10 +176,7 @@ export class PlayerVehicle {
     const lateralVelocity = Math.abs(steer) * PLAYER.lateralSpeed;
     const lean = lateralVelocity > PLAYER.leanThreshold ? Math.sign(steer) * 2.5 : 0;
     this.sprite.setRotation((lean * Math.PI) / 180);
-
-    // 1px engine vibration at a fixed rate, so it reads as mechanical, not random.
-    const jitter = Math.sin(time * 0.05) > 0.6 ? 1 : 0;
-    this.sprite.y = this.baseY + jitter;
+    this.sprite.y = PLAYER.y;
 
     if (this.isInvulnerable) {
       this.sprite.setAlpha(0.55 + 0.45 * Math.abs(Math.sin(time * 0.02)));

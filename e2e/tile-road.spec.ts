@@ -27,15 +27,45 @@ const BASE = '/deadlane/';
 const SEED = 424242;
 
 /**
- * Mirrors of `roadProfileFor` in `src/levels/types.ts`: tunnel and river lanes are 76 px,
- * everything else uses `ROAD.laneWidth`. Canyon is 5 × 64, river is 5 × 76, city is
- * 6 × 64, tunnel is 4 × 76.
+ * Mirrors of `CAMERA.zoom` and `WORLD` in `src/config.ts`.
+ *
+ * The world camera is zoomed out, so the world is authored `1 / zoom` screens wide and a
+ * world x lands on `x * zoom` on screen. Road profiles below are in *world* pixels, the same
+ * units `roadProfileFor` uses; every pixel this spec reads is converted here, once.
  */
-const HIGHWAY = { left: 128, width: 384, lanes: 6, laneWidth: 64 } as const;
-const CANYON = { left: 160, width: 320, lanes: 5, laneWidth: 64 } as const;
-const RIVER = { left: 130, width: 380, lanes: 5, laneWidth: 76 } as const;
-const CITY = { left: 128, width: 384, lanes: 6, laneWidth: 64 } as const;
-const TUNNEL = { left: 168, width: 304, lanes: 4, laneWidth: 76 } as const;
+const ZOOM = 0.75;
+const WORLD_WIDTH = 640 / ZOOM;
+
+/** The screen column a world x is drawn in. */
+function toScreen(worldX: number): number {
+  return Math.round(worldX * ZOOM);
+}
+
+/**
+ * Mirrors of `roadProfileFor` in `src/levels/types.ts`, in world pixels: the road is centred
+ * on the world aperture and tunnel and river lanes are 76 px, everything else `ROAD.laneWidth`.
+ * Canyon is 5 × 64, river is 5 × 76, city is 6 × 64, tunnel is 4 × 76.
+ */
+const highwayRoad = { width: 384, lanes: 6, laneWidth: 64 } as const;
+const canyonRoad = { width: 320, lanes: 5, laneWidth: 64 } as const;
+const riverRoad = { width: 380, lanes: 5, laneWidth: 76 } as const;
+const cityRoad = { width: 384, lanes: 6, laneWidth: 64 } as const;
+const tunnelRoad = { width: 304, lanes: 4, laneWidth: 76 } as const;
+
+/** A world road, centred on the aperture the way `roadProfileFor` centres it. */
+function worldRoad(road: {
+  readonly width: number;
+  readonly lanes: number;
+  readonly laneWidth: number;
+}): RoadProfile {
+  return { left: (WORLD_WIDTH - road.width) / 2, ...road };
+}
+
+const HIGHWAY = worldRoad(highwayRoad);
+const CANYON = worldRoad(canyonRoad);
+const RIVER = worldRoad(riverRoad);
+const CITY = worldRoad(cityRoad);
+const TUNNEL = worldRoad(tunnelRoad);
 
 /**
  * Mirrors of the level darkening WO-33 draws at `1 - visibility`, and of the palette entry
@@ -373,25 +403,32 @@ async function pause(page: Page): Promise<number> {
 }
 
 /**
- * The x columns inside each lane, 10 px clear of the 16 px dash bands that straddle the
- * lane boundaries. A dash is supposed to be there; a marking anywhere else is not.
+ * The x columns inside each lane, 10 world px clear of the dash bands that straddle the lane
+ * boundaries. A dash is supposed to be there; a marking anywhere else is not. Samples are
+ * converted to the screen column they are drawn in, and de-duplicated: at a zoomed-out
+ * camera several world columns share one screen pixel.
  */
 function laneInteriors(road: RoadProfile): number[] {
-  const columns: number[] = [];
+  const columns = new Set<number>();
   for (let lane = 0; lane < road.lanes; lane += 1) {
     const first = road.left + lane * road.laneWidth + 10;
-    for (let x = first; x < first + road.laneWidth - 20; x += 1) columns.push(x);
+    for (let x = first; x < first + road.laneWidth - 20; x += 1) columns.add(toScreen(x));
   }
-  return columns;
+  return [...columns].sort((a, b) => a - b);
 }
 
 /** Screen x of each painted lane divider: the dash band is centred on the boundary. */
 function laneBoundaries(road: RoadProfile): number[] {
   const boundaries: number[] = [];
   for (let lane = 1; lane < road.lanes; lane += 1) {
-    boundaries.push(road.left + lane * road.laneWidth);
+    boundaries.push(toScreen(road.left + lane * road.laneWidth));
   }
   return boundaries;
+}
+
+/** Screen columns of a world stripe: the 8 px shoulder beside the surface, say. */
+function screenStrip(worldX0: number, worldX1: number): { x0: number; x1: number } {
+  return { x0: toScreen(worldX0), x1: toScreen(worldX1) };
 }
 
 /** Median luma of every column in `columns`, taken over rows `y0` to `y1`. */
@@ -406,6 +443,43 @@ function columnMedians(
     for (let y = y0; y <= y1; y += 1) values.push(luma(rgb(frame, x, y)));
     return median(values);
   });
+}
+
+/**
+ * The brightest column median within `reach` screen px of `centre`.
+ *
+ * A dash is one painted *source* column inside a 16 px window. The world camera is zoomed
+ * out, so that column is not 1 screen px wide and does not land on the exact column the
+ * lane boundary rounds to: it covers whichever column the fraction falls on. Asking a band
+ * for its brightest column asks the question that still has meaning at any zoom — is the
+ * paint there — instead of assuming it landed on one arithmetic column.
+ */
+function brightestColumnMedian(
+  frame: Frame,
+  centre: number,
+  reach: number,
+  y0: number,
+  y1: number,
+): number {
+  const columns: number[] = [];
+  for (let x = centre - reach; x <= centre + reach; x += 1) columns.push(x);
+  return Math.max(...columnMedians(frame, columns, y0, y1));
+}
+
+/** The greatest per-column share of `keys` within `reach` screen px of `centre`. */
+function brightestColumnShare(
+  frame: Frame,
+  centre: number,
+  reach: number,
+  y0: number,
+  y1: number,
+  keys: readonly PaletteKey[],
+): number {
+  let best = 0;
+  for (let x = centre - reach; x <= centre + reach; x += 1) {
+    best = Math.max(best, paletteShare(frame, x, x, y0, y1, keys));
+  }
+  return best;
 }
 
 /**
@@ -481,9 +555,15 @@ async function measureScroll(
   const frameB = await grab(page);
 
   const travel = after - before;
+  // The canvas is the zoomed camera, so the pattern advances on screen by the world travel
+  // scaled by the zoom, and it repeats every window height scaled the same way. Searching a
+  // whole *world* period on screen would let an aliased shift win, so the search is bounded
+  // by the screen period.
+  const screenPeriod = strip.period * ZOOM;
+  const screenTravel = travel * ZOOM;
   let bestShift = 0;
   let bestCost = Number.POSITIVE_INFINITY;
-  for (let shift = 0; shift < strip.period; shift += 1) {
+  for (let shift = 0; shift < Math.ceil(screenPeriod); shift += 1) {
     let cost = 0;
     let samples = 0;
     for (let y = 60; y < 300; y += 1) {
@@ -499,7 +579,7 @@ async function measureScroll(
     }
   }
 
-  return { travel, shift: bestShift, expected: travel % strip.period };
+  return { travel, shift: bestShift, expected: screenTravel % screenPeriod };
 }
 
 async function expectPatternScrolls(
@@ -537,8 +617,8 @@ test('the highway is drawn from the art-13 tile sheet, without a grid', async ({
     return { distinct: counts.size, topShare: top / total };
   };
 
-  const leftGrass = grassStats(2, HIGHWAY.left - 18);
-  const rightGrass = grassStats(HIGHWAY.left + HIGHWAY.width + 16, 638);
+  const leftGrass = grassStats(2, toScreen(HIGHWAY.left) - 18);
+  const rightGrass = grassStats(toScreen(HIGHWAY.left + HIGHWAY.width) + 16, 638);
 
   expect(leftGrass.distinct, 'left terrain band is a flat drawn fill, not the tile sheet')
     .toBeGreaterThanOrEqual(10);
@@ -553,7 +633,9 @@ test('the highway is drawn from the art-13 tile sheet, without a grid', async ({
   const voidShare = (y: number): number => {
     let matches = 0;
     let samples = 0;
-    for (let x = HIGHWAY.left + 10; x < HIGHWAY.left + HIGHWAY.width - 10; x += 1) {
+    const x0 = toScreen(HIGHWAY.left) + 10;
+    const x1 = toScreen(HIGHWAY.left + HIGHWAY.width) - 10;
+    for (let x = x0; x < x1; x += 1) {
       const [r, g, b] = rgb(frame, x, y);
       samples += 1;
       if (Math.abs(r - 0x0b) <= 8 && Math.abs(g - 0x0d) <= 8 && Math.abs(b - 0x10) <= 8) {
@@ -583,14 +665,18 @@ test('the highway shoulder is drawn from the art-18 grass/road blend', async ({ 
   await startRun(page);
   const frame = await grab(page);
 
-  // The 8 px strip outside each edge line is `art-18` cell 4 through the `HIGHWAY_EDGE_BLEND`
-  // window: a grass verge that meets a worn road edge. The drawn fallback shoulder is one
-  // flat palette colour, so seeing both families in the strip proves the transition cell
-  // reached the screen. The guardrail ticks are painted over it at 35 % bone; the
-  // thresholds sit well below the measured shares so the ticks cannot mask a fallback.
+  // The transition strip outside each edge line is `art-18` cell 4 through the
+  // `HIGHWAY_EDGE_BLEND` window: a grass verge that meets a worn road edge. The drawn
+  // fallback shoulder is one flat palette colour, so seeing both families in the strip
+  // proves the transition cell reached the screen. The guardrail ticks are painted over it
+  // at 35 % bone; the thresholds sit well below the measured shares so the ticks cannot
+  // mask a fallback.
   const strips = [
-    { label: 'left', x0: HIGHWAY.left - 8, x1: HIGHWAY.left - 1 },
-    { label: 'right', x0: HIGHWAY.left + HIGHWAY.width, x1: HIGHWAY.left + HIGHWAY.width + 7 },
+    { label: 'left', ...screenStrip(HIGHWAY.left - 8, HIGHWAY.left - 1) },
+    {
+      label: 'right',
+      ...screenStrip(HIGHWAY.left + HIGHWAY.width, HIGHWAY.left + HIGHWAY.width + 7),
+    },
   ] as const;
 
   for (const strip of strips) {
@@ -644,8 +730,8 @@ test('the canyon road is drawn from the art-14 tile sheet, with no marking insid
   //    (`asphalt`). Its surface window is 84 % steel and 4 % asphalt, so 100 % asphalt is
   //    what the fallback would show and 3 % is what the tile shows - measured: 75 % steel,
   //    3 % asphalt (the rest is the sheet's own asphalt-light and grit, plus traffic).
-  const roadLeft = CANYON.left;
-  const roadRight = CANYON.left + CANYON.width - 1;
+  const roadLeft = toScreen(CANYON.left);
+  const roadRight = toScreen(CANYON.left + CANYON.width) - 1;
   expect(
     paletteShare(frame, roadLeft, roadRight, 60, 320, ['steel']),
     'the canyon road is not the sheet asphalt',
@@ -678,12 +764,14 @@ test('the canyon road is drawn from the art-14 tile sheet, with no marking insid
   ).toBeLessThan(30);
 
   // 5. The dash bands are drawn, on the lane boundaries, from the sheet's painted line.
-  //    This is the positive control for 3: the same measurement does find a marking.
+  //    This is the positive control for 3: the same measurement does find a marking. The
+  //    16 world px band is 12.8 screen px wide, so the band is searched rather than the one
+  //    column the boundary rounds to.
   for (const boundary of laneBoundaries(CANYON)) {
-    const [centre] = columnMedians(frame, [boundary], 60, 320);
-    expect(centre, `no dash on the lane boundary x=${boundary}`).toBeGreaterThan(140);
-    const [beside] = columnMedians(frame, [boundary - 7], 60, 320);
-    expect(beside, `the dash band at x=${boundary} is wider than 15 px`).toBeLessThan(
+    const centre = brightestColumnMedian(frame, boundary, 6, 60, 320);
+    expect(centre, `no dash in the band at x=${boundary}`).toBeGreaterThan(140);
+    const [beside] = columnMedians(frame, [boundary - 12], 60, 320);
+    expect(beside, `the dash band at x=${boundary} is wider than its window`).toBeLessThan(
       ASPHALT_LUMA_CEILING,
     );
   }
@@ -698,8 +786,11 @@ test('the canyon shoulder is drawn from the art-18 chevron cell', async ({ page 
   // fallback shoulder is flat rust with sand guardrail ticks, so amber paint in the strip
   // can only come from the transition sheet.
   const strips = [
-    { label: 'left', x0: CANYON.left - 8, x1: CANYON.left - 1 },
-    { label: 'right', x0: CANYON.left + CANYON.width, x1: CANYON.left + CANYON.width + 7 },
+    { label: 'left', ...screenStrip(CANYON.left - 8, CANYON.left - 1) },
+    {
+      label: 'right',
+      ...screenStrip(CANYON.left + CANYON.width, CANYON.left + CANYON.width + 7),
+    },
   ] as const;
 
   for (const strip of strips) {
@@ -734,7 +825,7 @@ test('the river is drawn from the art-15 water sheet, with no road markings at a
   //    the deck's own grooves, so its absence from the channel and the terrain proves the
   //    tarmac road is gone. Measured on this frame: 0.2 % asphalt anywhere in the channel,
   //    0.0 % in the lane columns (median column), against 100 % for a drawn fill.
-  const channel = { x0: RIVER.left, x1: RIVER.left + RIVER.width - 1 };
+  const channel = { x0: toScreen(RIVER.left), x1: toScreen(RIVER.left + RIVER.width) - 1 };
   expect(
     paletteShare(frame, 4, 636, 60, 330, ['asphalt']),
     'the river still paints road asphalt on screen',
@@ -745,8 +836,12 @@ test('the river is drawn from the art-15 water sheet, with no road markings at a
     'the river channel is drawn in road asphalt',
   ).toBe(0);
   for (const band of [
-    { label: 'left terrain', x0: 6, x1: RIVER.left - 10 },
-    { label: 'right terrain', x0: RIVER.left + RIVER.width + 10, x1: 634 },
+    { label: 'left terrain', x0: 6, x1: toScreen(RIVER.left) - 10 },
+    {
+      label: 'right terrain',
+      x0: toScreen(RIVER.left + RIVER.width) + 10,
+      x1: 634,
+    },
   ] as const) {
     expect(
       medianColumnShare(
@@ -798,12 +893,12 @@ test('the river is drawn from the art-15 water sheet, with no road markings at a
   //    hold more than 1 row of bone, the whole channel never more than 13, and a drawn line
   //    is 270.
   const edgeColumns = [
-    RIVER.left + 3,
-    RIVER.left + 4,
-    RIVER.left + 5,
-    RIVER.left + RIVER.width - 6,
-    RIVER.left + RIVER.width - 5,
-    RIVER.left + RIVER.width - 4,
+    toScreen(RIVER.left + 3),
+    toScreen(RIVER.left + 4),
+    toScreen(RIVER.left + 5),
+    toScreen(RIVER.left + RIVER.width - 6),
+    toScreen(RIVER.left + RIVER.width - 5),
+    toScreen(RIVER.left + RIVER.width - 4),
   ];
   for (const x of edgeColumns) {
     const run = longestRun(frame, x, 60, 330, ['bone', 'white']);
@@ -815,8 +910,8 @@ test('the river is drawn from the art-15 water sheet, with no road markings at a
   // The ticks are 12 rows tall, so a run cannot see them; the shoulder bands are the sheet's
   // deck and hold no bone at all, while a tick covers 15 % of the strip's height.
   for (const shoulder of [
-    { label: 'left', x0: RIVER.left - 8, x1: RIVER.left - 1 },
-    { label: 'right', x0: RIVER.left + RIVER.width, x1: RIVER.left + RIVER.width + 7 },
+    { label: 'left', ...screenStrip(RIVER.left - 8, RIVER.left - 1) },
+    { label: 'right', ...screenStrip(RIVER.left + RIVER.width, RIVER.left + RIVER.width + 7) },
   ] as const) {
     expect(
       paletteShare(frame, shoulder.x0, shoulder.x1, 60, 330, ['bone', 'white']),
@@ -843,8 +938,9 @@ test('the river is drawn from the art-15 water sheet, with no road markings at a
 
   // 7. The pier deck is the shoulder: warm planking beside the water it lines. Measured
   //    42 % amber, against 0 % in the channel.
+  const deck = screenStrip(RIVER.left - 8, RIVER.left - 1);
   expect(
-    paletteShare(frame, RIVER.left - 8, RIVER.left - 1, 60, 330, ['amber']),
+    paletteShare(frame, deck.x0, deck.x1, 60, 330, ['amber']),
     'the river shoulder is not the sheet deck',
   ).toBeGreaterThan(0.2);
 });
@@ -869,8 +965,8 @@ test('the city street is drawn from the art-16 tile sheet', async ({ page }) => 
   //    theme paints outside the road. The plaza is bone paving with steelLight grout, so
   //    both a bone share and the absence of the drawn fill prove the band is the sheet.
   for (const band of [
-    { label: 'left', x0: 6, x1: CITY.left - 20 },
-    { label: 'right', x0: CITY.left + CITY.width + 20, x1: 634 },
+    { label: 'left', x0: 6, x1: toScreen(CITY.left) - 20 },
+    { label: 'right', x0: toScreen(CITY.left + CITY.width) + 20, x1: 634 },
   ] as const) {
     expect(
       paletteShare(frame, band.x0, band.x1, 100, 300, ['bone']),
@@ -884,8 +980,8 @@ test('the city street is drawn from the art-16 tile sheet', async ({ page }) => 
 
   // 2. The kerb is the sheet's alley concrete, not the drawn `steel` strip.
   for (const shoulder of [
-    { label: 'left', x0: CITY.left - 8, x1: CITY.left - 1 },
-    { label: 'right', x0: CITY.left + CITY.width, x1: CITY.left + CITY.width + 7 },
+    { label: 'left', ...screenStrip(CITY.left - 8, CITY.left - 1) },
+    { label: 'right', ...screenStrip(CITY.left + CITY.width, CITY.left + CITY.width + 7) },
   ] as const) {
     expect(
       paletteShare(frame, shoulder.x0, shoulder.x1, 60, 330, ['steelLight']),
@@ -921,13 +1017,14 @@ test('the city street is drawn from the art-16 tile sheet', async ({ page }) => 
   }
 
   // 5. The lane dashes are the sheet's own line, centred on the boundary: the dash band is
-  //    8 px wide with the painted column at its centre, so it lands exactly on the boundary.
+  //    8 world px wide with the painted column at its centre. The band is searched rather
+  //    than assumed to land on one column, because the camera is zoomed out.
   for (const boundary of laneBoundaries(CITY)) {
-    const drawn = paletteShare(frame, boundary, boundary, 60, 330, ['steelLight', 'bone']);
-    expect(drawn, `no dash on the lane boundary x=${boundary}`).toBeGreaterThan(0.15);
+    const drawn = brightestColumnShare(frame, boundary, 3, 60, 330, ['steelLight', 'bone']);
+    expect(drawn, `no dash in the band at x=${boundary}`).toBeGreaterThan(0.15);
     expect(
-      paletteShare(frame, boundary - 3, boundary - 3, 60, 330, ['steelLight', 'bone']),
-      `the dash band at x=${boundary} is wider than 1 px`,
+      paletteShare(frame, boundary - 8, boundary - 8, 60, 330, ['steelLight', 'bone']),
+      `the dash band at x=${boundary} is wider than its window`,
     ).toBeLessThan(0.05);
   }
 });
@@ -987,8 +1084,8 @@ test('the tunnel is drawn from the art-17 sheet, darkened once by the visibility
   //    half of the composition that a second darkening would erase.
   const wallColumns: number[] = [];
   for (const band of [
-    { x0: 6, x1: TUNNEL.left - 10 },
-    { x0: TUNNEL.left + TUNNEL.width + 10, x1: 634 },
+    { x0: 6, x1: toScreen(TUNNEL.left) - 10 },
+    { x0: toScreen(TUNNEL.left + TUNNEL.width) + 10, x1: 634 },
   ] as const) {
     for (let x = band.x0; x <= band.x1; x += 1) wallColumns.push(x);
   }
@@ -1011,13 +1108,14 @@ test('the tunnel is drawn from the art-17 sheet, darkened once by the visibility
     ).toBeLessThan(55);
   }
 
-  // 4. The lane dashes are the sheet's own line. The 16 px dash band is centred on the
-  //    boundary, which puts the painted column one pixel to its left.
+  // 4. The lane dashes are the sheet's own line. The 16 world px dash band is centred on the
+  //    boundary, which puts the painted column just left of it; the band is searched for the
+  //    paint rather than assumed to land on one column, because the camera is zoomed out.
   for (const boundary of laneBoundaries(TUNNEL)) {
-    const [drawn] = columnMedians(frame, [boundary - 1], 60, 320);
-    expect(drawn ?? 0, `no dash on the lane boundary x=${boundary - 1}`).toBeGreaterThan(70);
-    const [beside] = columnMedians(frame, [boundary - 5], 60, 320);
-    expect(beside ?? 0, `the dash band at x=${boundary} is wider than 8 px`).toBeLessThan(
+    const drawn = brightestColumnMedian(frame, boundary, 6, 60, 320);
+    expect(drawn, `no dash in the band at x=${boundary}`).toBeGreaterThan(70);
+    const [beside] = columnMedians(frame, [boundary - 12], 60, 320);
+    expect(beside ?? 0, `the dash band at x=${boundary} is wider than its window`).toBeLessThan(
       expectedRoad + 10,
     );
   }

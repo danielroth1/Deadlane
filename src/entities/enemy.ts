@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { GAME, PLAYER, SPAWN } from '@/config';
+import { MOTION, PLAYER, SPAWN, WORLD } from '@/config';
 import { laneCenter, type RoadProfile } from '@/levels/types';
 import type { EnemyDef } from '@/content';
 import type { Art } from '@/art';
@@ -15,7 +15,6 @@ import type { Art } from '@/art';
 export interface EnemyUpdateContext {
   readonly now: number;
   readonly dt: number;
-  readonly scroll: number;
   readonly distance: number;
   readonly playerX: number;
 }
@@ -31,6 +30,20 @@ export class EnemyVehicle {
   private phase: number;
   private nextFireAt = 0;
   private currentX: number;
+  /**
+   * The hostile's own forward speed, world px/s.
+   *
+   * Absolute, not a share of the player's scroll: a hostile drives at its own speed whether
+   * the player is flat out or stopped, which is what lets a braking player watch one pull
+   * away and what stops the player's speed from silently rebalancing the chase.
+   *
+   * Hostiles always spawn ahead, so the speed must stay below cruise or they would outrun
+   * the chase and never be reachable. `def.speed` shapes the share of cruise rather than of
+   * the live scroll; the 0.94 cap keeps the fastest row from matching the player exactly.
+   */
+  private readonly speed: number;
+  /** True once the unit has been drawn inside the aperture. */
+  private entered = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -46,6 +59,7 @@ export class EnemyVehicle {
     this.hp = def.hp;
     this.phase = seedPhase;
     this.currentX = laneCenter(road, lane);
+    this.speed = MOTION.cruiseSpeed * Math.min(0.94, 0.5 + def.speed * 0.3);
 
     // An explicit `def.art` names a real manifest frame id and wins outright. The derived
     // `<slot>/<id>` candidates stay as a fallback for enemies whose content id happens to
@@ -74,12 +88,17 @@ export class EnemyVehicle {
    * Screen `y` alone is not enough: a unit that has fallen behind the player is still on
    * screen for another stretch, and after a sector boundary its world `at` belongs to the
    * previous sector, so it would never reach the bottom edge at all.
+   *
+   * The leading edge needs the same treatment now that a hostile drives at an absolute speed:
+   * a player who brakes hard is overtaken from behind by nothing, but every hostile ahead of
+   * the car pulls away and would otherwise sit off the top of the screen for the rest of the
+   * sector, holding a spawn slot. `entered` is what tells a deserter from a unit that has not
+   * descended into view yet.
    */
   isOffscreen(distance: number): boolean {
-    return (
-      this.at < distance - SPAWN.despawnMargin ||
-      this.sprite.y > GAME.height + SPAWN.despawnMargin
-    );
+    if (this.at < distance - SPAWN.despawnMargin) return true;
+    if (this.sprite.y > WORLD.height + SPAWN.despawnMargin) return true;
+    return this.entered && this.sprite.y < -SPAWN.despawnMargin;
   }
 
   get wantsToFire(): boolean {
@@ -87,11 +106,7 @@ export class EnemyVehicle {
   }
 
   update(ctx: EnemyUpdateContext, road: RoadProfile): boolean {
-    // Hostiles always spawn ahead, so their world speed must stay below the player's or
-    // they would simply outrun the chase and never be reachable. `def.speed` is therefore
-    // a share of the player's speed, not an absolute multiplier of it.
-    const closure = Math.min(0.94, 0.5 + this.def.speed * 0.3);
-    this.at += ctx.scroll * closure * ctx.dt;
+    this.at += this.speed * ctx.dt;
     this.phase += ctx.dt;
 
     const screenY = PLAYER.y + ctx.distance - this.at;
@@ -136,6 +151,7 @@ export class EnemyVehicle {
 
     this.sprite.x = Math.max(minX, Math.min(maxX, this.currentX));
     this.sprite.y = screenY;
+    if (screenY >= 0 && screenY <= WORLD.height) this.entered = true;
 
     // Lean into the direction of travel, snapped to whole degrees.
     const delta = targetX - this.currentX;

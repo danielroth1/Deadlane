@@ -1,4 +1,4 @@
-import { ROAD } from '@/config';
+import { ROAD, WORLD } from '@/config';
 
 /**
  * Level data model.
@@ -169,7 +169,12 @@ export function roadProfileFor(type: LevelType): RoadProfile {
   const profile = LEVEL_PROFILES[type];
   const laneWidth = profile.type === 'tunnel' || profile.type === 'river' ? 76 : ROAD.laneWidth;
   const width = profile.lanes * laneWidth;
-  const left = Math.round((640 - width) / 2);
+  // Centred on the world aperture, not on the canvas: the world camera is zoomed out, so a
+  // road centred on 640 would sit off-centre in the frame. Deliberately not rounded — the
+  // centring is exact in world units, and `(GAME.width - width * zoom) / 2`, which is the
+  // number of screen pixels it comes out as, is a whole number for every profile, so the
+  // road lands on whole screen pixels without a rounding step here.
+  const left = (WORLD.width - width) / 2;
 
   const middle = Math.floor(profile.lanes / 2);
   const obstructable = [middle - 1, middle].filter((l) => l >= 0 && l < profile.lanes);
