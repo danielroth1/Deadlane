@@ -18,6 +18,7 @@
     {
       "id": "switchblade",
       "label": "SWITCHBLADE",
+      "art": "enemy-ground-a/switchblade-interceptor",
       "behavior": "charge",
       "speed": 1.16,
       "hp": 1,
@@ -31,6 +32,7 @@
     {
       "id": "roadlord",
       "label": "ROAD LORD",
+      "art": "enemy-ground-a/road-lord-heavy",
       "behavior": "ram",
       "speed": 0.88,
       "hp": 3,
@@ -44,6 +46,7 @@
     {
       "id": "hauler",
       "label": "HAULER",
+      "art": "enemy-ground-b/hauler-armoured-truck",
       "behavior": "hold",
       "speed": 0.78,
       "hp": 4,
@@ -56,6 +59,7 @@
     {
       "id": "turret",
       "label": "TURRET",
+      "art": "enemy-ground-b/turret-rig",
       "behavior": "turret",
       "speed": 0.72,
       "hp": 2,
@@ -70,6 +74,7 @@
     {
       "id": "gunboat",
       "label": "GUNBOAT",
+      "art": "enemy-sea/gunboat",
       "behavior": "hold",
       "speed": 0.92,
       "hp": 2,

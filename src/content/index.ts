@@ -28,6 +28,13 @@ export interface EnemyDef {
   color: PaletteKey;
   accent: PaletteKey;
   size: number;
+  /**
+   * Full manifest sprite id of the form `<sheet-code>/<cell-slug>`, as keyed in
+   * `public/assets/assets.json` → `.sprites`. This is **not** an enemy id: sheet cells are
+   * labelled by hand and rarely match an enemy id verbatim. Omit it and the enemy draws
+   * the procedural placeholder.
+   */
+  readonly art?: string;
   weaveAmplitude?: number;
   weavePeriod?: number;
   chargeSpeed?: number;

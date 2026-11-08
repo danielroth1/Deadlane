@@ -47,8 +47,13 @@ export class EnemyVehicle {
     this.phase = seedPhase;
     this.currentX = laneCenter(road, lane);
 
+    // An explicit `def.art` names a real manifest frame id and wins outright. The derived
+    // `<slot>/<id>` candidates stay as a fallback for enemies whose content id happens to
+    // match a cell slug, and the placeholder handles the rest.
+    const artCandidates = [...(def.art ? [def.art] : []), ...ART_SLOTS.map((slot) => `${slot}/${def.id}`)];
+
     this.sprite = art.imageAny(
-      ART_SLOTS.map((slot) => `${slot}/${def.id}`),
+      artCandidates,
       this.currentX,
       -80,
       () => ({

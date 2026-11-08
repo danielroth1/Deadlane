@@ -319,6 +319,24 @@
       ],
       "lastVerdict": "pass",
       "note": "human override 2026-11-08: sheets accepted (3/4/4/3 frames, 0 hot-pink, art:validate green); round-3 reviewer FAIL was transcript fidelity, not the artefact. Residuals: manual cell drop, non-empty usableCells counter, enemy.ts frame-id lookup mismatch"
+    },
+    {
+      "id": "WO-28",
+      "title": "Enemy sprite ids map to real manifest frames",
+      "file": "gauntlet/work-orders/WO-28-enemy-frame-ids.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "def.art maps 5 enemies to real manifest frames; unmapped keep placeholder"
+    },
+    {
+      "id": "WO-29",
+      "title": "Pipeline: declared dropped cells instead of rm",
+      "file": "gauntlet/work-orders/WO-29-declared-drops.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
     }
   ]
 }
