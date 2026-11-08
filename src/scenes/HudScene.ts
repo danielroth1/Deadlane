@@ -14,6 +14,10 @@ export interface DebugSnapshot extends RunDebugState {
 export interface DebugControl {
   /** Put a lone civilian directly in the gun line, a short way ahead of the car. */
   stageCivilianAhead(): void;
+  /** Advance the run by `pixels` of world distance instead of waiting out the clock. */
+  fastForward(pixels: number): void;
+  /** Destroy the player through the normal damage path, ending the run. */
+  destroyPlayer(): void;
 }
 
 declare global {
@@ -261,6 +265,8 @@ export class HudScene extends Phaser.Scene {
 
     window.__deadlaneControl = {
       stageCivilianAhead: () => this.gameScene.debugStageCivilianAhead(),
+      fastForward: (pixels: number) => this.gameScene.debugFastForward(pixels),
+      destroyPlayer: () => this.gameScene.debugDestroyPlayer(),
     };
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

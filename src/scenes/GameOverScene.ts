@@ -12,6 +12,25 @@ interface GameOverData {
   seed: number;
 }
 
+/** Read-only result view served to Playwright through `window.__deadlaneOver` at `?debug=1`. */
+export interface RunResultSnapshot {
+  readonly score: number;
+  readonly distance: number;
+  readonly level: number;
+  readonly seed: number;
+  /** Best score as this screen read it back from storage. */
+  readonly best: number;
+  /** True when this result replaced that best. */
+  readonly isBest: boolean;
+}
+
+declare global {
+  interface Window {
+    /** Read-only result snapshot, installed only when the page is opened with `?debug=1`. */
+    __deadlaneOver?: RunResultSnapshot;
+  }
+}
+
 /**
  * Run summary. Shows the seed so a good (or unfair) run can be replayed later via
  * `?seed=` — which is the whole reason levels are generated from a seed in the first place.
@@ -89,5 +108,31 @@ export class GameOverScene extends Phaser.Scene {
     this.input.keyboard!.once('keydown-ENTER', redeploy);
     this.input.keyboard!.once('keydown-ESC', () => this.scene.start('Title'));
     this.input.once('pointerdown', redeploy);
+
+    this.installDebugSnapshot(data, best, isBest);
+  }
+
+  /**
+   * Opt-in, read-only result surface for Playwright.
+   *
+   * The HUD installs `window.__deadlane` for the run, but it is stopped before this scene
+   * starts, so a spec that reaches game over has no other way to read the result without
+   * screenshotting the canvas. Never writes gameplay.
+   */
+  private installDebugSnapshot(data: GameOverData, best: number, isBest: boolean): void {
+    if (new URLSearchParams(window.location.search).get('debug') !== '1') return;
+
+    window.__deadlaneOver = {
+      score: data.score,
+      distance: data.distance,
+      level: data.level,
+      seed: data.seed,
+      best,
+      isBest,
+    };
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      delete window.__deadlaneOver;
+    });
   }
 }

@@ -315,6 +315,35 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Debug-only: move the run forward by `pixels` of world distance.
+   *
+   * A sector is 24 000 px and the base scroll is 220 px/s, so waiting out a boundary in
+   * real time would make the E2E spec an 80-second test. This moves only the same
+   * `distance` cursor `update()` moves, so the sector change, the spawner horizon and the
+   * challenge windows all resolve normally on the next frame. Playwright reaches it through
+   * `window.__deadlaneControl` at `?debug=1`; nothing in the run calls it.
+   */
+  debugFastForward(pixels: number): void {
+    if (!Number.isFinite(pixels) || pixels <= 0) return;
+    this.distance += pixels;
+  }
+
+  /**
+   * Debug-only: end the run by destroying the player.
+   *
+   * The last armour point is spent by `damagePlayer()`, which is the same call an incoming
+   * shell makes, so the wreck, the score write and the game-over hand-off all run for real.
+   * Playwright reaches it through `window.__deadlaneControl` at `?debug=1`; nothing in the
+   * run calls it. Refused while the sector card is up, because the HUD that owns the
+   * snapshot is not the thing being tested there.
+   */
+  debugDestroyPlayer(): void {
+    if (!this.player || this.paused || this.introActive) return;
+    this.player.armor = Math.min(1, Math.max(0, this.player.armor));
+    this.damagePlayer(this.time.now);
+  }
+
+  /**
    * Pause/resume the run.
    *
    * Phaser refuses keyboard input to a scene that is not RUNNING, so the pause key lives in
@@ -1021,18 +1050,24 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(400, 0.02);
     this.scene.stop('Hud');
 
+    // The scene keeps ticking until the 600 ms hand-off, which would add a few points and
+    // a couple of hundred pixels to a run that is already over — and could even cross a
+    // sector boundary. Freeze the result here so the summary, the stored best and the
+    // debug snapshot all describe the same moment.
+    const result = {
+      score: Math.max(0, Math.round(this.score)),
+      distance: Math.round(this.distance * LEVEL.metresPerPixel),
+      level: this.levelIndex,
+      seed: this.seed,
+    };
+
     const best = Number(localStorage.getItem(`${GAME.storagePrefix}best`) ?? '0');
-    if (this.score > best) {
-      localStorage.setItem(`${GAME.storagePrefix}best`, String(Math.round(this.score)));
+    if (result.score > best) {
+      localStorage.setItem(`${GAME.storagePrefix}best`, String(result.score));
     }
 
     this.time.delayedCall(600, () => {
-      this.scene.start('GameOver', {
-        score: Math.max(0, Math.round(this.score)),
-        distance: Math.round(this.distance * LEVEL.metresPerPixel),
-        level: this.levelIndex,
-        seed: this.seed,
-      });
+      this.scene.start('GameOver', result);
     });
   }
 

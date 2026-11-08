@@ -484,12 +484,14 @@
       "id": "WO-43",
       "title": "E2E reaches the end of a run",
       "file": "gauntlet/work-orders/WO-43-e2e-end-of-run.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-32",
         "WO-33"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "e2e run reaches game over, redeploy, persisted best and a live sector 2, all waits are snapshot polls"
     },
     {
       "id": "WO-44",
