@@ -472,11 +472,13 @@
       "id": "WO-42",
       "title": "art-11 and art-12: roadside and terrain props",
       "file": "gauntlet/work-orders/WO-42-art-props.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-33"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "art-11+art-12 atlased, all 18 propPool ids mapped to real cells, drift test pins sheets to LEVEL_PROFILES"
     },
     {
       "id": "WO-43",
