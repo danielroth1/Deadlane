@@ -233,10 +233,15 @@ export const SLOTS: readonly SlotSpec[] = [
     //     would draw a water oval over the road.
     //   3 boring machine — three-quarter side view of the machine leaving a tunnel mouth, with
     //     the tunnel arch, dirt floor and rubble drawn behind it. Not a top-down machine.
-    // All four fail the vehicle-sheet contract on pose, background or both, so this attempt
-    // ships no frames and every boss stays on its procedural placeholder. The drop is scoped
-    // to attempt 1: a retry draws four new cells and must be judged on those.
+    // All four fail the vehicle-sheet contract on pose, background or both, so attempt 1
+    // ships no boss frames. The drop is scoped to attempt 1 and is not the deliverable: the
+    // four dedicated cells stay open for a later attempt, while `src/content/bosses.json`
+    // names a shipped donor cell per boss so no boss draws the procedural placeholder in the
+    // meantime. A retry draws four new cells and is judged on those alone.
     droppedCellsByAttempt: { 1: [0, 1, 2, 3] },
+    // `emphasis` is deliberately unchanged. Attempt 2's prompt is its own order; it must add
+    // the axis-aligned / no-scenery clauses before claiming a new image, because otherwise
+    // its prompt is byte-identical to the one that produced this rejected sheet.
     emphasis: ['each boss fills its cell', 'clearly a scaled-up threat, same rendering rules'],
   },
   {

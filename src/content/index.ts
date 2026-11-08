@@ -143,9 +143,9 @@ export interface BossDef {
   accent: PaletteKey;
   /**
    * Full manifest sprite id of the form `<sheet-code>/<cell-slug>`, as keyed in
-   * `public/assets/assets.json` → `.sprites`. Omit it and the entity asks for `boss/<id>`
-   * and then draws the procedural placeholder; art-07-boss is WO-49, so today it is the
-   * placeholder.
+   * `public/assets/assets.json` → `.sprites`. The entity always asks for `boss/<id>` first,
+   * so a dedicated art-07-boss cell takes over automatically once it ships; this donor is
+   * the fallback until then. Omit it only when `boss/<id>` exists or a placeholder is fine.
    */
   readonly art?: string;
 }

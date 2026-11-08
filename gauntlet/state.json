@@ -557,13 +557,13 @@
       "id": "WO-49",
       "title": "art-07 bosses",
       "file": "gauntlet/work-orders/WO-49-art-bosses.md",
-      "status": "pending",
-      "round": 1,
+      "status": "done",
+      "round": 2,
       "dependsOn": [
         "WO-48"
       ],
-      "lastVerdict": "fail",
-      "note": "sheet rejected so zero boss frames ship; spec pins the absence instead of using shipped donor cells"
+      "lastVerdict": "pass",
+      "note": "bosses draw shipped donor frames instead of placeholders; art-07 attempt 1 rejected, dedicated sheet owed to a new order"
     },
     {
       "id": "WO-50",

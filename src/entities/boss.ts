@@ -62,10 +62,11 @@ export class BossVehicle {
     this.state = createBossFight(def, now);
     this.currentX = road.left + road.width / 2;
 
-    // `boss/<id>` matches the art-07-boss cell slugs, so WO-49's sheet starts drawing the
-    // moment it ships and the placeholder covers every run until then.
+    // Dedicated art is `boss/<id>`, matching the art-07-boss cell slugs, so a future sheet
+    // takes over the moment it ships. Until then the row's declared donor (`def.art`) is the
+    // next candidate, and the procedural placeholder covers only a boss with neither.
     this.sprite = art.imageAny(
-      [...(def.art ? [def.art] : []), `boss/${def.id}`],
+      [`boss/${def.id}`, ...(def.art ? [def.art] : [])],
       this.currentX,
       -def.size,
       () => ({

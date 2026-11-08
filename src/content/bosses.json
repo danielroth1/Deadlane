@@ -1,5 +1,5 @@
 {
-  "$comment": "Act bosses. One closes every sector (an act is a sector), themed by the level type. `bossForLevel` in src/systems/boss.ts is the only reader: rows that list the level type — or the `any` wildcard — and that have unlocked by the act are eligible, and the highest `minAct` wins with a tie going to table order. `variantEvery` fields a row every Nth act from its `minAct`, so the wildcard gunship is the act 2+ variant (acts 2, 4, 6) rather than a replacement for the type's own machine; it also carries a type with no machine of its own (canyon). Attack pattern ids are implemented in src/systems/boss.ts; adding a boss here needs no class. Asset ids are derived as `boss/<id>`, which matches the art-07-boss cell slugs.",
+  "$comment": "Act bosses. One closes every sector (an act is a sector), themed by the level type. `bossForLevel` in src/systems/boss.ts is the only reader: rows that list the level type — or the `any` wildcard — and that have unlocked by the act are eligible, and the highest `minAct` wins with a tie going to table order. `variantEvery` fields a row every Nth act from its `minAct`, so the wildcard gunship is the act 2+ variant (acts 2, 4, 6) rather than a replacement for the type's own machine; it also carries a type with no machine of its own (canyon). Attack pattern ids are implemented in src/systems/boss.ts; adding a boss here needs no class. Dedicated art is looked up as `boss/<id>`, which matches the art-07-boss cell slugs; until that sheet exists, each row's `art` names a shipped donor cell so no boss draws the procedural placeholder.",
   "bosses": [
     {
       "id": "command-carrier",
@@ -13,7 +13,8 @@
       "reward": 1500,
       "size": 120,
       "color": "rust",
-      "accent": "signal-red"
+      "accent": "signal-red",
+      "art": "enemy-ground-b/hauler-armoured-truck"
     },
     {
       "id": "river-dreadnought",
@@ -27,7 +28,8 @@
       "reward": 1800,
       "size": 128,
       "color": "olive",
-      "accent": "amber"
+      "accent": "amber",
+      "art": "enemy-sea/gunboat"
     },
     {
       "id": "boring-machine",
@@ -41,7 +43,8 @@
       "reward": 1700,
       "size": 116,
       "color": "asphalt-light",
-      "accent": "amber"
+      "accent": "amber",
+      "art": "enemy-ground-b/ram-bulldozer"
     },
     {
       "id": "gunship-boss",
@@ -56,7 +59,8 @@
       "reward": 2000,
       "size": 112,
       "color": "steel",
-      "accent": "signal-red"
+      "accent": "signal-red",
+      "art": "enemy-air/gunship-large"
     }
   ]
 }

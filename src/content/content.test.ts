@@ -335,8 +335,9 @@ describe('boss content', () => {
 
   /**
    * Same seam as the enemy and civilian art tests: a declared id must resolve in the
-   * shipped manifest. Bosses declare none until art-07-boss (WO-49) lands, and the entity
-   * falls back to `boss/<id>` plus the procedural placeholder until then.
+   * shipped manifest. Until art-07-boss ships, each row names a shipped donor cell via
+   * `art`, so no boss falls back to the procedural placeholder; once `boss/<id>` exists the
+   * entity prefers it over the donor.
    */
   it('resolves every declared boss art id in the shipped manifest', () => {
     const manifest = JSON.parse(
@@ -349,6 +350,22 @@ describe('boss content', () => {
       expect(
         sprites.has(boss.art),
         `${boss.id}.art=${boss.art} is not a key of .sprites in public/assets/assets.json`,
+      ).toBe(true);
+    }
+  });
+
+  it('draws every boss from real art, directly or through a declared donor', () => {
+    const manifest = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'public/assets/assets.json'), 'utf8'),
+    ) as SpriteManifest;
+    const sprites = new Set(Object.keys(manifest.sprites));
+
+    for (const boss of BOSSES) {
+      const direct = `boss/${boss.id}`;
+      const donor = boss.art;
+      expect(
+        sprites.has(direct) || (donor !== undefined && sprites.has(donor)),
+        `${boss.id} has neither ${direct} nor a shipped donor, so it would draw the placeholder`,
       ).toBe(true);
     }
   });
