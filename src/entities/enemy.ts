@@ -8,8 +8,8 @@ import type { Art } from '@/art';
  * A hostile unit.
  *
  * Behaviour is chosen from a small, closed set (`BehaviorId`) rather than subclassing per
- * enemy: nine enemies share five behaviours, and the data table decides which. That keeps
- * "add an enemy" a JSON change, which is what `AGENTS.md` promises.
+ * enemy: every enemy shares one of five behaviours, and the data table decides which. That
+ * keeps "add an enemy" a JSON change, which is what `AGENTS.md` promises.
  */
 
 export interface EnemyUpdateContext {

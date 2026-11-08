@@ -15,6 +15,7 @@ const PALETTE_KEYS = new Set(Object.keys(PALETTE));
 
 interface SpriteManifest {
   sprites: Record<string, { sheet: string; x: number; y: number; w: number; h: number }>;
+  sheets: Record<string, { frames: Record<string, { x: number; y: number; w: number; h: number }> }>;
 }
 
 describe('enemy content', () => {
@@ -90,10 +91,37 @@ describe('enemy art ids', () => {
     }
   });
 
-  it('declares art for exactly the five shipped enemies', () => {
+  it('declares art for every enemy, and only shipped frames', () => {
     const ids = declared.map(({ id }) => id).sort();
-    expect(ids).toHaveLength(5);
-    expect(ids).toEqual(['gunboat', 'hauler', 'roadlord', 'switchblade', 'turret']);
+    expect(ids).toHaveLength(ENEMIES.length);
+    expect(ids).toEqual([
+      'dredger',
+      'drone',
+      'enforcer',
+      'gunboat',
+      'hauler',
+      'helicopter',
+      'jetski',
+      'roadlord',
+      'speedboat',
+      'switchblade',
+      'turret',
+    ]);
+  });
+
+  /**
+   * `art-03` cell 0 (enforcer motorcycle, drawn nose-down) and `art-06` cell 1 (speedboat
+   * hostile, drawn three-quarter) are declared `droppedCells` in `pipeline/registry/slots.ts`.
+   * They are the only two frames whose absence from the manifest is intentional, so nothing
+   * in the content table may resolve to them.
+   */
+  it('never ships the two cells the registry declares dropped', () => {
+    expect(sprites.has('enemy-ground-a/enforcer-motorcycle')).toBe(false);
+    expect(sprites.has('enemy-sea/speedboat-hostile')).toBe(false);
+
+    // Both slots are 2x2 with one dropped cell, so three frames of four reach the atlas.
+    expect(Object.keys(manifest.sheets['art-03-enemy-ground-a']?.frames ?? {})).toHaveLength(3);
+    expect(Object.keys(manifest.sheets['art-06-enemy-sea']?.frames ?? {})).toHaveLength(3);
   });
 });
 

@@ -420,9 +420,11 @@
       "id": "WO-37",
       "title": "Every enemy resolves to a shipped frame",
       "file": "gauntlet/work-orders/WO-37-enemy-art.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "all 11 enemies map to shipped frames, two air units added, dropped cells still absent, no images"
     },
     {
       "id": "WO-38",

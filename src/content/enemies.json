@@ -4,6 +4,7 @@
     {
       "id": "enforcer",
       "label": "ENFORCER",
+      "art": "enemy-ground-a/division-sports-coupe",
       "behavior": "weave",
       "speed": 1.08,
       "hp": 1,
@@ -67,6 +68,33 @@
       "projectileSpeed": 260
     },
     {
+      "id": "helicopter",
+      "label": "ATTACK HELI",
+      "art": "enemy-air/attack-helicopter",
+      "behavior": "weave",
+      "speed": 1.12,
+      "hp": 2,
+      "shape": "heli",
+      "color": "steel",
+      "accent": "signal-red",
+      "size": 64,
+      "weaveAmplitude": 54,
+      "weavePeriod": 1.9
+    },
+    {
+      "id": "drone",
+      "label": "HUNTER DRONE",
+      "art": "enemy-air/hunter-drone",
+      "behavior": "charge",
+      "speed": 1.24,
+      "hp": 1,
+      "shape": "heli",
+      "color": "asphalt-light",
+      "accent": "signal-red",
+      "size": 52,
+      "chargeSpeed": 230
+    },
+    {
       "id": "gunboat",
       "label": "GUNBOAT",
       "art": "enemy-sea/gunboat",
@@ -81,6 +109,7 @@
     {
       "id": "speedboat",
       "label": "SPEEDBOAT",
+      "art": "enemy-sea/torpedo-boat",
       "behavior": "weave",
       "speed": 1.22,
       "hp": 1,
@@ -94,6 +123,7 @@
     {
       "id": "jetski",
       "label": "JETSKI",
+      "art": "enemy-sea/hovercraft",
       "behavior": "charge",
       "speed": 1.3,
       "hp": 1,
@@ -106,6 +136,7 @@
     {
       "id": "dredger",
       "label": "DREDGER",
+      "art": "enemy-ground-b/ram-bulldozer",
       "behavior": "ram",
       "speed": 0.7,
       "hp": 5,
