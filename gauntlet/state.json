@@ -577,6 +577,140 @@
       ],
       "lastVerdict": "pass",
       "note": "pure multi-touch input module, pad in the gutters, one input path with keyboard, desktop tap-to-fire kept"
+    },
+    {
+      "id": "WO-51",
+      "title": "Art process overhaul: unlimited images, new slots, soft art bible",
+      "file": "gauntlet/work-orders/WO-51-art-pipeline.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-52",
+      "title": "Motion and framing: centred car, gradual speed, zoomed-out world",
+      "file": "gauntlet/work-orders/WO-52-motion-framing.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-53",
+      "title": "Lives and respawn",
+      "file": "gauntlet/work-orders/WO-53-lives.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-52"
+      ]
+    },
+    {
+      "id": "WO-54",
+      "title": "Road edges: variable width, generated scenery, off-road damage",
+      "file": "gauntlet/work-orders/WO-54-road-edges.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-51",
+        "WO-52",
+        "WO-53"
+      ]
+    },
+    {
+      "id": "WO-55",
+      "title": "Collision response: push apart, not delete",
+      "file": "gauntlet/work-orders/WO-55-collisions.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-52",
+        "WO-54"
+      ]
+    },
+    {
+      "id": "WO-56",
+      "title": "Road hazards: solid obstacles and ramps",
+      "file": "gauntlet/work-orders/WO-56-road-hazards.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-52",
+        "WO-54",
+        "WO-55"
+      ]
+    },
+    {
+      "id": "WO-57",
+      "title": "Special weapons: static oil/smoke, rockets, flamethrower, weapon audio",
+      "file": "gauntlet/work-orders/WO-57-special-weapons.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-52",
+        "WO-55"
+      ]
+    },
+    {
+      "id": "WO-58",
+      "title": "Combat roster: fewer/tougher vehicles, signature enemy weapons, new boss patterns",
+      "file": "gauntlet/work-orders/WO-58-combat-roster.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-55"
+      ]
+    },
+    {
+      "id": "WO-59",
+      "title": "Motion and combat FX: skid marks, varied explosions, rotors, sparks/debris",
+      "file": "gauntlet/work-orders/WO-59-combat-fx.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-52",
+        "WO-55",
+        "WO-56",
+        "WO-57",
+        "WO-58"
+      ]
+    },
+    {
+      "id": "WO-60",
+      "title": "Generated art batch: UI, civilians, remaining character sheets",
+      "file": "gauntlet/work-orders/WO-60-generated-art.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-51",
+        "WO-53",
+        "WO-57"
+      ]
+    },
+    {
+      "id": "WO-61",
+      "title": "Water sections, boat transformation, water splashes",
+      "file": "gauntlet/work-orders/WO-61-water.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-52",
+        "WO-54",
+        "WO-56",
+        "WO-59",
+        "WO-60"
+      ]
+    },
+    {
+      "id": "WO-62",
+      "title": "Transporter: dedicated sprite and bookends",
+      "file": "gauntlet/work-orders/WO-62-transporter.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-51",
+        "WO-52",
+        "WO-54"
+      ]
     }
   ]
 }
