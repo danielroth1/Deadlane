@@ -339,6 +339,28 @@
       "dependsOn": [],
       "lastVerdict": "pass",
       "note": "droppedCells declared for art-03[0]/art-06[1]; atlas skips them even with cell PNGs present"
+    },
+    {
+      "id": "WO-30",
+      "title": "Pipeline test: declared drop beats an existing cell PNG",
+      "file": "gauntlet/work-orders/WO-30-drop-gate-test.md",
+      "status": "done",
+      "round": 1,
+      "dependsOn": [
+        "WO-29"
+      ],
+      "lastVerdict": "pass",
+      "note": "includedCellIndexes extracted + 6 tests pin the drop gate"
+    },
+    {
+      "id": "WO-31",
+      "title": "Content test: every art id resolves in the manifest",
+      "file": "gauntlet/work-orders/WO-31-art-id-test.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-28"
+      ]
     }
   ]
 }

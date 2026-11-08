@@ -64,6 +64,41 @@ export interface BuildSheetInput {
   readonly attempt: number;
 }
 
+export interface IncludedCellIndexesInput {
+  readonly cols: number;
+  readonly rows: number;
+  readonly droppedCells?: readonly number[];
+  readonly hasCell: (index: number) => boolean;
+}
+
+/**
+ * The cell-selection rule for a sheet, as a pure function so the drop gate can be tested
+ * without touching the work or output directories.
+ *
+ * A declared drop is a decision, not an accident: the cell is excluded even when the
+ * processed PNG is sitting in the work directory. That is different from a missing file
+ * (`hasCell` returning false), which just means the cell has not been processed yet.
+ *
+ * Indexes are returned in ascending row-major order.
+ */
+export function includedCellIndexes({
+  cols,
+  rows,
+  droppedCells,
+  hasCell,
+}: IncludedCellIndexesInput): number[] {
+  const dropped = droppedCells ?? [];
+  const included: number[] = [];
+
+  for (let index = 0; index < cols * rows; index += 1) {
+    if (dropped.includes(index)) continue;
+    if (!hasCell(index)) continue;
+    included.push(index);
+  }
+
+  return included;
+}
+
 export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<SheetManifest | null> {
   const workDir = join(WORK_ROOT, slot.id, `attempt-${attempt}`);
   if (!existsSync(workDir)) return null;
@@ -75,17 +110,16 @@ export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<Sh
 
   const composites: sharp.OverlayOptions[] = [];
   const frames: Record<string, FrameRect> = {};
-  const dropped = slot.droppedCells ?? [];
 
-  for (let index = 0; index < cols * rows; index += 1) {
-    // A declared drop is a decision, not an accident: the cell is excluded even when the
-    // processed PNG is sitting in the work directory. That is different from a missing
-    // file (`existsSync` below), which just means the cell has not been processed yet.
-    if (dropped.includes(index)) continue;
+  const included = includedCellIndexes({
+    cols,
+    rows,
+    droppedCells: slot.droppedCells,
+    hasCell: (index) => existsSync(join(workDir, `cell-${index}.png`)),
+  });
 
+  for (const index of included) {
     const cellPath = join(workDir, `cell-${index}.png`);
-    if (!existsSync(cellPath)) continue;
-
     const x = (index % cols) * size;
     const y = Math.floor(index / cols) * size;
 
