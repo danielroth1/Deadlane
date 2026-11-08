@@ -3,11 +3,13 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   CANYON_TILE_ART,
+  CITY_TILE_ART,
   EFFECT_ART,
   HIGHWAY_TILE_ART,
   PICKUP_ART,
   PROP_ART,
   PROP_PLACEHOLDER,
+  TUNNEL_TILE_ART,
   WATER_TILE_ART,
   propArtIds,
   type EffectKind,
@@ -137,7 +139,7 @@ describe('highway tile art ids', () => {
   });
 });
 
-describe('canyon and water tile art ids', () => {
+describe('canyon, water, city and tunnel tile art ids', () => {
   const sheets: readonly [string, TileArtByKind, Record<TileKind, number>][] = [
     [
       'art-14-tiles-canyon',
@@ -149,6 +151,20 @@ describe('canyon and water tile art ids', () => {
       WATER_TILE_ART,
       // The surface is the current streak (10), not open water (0): see WATER_TILE_ART.
       { surface: 10, dash: 2, shoulder: 12, terrain: 9 },
+    ],
+    [
+      'art-16-tiles-city',
+      CITY_TILE_ART,
+      // The street strip (0) carries both the surface and the lane dash; the kerb is the
+      // alley concrete (8) and the only seamless surface is the plaza tile (12).
+      { surface: 0, dash: 0, shoulder: 8, terrain: 12 },
+    ],
+    [
+      'art-17-tiles-tunnel',
+      TUNNEL_TILE_ART,
+      // One asphalt cell (0) carries surface, dash and both painted edges; outside the
+      // road is the concrete wall (2).
+      { surface: 0, dash: 0, shoulder: 0, terrain: 2 },
     ],
   ];
 
@@ -206,6 +222,12 @@ describe('art id manifest seam', () => {
       ...Object.entries(WATER_TILE_ART).map(
         ([kind, ids]): [string, readonly string[]] => [`tile:water:${kind}`, ids],
       ),
+      ...Object.entries(CITY_TILE_ART).map(
+        ([kind, ids]): [string, readonly string[]] => [`tile:city:${kind}`, ids],
+      ),
+      ...Object.entries(TUNNEL_TILE_ART).map(
+        ([kind, ids]): [string, readonly string[]] => [`tile:tunnel:${kind}`, ids],
+      ),
     ];
 
     for (const [label, ids] of groups) {
@@ -227,6 +249,8 @@ describe('art id manifest seam', () => {
       ...Object.values(HIGHWAY_TILE_ART).flat(),
       ...Object.values(CANYON_TILE_ART).flat(),
       ...Object.values(WATER_TILE_ART).flat(),
+      ...Object.values(CITY_TILE_ART).flat(),
+      ...Object.values(TUNNEL_TILE_ART).flat(),
     ];
     for (const id of allIds) {
       expect(id.startsWith('placeholder/'), `${id} must be a manifest frame id`).toBe(false);

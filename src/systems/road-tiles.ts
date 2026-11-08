@@ -2,7 +2,9 @@ import { GAME } from '@/config';
 import type { LevelType, RoadProfile } from '@/levels/types';
 import {
   CANYON_TILE_ART,
+  CITY_TILE_ART,
   HIGHWAY_TILE_ART,
+  TUNNEL_TILE_ART,
   WATER_TILE_ART,
   type TileArtByKind,
   type TileKind,
@@ -154,15 +156,79 @@ export const WATER_TILE_WINDOWS: RoadTileTheme = {
 };
 
 /**
+ * Windows measured on the shipped `art-16-tiles-city` cells (`cell-N.png`).
+ *
+ * The city sheet is a block of compositions, not a set of seams: cell 0 is a whole street
+ * cross-section and cell 12 is the only cell that tiles as a surface. Every rectangle below
+ * was measured on the committed PNG and is pinned by `road-tiles.sheet.test.ts`.
+ *
+ * - surface (cell 0, the street strip): columns 11–17, rows 2–28. The cell carries a rust
+ *   kerb edge at column 10 — just outside the window — a dashed centre line at column 18 and
+ *   a solid kerb line at 26–28. Columns 11–17 are the only run of plain asphalt whose wrap
+ *   is as smooth as its interior (0.0 luma at the seam against 4.1 inside). It is narrow,
+ *   because the cell is a street cross-section: the asphalt between the kerb and the dash is
+ *   all there is. Rows 0–1 and 30–31 are the transparent margins of the composition.
+ * - terrain (cell 12, plaza tile): columns 1–30, rows 1–30. The grout lines sit on column 0
+ *   and row 0, so the window starts one pixel inside them and the repeated seam is a light
+ *   column against a light column (2.5 luma) instead of a grout line.
+ * - shoulder (cell 8, alley concrete): columns 1–8, rows 2–24. Rows 25–31 are the dark
+ *   ledge of that composition; stopping at row 24 keeps the band a uniform concrete strip.
+ *   Both shoulders use the same window — a kerb has no inside or outside.
+ * - dash (cell 0): columns 14–21 put the painted centre line at local column 4, the middle
+ *   of the 8 px band to within half a pixel, with plain asphalt either side. Repeating it
+ *   paints the line on the lane boundary without replaying the kerb line at 26–28.
+ */
+export const CITY_TILE_WINDOWS: RoadTileTheme = {
+  surface: { sourceX: 11, sourceWidth: 7, sourceY: 2, sourceHeight: 28 },
+  terrain: { sourceX: 1, sourceWidth: 30, sourceY: 1, sourceHeight: 30 },
+  shoulderLeft: { sourceX: 1, sourceWidth: SHOULDER_WIDTH, sourceY: 2, sourceHeight: 23 },
+  shoulderRight: { sourceX: 1, sourceWidth: SHOULDER_WIDTH, sourceY: 2, sourceHeight: 23 },
+  dash: { sourceX: 14, sourceWidth: 8, sourceY: 2, sourceHeight: 28 },
+};
+
+/**
+ * Windows measured on the shipped `art-17-tiles-tunnel` cells (`cell-N.png`).
+ *
+ * The tunnel is the one level type whose world is darkened by `LevelBlueprint.visibility`
+ * (WO-33 draws a single void overlay at `1 - visibility`). The windows below sample the
+ * sheet at its authored brightness and the tile layer is never tinted, so that overlay is
+ * the *only* darkening: the sheet is composed with the darkness once, not twice. See the
+ * composition test in `road-tiles.sheet.test.ts`.
+ *
+ * - surface (cell 0, tunnel asphalt): columns 3–13, rows 0–29. The cell is a road
+ *   cross-section: a white edge line at columns 1–2, the dashed centre line at column 15
+ *   and an amber hazard line at 26–27. Columns 3–13 are plain asphalt; the window wraps at
+ *   0.3 luma on rows and 3.2 on columns against 11 luma inside, so it tiles as a surface.
+ * - terrain (cell 2, concrete wall): the whole cell. Outside the carriageway is wall, and
+ *   this cell is the wall face with its light fitting — repeating it draws the strip lights
+ *   down the tunnel. The whole cell wraps at 51.8 luma against 81.2 inside because the
+ *   fitting is a brighter row than the seam.
+ * - shoulder: cell 0's outer eight columns. On the left that is the white edge line at
+ *   local columns 1–2; on the right it is the amber hazard line at local columns 2–3 and
+ *   the bright edge at 6–7. The asphalt either side keeps the strip opaque.
+ * - dash (cell 0): columns 8–23 put the painted centre line at local column 7, the middle
+ *   of the 16 px band to within half a pixel.
+ */
+export const TUNNEL_TILE_WINDOWS: RoadTileTheme = {
+  surface: { sourceX: 3, sourceWidth: 11, sourceY: 0, sourceHeight: 30 },
+  terrain: { sourceX: 0, sourceWidth: 32, sourceY: 0, sourceHeight: 32 },
+  shoulderLeft: { sourceX: 0, sourceWidth: SHOULDER_WIDTH, sourceY: 1, sourceHeight: 30 },
+  shoulderRight: { sourceX: 24, sourceWidth: SHOULDER_WIDTH, sourceY: 1, sourceHeight: 30 },
+  dash: { sourceX: 8, sourceWidth: DASH_WIDTH, sourceY: 1, sourceHeight: 30 },
+};
+
+/**
  * Level type → the sheet and windows its road is drawn from.
  *
- * City and tunnel are deliberately absent: they keep the drawn theme until their own
- * sheets land, and a missing entry is the only thing that has to change to opt them in.
+ * A level type with no entry keeps the drawn theme, so a rejected or missing sheet degrades
+ * to painted fills and nothing else in the game changes.
  */
 export const ROAD_TILE_SPECS: Readonly<Partial<Record<LevelType, RoadTileSpec>>> = {
   highway: { windows: HIGHWAY_TILE_WINDOWS, art: HIGHWAY_TILE_ART },
   canyon: { windows: CANYON_TILE_WINDOWS, art: CANYON_TILE_ART },
   river: { windows: WATER_TILE_WINDOWS, art: WATER_TILE_ART },
+  city: { windows: CITY_TILE_WINDOWS, art: CITY_TILE_ART },
+  tunnel: { windows: TUNNEL_TILE_WINDOWS, art: TUNNEL_TILE_ART },
 };
 
 export interface TileBandPlan extends TileWindow {

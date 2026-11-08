@@ -1,4 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import sharp from 'sharp';
 
 /**
@@ -8,8 +10,8 @@ import sharp from 'sharp';
  * which direction it scrolls, or whether it paints a grid — all three of those were wrong
  * in WO-44's first round while every command passed. `road-tiles.sheet.test.ts` measures
  * the window rectangles against the committed PNGs; this spec reads the canvas back at the
- * game's own 640 x 360 resolution and proves those windows reached the screen, on all three
- * themes that have a sheet: highway, canyon and water.
+ * game's own 640 x 360 resolution and proves those windows reached the screen, on every
+ * theme that has a sheet: highway, canyon, water, city and tunnel.
  *
  * Nothing here is paused when it samples colours. The pause card is a 70 % void overlay
  * across the whole screen, so a paused frame can only be compared with another paused
@@ -26,11 +28,21 @@ const SEED = 424242;
 
 /**
  * Mirrors of `roadProfileFor` in `src/levels/types.ts`: tunnel and river lanes are 76 px,
- * everything else uses `ROAD.laneWidth`. Canyon is 5 × 64, river is 5 × 76.
+ * everything else uses `ROAD.laneWidth`. Canyon is 5 × 64, river is 5 × 76, city is
+ * 6 × 64, tunnel is 4 × 76.
  */
 const HIGHWAY = { left: 128, width: 384, lanes: 6, laneWidth: 64 } as const;
 const CANYON = { left: 160, width: 320, lanes: 5, laneWidth: 64 } as const;
 const RIVER = { left: 130, width: 380, lanes: 5, laneWidth: 76 } as const;
+const CITY = { left: 128, width: 384, lanes: 6, laneWidth: 64 } as const;
+const TUNNEL = { left: 168, width: 304, lanes: 4, laneWidth: 76 } as const;
+
+/**
+ * Mirrors of the level darkening WO-33 draws at `1 - visibility`, and of the palette entry
+ * it draws with. A tunnel is the only road strong enough to matter to a screenshot.
+ */
+const TUNNEL_VISIBILITY = 0.45;
+const DARKNESS: Rgb = [0x0b, 0x0d, 0x10];
 
 /**
  * Palette mirror. Every sheet pixel was quantised onto these 16 colours, so a rendered pixel
@@ -106,6 +118,50 @@ async function grab(page: Page): Promise<Frame> {
 function rgb(frame: Frame, x: number, y: number): Rgb {
   const i = (y * frame.width + x) * frame.channels;
   return [frame.data[i] ?? 0, frame.data[i + 1] ?? 0, frame.data[i + 2] ?? 0];
+}
+
+interface ManifestFrame {
+  readonly sheet: string;
+  readonly x: number;
+  readonly y: number;
+  readonly w: number;
+  readonly h: number;
+}
+
+interface Manifest {
+  readonly sprites: Record<string, ManifestFrame>;
+}
+
+/** The mean colour of one window of a committed sheet — the pixels the tile layer repeats. */
+async function sheetWindowMean(
+  id: string,
+  window: { readonly x: number; readonly y: number; readonly w: number; readonly h: number },
+): Promise<Rgb> {
+  const manifest = JSON.parse(
+    readFileSync(resolve(process.cwd(), 'public/assets/assets.json'), 'utf8'),
+  ) as Manifest;
+  const frame = manifest.sprites[id];
+  if (!frame) throw new Error(`${id} is not a frame in public/assets/assets.json`);
+
+  const { data, info } = await sharp(
+    resolve(process.cwd(), 'public/assets/sheets', `${frame.sheet}.png`),
+  )
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  for (let y = 0; y < window.h; y += 1) {
+    for (let x = 0; x < window.w; x += 1) {
+      const i = ((frame.y + window.y + y) * info.width + frame.x + window.x + x) * info.channels;
+      r += data[i] ?? 0;
+      g += data[i + 1] ?? 0;
+      b += data[i + 2] ?? 0;
+    }
+  }
+  const count = window.w * window.h;
+  return [r / count, g / count, b / count];
 }
 
 function luma(pixel: Rgb): number {
@@ -728,4 +784,179 @@ test('the water tile pattern scrolls down the screen with the world', async ({ p
   // The terrain window is 22 rows tall, not 32: each band wraps at its own window height,
   // and a band that wrapped at 32 would jump 10 px every tile.
   await expectPatternScrolls(page, 'river', { x0: 6, x1: 110, period: 22 });
+});
+
+test('the city street is drawn from the art-16 tile sheet', async ({ page }) => {
+  await startRun(page);
+  await crossSector(page, 'REDLINE CANYON');
+  await crossSector(page, 'DELTA RUN');
+  await crossSector(page, 'DOWNTOWN BLOCK');
+  const frame = await grab(page);
+
+  // 1. The pavement is the sheet's plaza tile, not the drawn `asphaltLight` fill the city
+  //    theme paints outside the road. The plaza is bone paving with steelLight grout, so
+  //    both a bone share and the absence of the drawn fill prove the band is the sheet.
+  for (const band of [
+    { label: 'left', x0: 6, x1: CITY.left - 20 },
+    { label: 'right', x0: CITY.left + CITY.width + 20, x1: 634 },
+  ] as const) {
+    expect(
+      paletteShare(frame, band.x0, band.x1, 100, 300, ['bone']),
+      `the ${band.label} city pavement is not the plaza tile`,
+    ).toBeGreaterThan(0.3);
+    expect(
+      paletteShare(frame, band.x0, band.x1, 100, 300, ['asphaltLight']),
+      `the ${band.label} city pavement is the drawn asphaltLight fill`,
+    ).toBeLessThan(0.05);
+  }
+
+  // 2. The kerb is the sheet's alley concrete, not the drawn `steel` strip.
+  for (const shoulder of [
+    { label: 'left', x0: CITY.left - 8, x1: CITY.left - 1 },
+    { label: 'right', x0: CITY.left + CITY.width, x1: CITY.left + CITY.width + 7 },
+  ] as const) {
+    expect(
+      paletteShare(frame, shoulder.x0, shoulder.x1, 60, 330, ['steelLight']),
+      `the ${shoulder.label} city kerb is not the sheet concrete`,
+    ).toBeGreaterThan(0.4);
+    expect(
+      paletteShare(frame, shoulder.x0, shoulder.x1, 60, 330, ['asphalt']),
+      `the ${shoulder.label} city kerb is the drawn asphalt fill`,
+    ).toBeLessThan(0.05);
+  }
+
+  // 3. The road is the sheet's street asphalt (`asphaltLight` with steel grain), not the
+  //    drawn `asphalt` fill the city theme would paint across the lanes.
+  const lanes = laneInteriors(CITY);
+  expect(
+    medianColumnShare(frame, lanes, 60, 320, ['asphaltLight']),
+    'the city road is not the sheet asphalt',
+  ).toBeGreaterThan(0.5);
+  expect(
+    medianColumnShare(frame, lanes, 60, 320, ['asphalt']),
+    'the city road is the drawn asphalt fill',
+  ).toBeLessThan(0.1);
+
+  // 4. No marking anywhere inside a lane. The surface window is 7 px wide and sits between
+  //    the cell's rust kerb edge and its dashed centre line, so a window that leaked either
+  //    would repeat a marking every 7 px across the road. Measured: the brightest lane
+  //    column is 48 luma against the sheet's 90-luma dash.
+  for (const [index, value] of columnMedians(frame, lanes, 60, 320).entries()) {
+    expect(
+      value,
+      `column x=${lanes[index]} is ${value.toFixed(0)} luma inside a lane — a marking leaked into the surface window`,
+    ).toBeLessThan(70);
+  }
+
+  // 5. The lane dashes are the sheet's own line, centred on the boundary: the dash band is
+  //    8 px wide with the painted column at its centre, so it lands exactly on the boundary.
+  for (const boundary of laneBoundaries(CITY)) {
+    const drawn = paletteShare(frame, boundary, boundary, 60, 330, ['steelLight', 'bone']);
+    expect(drawn, `no dash on the lane boundary x=${boundary}`).toBeGreaterThan(0.15);
+    expect(
+      paletteShare(frame, boundary - 3, boundary - 3, 60, 330, ['steelLight', 'bone']),
+      `the dash band at x=${boundary} is wider than 1 px`,
+    ).toBeLessThan(0.05);
+  }
+});
+
+test('the city tile pattern scrolls down the screen with the world', async ({ page }) => {
+  await startRun(page);
+  await crossSector(page, 'REDLINE CANYON');
+  await crossSector(page, 'DELTA RUN');
+  await crossSector(page, 'DOWNTOWN BLOCK');
+  // The plaza window is 30 rows tall, so that is the terrain band's scroll period.
+  await expectPatternScrolls(page, 'city', { x0: 6, x1: 110, period: 30 });
+});
+
+test('the tunnel is drawn from the art-17 sheet, darkened once by the visibility overlay', async ({
+  page,
+}) => {
+  await startRun(page);
+  await crossSector(page, 'REDLINE CANYON');
+  await crossSector(page, 'DELTA RUN');
+  await crossSector(page, 'DOWNTOWN BLOCK');
+  await crossSector(page, 'SERVICE TUNNEL 4');
+  const frame = await grab(page);
+
+  // WO-33 draws one void rectangle at `1 - visibility` over the world. The sheet is sampled
+  // at its authored brightness and the tile layer is never tinted, so that overlay is the
+  // only darkening. The expected value below is the sheet's own window composed with the
+  // profile's overlay exactly once; the tolerances are wide enough for traffic and narrow
+  // enough that a missing sheet (the drawn asphalt, ~19 luma) or a second darkening
+  // (~21 luma) would both miss.
+  const visibility = TUNNEL_VISIBILITY;
+  const darkness = luma(DARKNESS);
+  const compose = ([r, g, b]: Rgb): number =>
+    luma([
+      r * visibility + DARKNESS[0] * (1 - visibility),
+      g * visibility + DARKNESS[1] * (1 - visibility),
+      b * visibility + DARKNESS[2] * (1 - visibility),
+    ] as const);
+
+  const expectedRoad = compose(
+    await sheetWindowMean('tiles-tunnel/tunnel-asphalt', { x: 3, y: 0, w: 11, h: 30 }),
+  );
+  const expectedWall = compose(
+    await sheetWindowMean('tiles-tunnel/concrete-wall', { x: 0, y: 0, w: 32, h: 32 }),
+  );
+
+  // 1. The road is the sheet's asphalt, not the drawn asphalt fill, and it is darkened
+  //    exactly once.
+  const lanes = laneInteriors(TUNNEL);
+  const road = median(columnMedians(frame, lanes, 60, 320));
+  expect(
+    Math.abs(road - expectedRoad),
+    `the tunnel road measures ${road.toFixed(1)} luma; one darkening of the sheet is ${expectedRoad.toFixed(1)}`,
+  ).toBeLessThan(6);
+  expect(darkness).toBeLessThan(expectedRoad);
+
+  // 2. Outside the road is the sheet's concrete wall, not the drawn void fill. This is the
+  //    half of the composition that a second darkening would erase.
+  const wallColumns: number[] = [];
+  for (const band of [
+    { x0: 6, x1: TUNNEL.left - 10 },
+    { x0: TUNNEL.left + TUNNEL.width + 10, x1: 634 },
+  ] as const) {
+    for (let x = band.x0; x <= band.x1; x += 1) wallColumns.push(x);
+  }
+  const wall = median(columnMedians(frame, wallColumns, 60, 320));
+  expect(
+    Math.abs(wall - expectedWall),
+    `the tunnel wall measures ${wall.toFixed(1)} luma; one darkening of the sheet is ${expectedWall.toFixed(1)}`,
+  ).toBeLessThan(8);
+  expect(wall, 'the tunnel wall is no brighter than the void fill').toBeGreaterThan(
+    darkness + 30,
+  );
+
+  // 3. No marking inside a lane: the surface window is 11 px of plain asphalt between the
+  //    white edge line and the centre dash. Measured: the brightest lane column is 64 luma
+  //    on the sheet, under 40 once the tunnel darkens it.
+  for (const [index, value] of columnMedians(frame, lanes, 60, 320).entries()) {
+    expect(
+      value,
+      `column x=${lanes[index]} is ${value.toFixed(0)} luma inside a lane — a marking leaked into the surface window`,
+    ).toBeLessThan(55);
+  }
+
+  // 4. The lane dashes are the sheet's own line. The 16 px dash band is centred on the
+  //    boundary, which puts the painted column one pixel to its left.
+  for (const boundary of laneBoundaries(TUNNEL)) {
+    const [drawn] = columnMedians(frame, [boundary - 1], 60, 320);
+    expect(drawn ?? 0, `no dash on the lane boundary x=${boundary - 1}`).toBeGreaterThan(70);
+    const [beside] = columnMedians(frame, [boundary - 5], 60, 320);
+    expect(beside ?? 0, `the dash band at x=${boundary} is wider than 8 px`).toBeLessThan(
+      expectedRoad + 10,
+    );
+  }
+});
+
+test('the tunnel tile pattern scrolls down the screen with the world', async ({ page }) => {
+  await startRun(page);
+  await crossSector(page, 'REDLINE CANYON');
+  await crossSector(page, 'DELTA RUN');
+  await crossSector(page, 'DOWNTOWN BLOCK');
+  await crossSector(page, 'SERVICE TUNNEL 4');
+  // The wall cell is a whole 32 px frame, so 32 is the terrain band's scroll period.
+  await expectPatternScrolls(page, 'tunnel', { x0: 6, x1: 110, period: 32 });
 });

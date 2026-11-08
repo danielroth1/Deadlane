@@ -521,11 +521,13 @@
       "id": "WO-46",
       "title": "art-16 city and art-17 tunnel tiles",
       "file": "gauntlet/work-orders/WO-46-tiles-city-tunnel.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-44"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "city+tunnel tile themes wired, measured windows, single-darkening tunnel proof, disallowed cells left out"
     },
     {
       "id": "WO-47",

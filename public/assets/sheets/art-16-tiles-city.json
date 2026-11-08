@@ -1,0 +1,112 @@
+{
+  "slot": "art-16-tiles-city",
+  "code": "tiles-city",
+  "cellSize": 32,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-16-tiles-city.png",
+  "frames": {
+    "tiles-city/street-asphalt": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/intersection": {
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/crosswalk": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/sidewalk-slab": {
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/sidewalk-corner": {
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/building-roof": {
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/roof-vent": {
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/roof-ledge": {
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/alley-concrete": {
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/kerb-edge": {
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/manhole": {
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/storm-drain": {
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/plaza-tile": {
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/grass-median": {
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/parking-bay": {
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/stop-line": {
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    }
+  },
+  "tiles": [
+    "tiles-city/crosswalk",
+    "tiles-city/roof-vent",
+    "tiles-city/storm-drain",
+    "tiles-city/plaza-tile"
+  ]
+}

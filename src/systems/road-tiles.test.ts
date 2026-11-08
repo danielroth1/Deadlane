@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { GAME, ROAD } from '@/config';
-import { CANYON_TILE_ART, HIGHWAY_TILE_ART, WATER_TILE_ART, type TileKind } from '@/art/ids';
+import {
+  CANYON_TILE_ART,
+  CITY_TILE_ART,
+  HIGHWAY_TILE_ART,
+  TUNNEL_TILE_ART,
+  WATER_TILE_ART,
+  type TileKind,
+} from '@/art/ids';
 import { LEVEL_PROFILES, type RoadProfile } from '@/levels/types';
 import {
   CANYON_TILE_WINDOWS,
+  CITY_TILE_WINDOWS,
   DASH_SAMPLE_X,
   DASH_WIDTH,
   HIGHWAY_TILE_WINDOWS,
   ROAD_TILE_SPECS,
   SHOULDER_WIDTH,
   TILE_SIZE,
+  TUNNEL_TILE_WINDOWS,
   WATER_TILE_WINDOWS,
   planRoadTiles,
   tileOffset,
@@ -244,16 +253,23 @@ describe('road tile specs', () => {
     ['highway', HIGHWAY_TILE_WINDOWS],
     ['canyon', CANYON_TILE_WINDOWS],
     ['water', WATER_TILE_WINDOWS],
+    ['city', CITY_TILE_WINDOWS],
+    ['tunnel', TUNNEL_TILE_WINDOWS],
   ];
 
-  it('wires exactly the level types that have a sheet', () => {
-    expect(Object.keys(ROAD_TILE_SPECS).sort()).toEqual(['canyon', 'highway', 'river']);
+  it('wires every level type to a shipped sheet', () => {
+    expect(Object.keys(ROAD_TILE_SPECS).sort()).toEqual([
+      'canyon',
+      'city',
+      'highway',
+      'river',
+      'tunnel',
+    ]);
     expect(ROAD_TILE_SPECS.highway?.art).toBe(HIGHWAY_TILE_ART);
     expect(ROAD_TILE_SPECS.canyon?.art).toBe(CANYON_TILE_ART);
     expect(ROAD_TILE_SPECS.river?.art).toBe(WATER_TILE_ART);
-    // City and tunnel keep the drawn theme until their own sheets land.
-    expect(ROAD_TILE_SPECS.city).toBeUndefined();
-    expect(ROAD_TILE_SPECS.tunnel).toBeUndefined();
+    expect(ROAD_TILE_SPECS.city?.art).toBe(CITY_TILE_ART);
+    expect(ROAD_TILE_SPECS.tunnel?.art).toBe(TUNNEL_TILE_ART);
   });
 
   it('samples every theme 1:1 inside its own 32 px frame', () => {
@@ -288,7 +304,7 @@ describe('road tile specs', () => {
   });
 
   it('plans every theme on a real level road profile', () => {
-    for (const type of ['canyon', 'river'] as const) {
+    for (const type of ['canyon', 'river', 'city', 'tunnel'] as const) {
       const spec = ROAD_TILE_SPECS[type];
       if (!spec) throw new Error(`${type} has no tile spec`);
       const profile = LEVEL_PROFILES[type];

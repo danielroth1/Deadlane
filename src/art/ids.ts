@@ -246,6 +246,71 @@ export const WATER_TILE_ART: TileArtByKind = {
   terrain: ['tiles-water/deep-water'],
 };
 
+/**
+ * City tile role → candidate frame ids, most specific first.
+ *
+ * art-16 attempt 1 is shifted from its labels, and most of its cells are compositions
+ * rather than seams. Every entry was matched on `pipeline/work/art-16-tiles-city/
+ * attempt-1/cell-N.png`. Row-major the sheet draws:
+ *   0 a street strip: rust kerb edge at column 10, dashed centre line at column 18, kerb
+ *   line at columns 26–28, and an L-shaped pavement corner in columns 1–8 ·
+ *   1 a four-way intersection · 2 a crosswalk (four-way stripes) · 3 a building roof with
+ *   a vent and a rust parapet (labelled `sidewalk slab`) · 4 the only plain slab
+ *   (labelled `sidewalk corner`) · 5 a roof with a vent box · 6 a roof with a circular
+ *   hatch (labelled `roof vent`) · 7 a roof with a railed ledge · 8 alley concrete ·
+ *   9 an L of kerb around a manhole (label says `kerb edge`, and it is one — but it is a
+ *   corner, not a strip) · 10 a manhole cover · 11 a teal storm-drain panel with painted
+ *   lettering — opaque, wraps numerically, and must never be tiled · 12 a plaza tile ·
+ *   13 a grass median · 14 a repeat of 13 · 15 a printed STOP sign.
+ * The road surface is the street strip (0) windowed between its rust edge and its centre
+ * dash; the same cell's dash column carries the lane band. Cell 12 is the only genuine
+ * seamless surface on the sheet, so it is the pavement outside the road; cell 8 is a
+ * fine-grained concrete strip and carries the kerb. Cell 4 is the alternate for both: it
+ * is a plain slab, which degrades to a concrete road or kerb rather than a placeholder.
+ */
+export const CITY_TILE_ART: TileArtByKind = {
+  // Cell 0 — asphalt between the kerb edge and the centre dash.
+  surface: ['tiles-city/street-asphalt'],
+  // Cell 0 again — the dashed centre line at column 18, windowed for the lane band.
+  dash: ['tiles-city/street-asphalt'],
+  // Cell 8 — alley concrete, fine-grained enough for an 8 px kerb strip.
+  shoulder: ['tiles-city/alley-concrete', 'tiles-city/sidewalk-corner'],
+  // Cell 12 — the plaza tile, the sheet's one seamless surface.
+  terrain: ['tiles-city/plaza-tile', 'tiles-city/sidewalk-corner'],
+};
+
+/**
+ * Tunnel tile role → candidate frame ids, most specific first.
+ *
+ * art-17 attempt 1 is close to its labels, and was matched on `pipeline/work/
+ * art-17-tiles-tunnel/attempt-1/cell-N.png`:
+ *   0 a full asphalt cell: a solid white edge line at columns 1–2, a dashed centre line
+ *   at column 15, an amber hazard line at columns 26–27 and a bright edge at 30–31 ·
+ *   1 a narrow asphalt strip carrying one solid line, with transparent margins (label
+ *   `tunnel edge line`) · 2 concrete wall with a light fitting near the top ·
+ *   3 concrete wall with cable runs · 4 ceiling panel · 5 a T-shaped pillar · 6 another
+ *   pillar (label `support pillar`) · 7 a portal frame, hollow · 8 floor grate ·
+ *   9 wet patch · 10 scorch mark · 11 emergency door with a painted arrow · 12 a boxed
+ *   vent (label `lane arrow`) · 13 a pipe elbow (label `ventilation duct`) · 14 rubble ·
+ *   15 a chevron board over a hazard stripe.
+ * The road is the full asphalt cell (0): the surface is windowed between the white edge
+ * line and the centre dash, the dash column becomes the lane band, and the outer eight
+ * columns carry the painted edges. Outside the road is the wall — the concrete wall (2)
+ * for the wide terrain bands, with the cabled wall (3) as the alternate. Cell 1 cannot be
+ * a band on its own: 74 % of it is transparent, so a window either side of its line is
+ * mostly hole. It is deliberately not listed.
+ */
+export const TUNNEL_TILE_ART: TileArtByKind = {
+  // Cell 0 — asphalt between the white edge line and the centre dash.
+  surface: ['tiles-tunnel/tunnel-asphalt'],
+  // Cell 0 again — the dashed centre line at column 15.
+  dash: ['tiles-tunnel/tunnel-asphalt'],
+  // Cell 0's outer columns: white edge line on the left, amber hazard line on the right.
+  shoulder: ['tiles-tunnel/tunnel-asphalt'],
+  // Cell 2 — the concrete wall. Cell 3 is the same wall with cable runs.
+  terrain: ['tiles-tunnel/concrete-wall', 'tiles-tunnel/wall-cable-run'],
+};
+
 /** Frame ids for a pickup kind, or none when the kind is unknown and the fallback wins. */
 export function pickupArtIds(kind: string): readonly string[] {
   return isPickupKind(kind) ? PICKUP_ART[kind] : [];

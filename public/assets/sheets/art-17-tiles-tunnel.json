@@ -1,0 +1,111 @@
+{
+  "slot": "art-17-tiles-tunnel",
+  "code": "tiles-tunnel",
+  "cellSize": 32,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-17-tiles-tunnel.png",
+  "frames": {
+    "tiles-tunnel/tunnel-asphalt": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/tunnel-edge-line": {
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/concrete-wall": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/wall-cable-run": {
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/ceiling-panel": {
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/ceiling-light": {
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/support-pillar": {
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/portal-frame": {
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/floor-grate": {
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/wet-patch": {
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/scorch-mark": {
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/emergency-door": {
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/lane-arrow": {
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/ventilation-duct": {
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/rubble": {
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/hazard-stripe": {
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    }
+  },
+  "tiles": [
+    "tiles-tunnel/concrete-wall",
+    "tiles-tunnel/wall-cable-run",
+    "tiles-tunnel/floor-grate"
+  ]
+}

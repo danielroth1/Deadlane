@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T14:11:18.503Z",
+  "generatedAt": "2026-11-08T15:04:45.968Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -992,6 +992,229 @@
         "tiles-water/stone-bank-edge",
         "tiles-water/pier-plank"
       ]
+    },
+    "art-16-tiles-city": {
+      "slot": "art-16-tiles-city",
+      "code": "tiles-city",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-16-tiles-city.png",
+      "frames": {
+        "tiles-city/street-asphalt": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/intersection": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/crosswalk": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/sidewalk-slab": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/sidewalk-corner": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/building-roof": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/roof-vent": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/roof-ledge": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/alley-concrete": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/kerb-edge": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/manhole": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/storm-drain": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/plaza-tile": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/grass-median": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/parking-bay": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-city/stop-line": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "tiles": [
+        "tiles-city/crosswalk",
+        "tiles-city/roof-vent",
+        "tiles-city/storm-drain",
+        "tiles-city/plaza-tile"
+      ]
+    },
+    "art-17-tiles-tunnel": {
+      "slot": "art-17-tiles-tunnel",
+      "code": "tiles-tunnel",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-17-tiles-tunnel.png",
+      "frames": {
+        "tiles-tunnel/tunnel-asphalt": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/tunnel-edge-line": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/concrete-wall": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/wall-cable-run": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/ceiling-panel": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/ceiling-light": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/support-pillar": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/portal-frame": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/floor-grate": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/wet-patch": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/scorch-mark": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/emergency-door": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/lane-arrow": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/ventilation-duct": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/rubble": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-tunnel/hazard-stripe": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "tiles": [
+        "tiles-tunnel/concrete-wall",
+        "tiles-tunnel/wall-cable-run",
+        "tiles-tunnel/floor-grate"
+      ]
     }
   },
   "sprites": {
@@ -1949,6 +2172,230 @@
     },
     "tiles-water/moored-tyre": {
       "sheet": "art-15-tiles-water",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/street-asphalt": {
+      "sheet": "art-16-tiles-city",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/intersection": {
+      "sheet": "art-16-tiles-city",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/crosswalk": {
+      "sheet": "art-16-tiles-city",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/sidewalk-slab": {
+      "sheet": "art-16-tiles-city",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/sidewalk-corner": {
+      "sheet": "art-16-tiles-city",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/building-roof": {
+      "sheet": "art-16-tiles-city",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/roof-vent": {
+      "sheet": "art-16-tiles-city",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/roof-ledge": {
+      "sheet": "art-16-tiles-city",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/alley-concrete": {
+      "sheet": "art-16-tiles-city",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/kerb-edge": {
+      "sheet": "art-16-tiles-city",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/manhole": {
+      "sheet": "art-16-tiles-city",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/storm-drain": {
+      "sheet": "art-16-tiles-city",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/plaza-tile": {
+      "sheet": "art-16-tiles-city",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/grass-median": {
+      "sheet": "art-16-tiles-city",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/parking-bay": {
+      "sheet": "art-16-tiles-city",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-city/stop-line": {
+      "sheet": "art-16-tiles-city",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/tunnel-asphalt": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/tunnel-edge-line": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/concrete-wall": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/wall-cable-run": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/ceiling-panel": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/ceiling-light": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/support-pillar": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/portal-frame": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/floor-grate": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/wet-patch": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/scorch-mark": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/emergency-door": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/lane-arrow": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/ventilation-duct": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/rubble": {
+      "sheet": "art-17-tiles-tunnel",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-tunnel/hazard-stripe": {
+      "sheet": "art-17-tiles-tunnel",
       "x": 96,
       "y": 96,
       "w": 32,

@@ -308,13 +308,37 @@
     },
     "art-16-tiles-city": {
       "id": "art-16-tiles-city",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 840704250,
+          "promptHash": "ca9b0a8a670fb25c",
+          "state": "generated",
+          "claimedAt": "2026-11-08T14:56:02.033Z",
+          "requestId": "01a1bba9-02a5-70b0-9509-de61d94ce8be",
+          "url": "https://v3b.fal.media/files/b/0ab1a7c2/h_TGFdJe9V-n3VJerKV9T_fJ9lElVU.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-17-tiles-tunnel": {
       "id": "art-17-tiles-tunnel",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 505823890,
+          "promptHash": "9698ba20965f6d96",
+          "state": "generated",
+          "claimedAt": "2026-11-08T15:01:01.069Z",
+          "requestId": "01a1bbad-9cc4-7f61-9fad-0c7bb5158cc6",
+          "url": "https://v3b.fal.media/files/b/0ab1a7e0/ZXRkiLT4H0v0IRp19LJSa_sU8mwkQ6.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-18-tiles-transition": {
       "id": "art-18-tiles-transition",

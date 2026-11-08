@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { PALETTE } from '@/palette';
 import type { TileKind } from '@/art/ids';
+import { LEVEL_PROFILES } from '@/levels/types';
 import { decode, type Raster } from '../../pipeline/lib/image.js';
 import {
   ROAD_TILE_SPECS,
@@ -61,7 +62,7 @@ function sheetRaster(sheet: string): Promise<Raster> {
   return loaded;
 }
 
-function specFor(type: 'canyon' | 'river'): RoadTileSpec {
+function specFor(type: 'canyon' | 'river' | 'city' | 'tunnel'): RoadTileSpec {
   const spec = ROAD_TILE_SPECS[type];
   if (!spec) throw new Error(`${type} has no tile spec`);
   return spec;
@@ -132,6 +133,15 @@ function matches(pixel: Rgb, hex: number): boolean {
 
 function luma(pixel: Rgb): number {
   return 0.2126 * pixel[0] + 0.7152 * pixel[1] + 0.0722 * pixel[2];
+}
+
+/** Mean luma of every pixel in a raster. */
+function meanLuma(raster: Raster): number {
+  let sum = 0;
+  for (let y = 0; y < raster.height; y += 1) {
+    for (let x = 0; x < raster.width; x += 1) sum += luma(rgbAt(raster, x, y));
+  }
+  return sum / (raster.width * raster.height);
 }
 
 /** Share of a raster's pixels painted in one palette colour. */
@@ -231,6 +241,8 @@ function brightCentroid(raster: Raster, test: (pixel: Rgb) => boolean): number {
 const THEMES = [
   ['canyon', specFor('canyon')],
   ['river', specFor('river')],
+  ['city', specFor('city')],
+  ['tunnel', specFor('tunnel')],
 ] as const;
 
 describe('shipped tile windows', () => {
@@ -435,5 +447,203 @@ describe('water sheet cells', () => {
     ).toBeLessThanOrEqual(1.5);
 
     expect(familyShare(band, [PALETTE.white, PALETTE.bone])).toBeGreaterThan(0.25);
+  });
+});
+
+describe('city sheet cells', () => {
+  const spec = specFor('city');
+
+  it('measures the street strip it samples: a rust kerb edge and a centre dash outside the surface window', async () => {
+    // The positive control. Cell 0 is a street cross-section, not a plain asphalt patch:
+    // rust at column 10, the dashed centre line at column 18, the solid kerb line at
+    // 26–28. If any of those moves, the surface window is sampling something else.
+    const cell = await cellPixels(spec, 'surface');
+    expect(cell.width).toBe(32);
+
+    const column = (x: number): Raster => crop(cell, x, 0, 1, cell.height);
+    expect(
+      colourShare(column(10), PALETTE.rust),
+      'column 10 is not the rust kerb edge',
+    ).toBeGreaterThan(0.3);
+
+    const dash = column(18);
+    const dashPixels = Array.from({ length: dash.height }, (_, y) => rgbAt(dash, 0, y));
+    expect(
+      dashPixels.filter((pixel) => matches(pixel, PALETTE.steelLight)).length / dash.height,
+      'column 18 is not the dashed centre line',
+    ).toBeGreaterThan(0.3);
+
+    expect(
+      columnProfile(column(26))[0] ?? 0,
+      'column 26 is not the kerb line',
+    ).toBeGreaterThan(120);
+  });
+
+  it('samples the surface from asphalt only, between the kerb edge and the dash', async () => {
+    const { sourceX, sourceWidth } = spec.windows.surface;
+    const band = await bandPixels(spec, 'surface');
+
+    for (let x = 0; x < band.width; x += 1) {
+      for (let y = 0; y < band.height; y += 1) {
+        const pixel = rgbAt(band, x, y);
+        expect(
+          matches(pixel, PALETTE.bone) || matches(pixel, PALETTE.white),
+          `surface column ${sourceX + x} row ${y} is a painted marking`,
+        ).toBe(false);
+      }
+    }
+
+    // The paint next door is 90 luma (the dash) and 126+ (the kerb line); the window's own
+    // columns measure 42–48, so nothing that reads as paint can leak in.
+    for (const mean of columnProfile(band)) expect(mean).toBeLessThan(80);
+
+    // The asphalt is the cell's `asphaltLight`, with the model's dark grain on top.
+    expect(colourShare(band, PALETTE.asphaltLight)).toBeGreaterThan(0.7);
+    expect(distinctColours(band)).toBeGreaterThanOrEqual(2);
+
+    expect(sourceX).toBeGreaterThan(10);
+    expect(sourceX + sourceWidth).toBeLessThanOrEqual(18);
+  });
+
+  it('puts the centre dash at the middle of the lane band', async () => {
+    const band = await bandPixels(spec, 'dash');
+    const marking = (pixel: Rgb): boolean => luma(pixel) > 110;
+
+    const centroid = brightCentroid(band, marking);
+    const centre = (band.width - 1) / 2;
+    expect(
+      Math.abs(centroid - centre),
+      `dash centroid ${centroid.toFixed(2)} is not the centre ${centre} of a ${band.width} px band`,
+    ).toBeLessThanOrEqual(1.5);
+
+    // One column carries the paint, so repeating the band must not replay the line twice.
+    const painted = Array.from({ length: band.width }, (_, x) =>
+      Array.from({ length: band.height }, (_, y) => rgbAt(band, x, y)).filter(marking).length,
+    ).filter((count) => count / band.height > 0.3);
+    expect(painted).toHaveLength(1);
+
+    expect(colourShare(band, PALETTE.steelLight)).toBeGreaterThan(0.03);
+  });
+
+  it('fills the terrain with plaza paving, not the drawn asphalt fill', async () => {
+    const band = await bandPixels(spec, 'terrain');
+
+    // The plaza tile is bone paving with steelLight grout; the drawn city theme fills the
+    // terrain with `asphaltLight`, so either road colour appearing here is a fallback leak.
+    expect(familyShare(band, [PALETTE.bone, PALETTE.steelLight])).toBeGreaterThan(0.95);
+    expect(colourShare(band, PALETTE.bone)).toBeGreaterThan(0.5);
+    expect(colourShare(band, PALETTE.asphalt)).toBe(0);
+    expect(colourShare(band, PALETTE.asphaltLight)).toBe(0);
+    expect(distinctColours(band)).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe('tunnel sheet cells', () => {
+  const spec = specFor('tunnel');
+
+  it('measures the asphalt cell it samples: a white edge line, a centre dash and an amber hazard line', async () => {
+    // The positive control. Cell 0 is a road cross-section: white edge at columns 1–2, the
+    // dashed centre line at column 15, amber at 26–27. Everything the windows avoid.
+    const cell = await cellPixels(spec, 'surface');
+    expect(cell.width).toBe(32);
+
+    const column = (x: number): Raster => crop(cell, x, 0, 1, cell.height);
+    const white = Array.from({ length: 32 }, (_, y) => rgbAt(column(1), 0, y)).filter(
+      (pixel) => matches(pixel, PALETTE.bone) || matches(pixel, PALETTE.white),
+    );
+    expect(white.length / 32, 'column 1 is not the white edge line').toBeGreaterThan(0.3);
+
+    const dash = Array.from({ length: 32 }, (_, y) => rgbAt(column(15), 0, y)).filter(
+      (pixel) => matches(pixel, PALETTE.bone) || matches(pixel, PALETTE.white),
+    );
+    expect(dash.length / 32, 'column 15 is not the dashed centre line').toBeGreaterThan(0.3);
+
+    expect(colourShare(column(26), PALETTE.amber), 'column 26 is not the amber line').toBeGreaterThan(
+      0.4,
+    );
+  });
+
+  it('samples the surface from asphalt only, between the edge line and the dash', async () => {
+    const { sourceX, sourceWidth } = spec.windows.surface;
+    const band = await bandPixels(spec, 'surface');
+
+    for (let x = 0; x < band.width; x += 1) {
+      for (let y = 0; y < band.height; y += 1) {
+        const pixel = rgbAt(band, x, y);
+        expect(
+          matches(pixel, PALETTE.bone) || matches(pixel, PALETTE.white),
+          `surface column ${sourceX + x} row ${y} is a painted marking`,
+        ).toBe(false);
+      }
+    }
+
+    // The paint next door is 140–160 luma; the window's own columns measure 42–64.
+    for (const mean of columnProfile(band)) expect(mean).toBeLessThan(80);
+
+    expect(colourShare(band, PALETTE.asphaltLight)).toBeGreaterThan(0.6);
+    expect(colourShare(band, PALETTE.steel)).toBeGreaterThan(0.2);
+
+    expect(sourceX).toBeGreaterThan(2);
+    expect(sourceX + sourceWidth).toBeLessThanOrEqual(15);
+  });
+
+  it('puts the centre dash at the middle of the lane band', async () => {
+    const band = await bandPixels(spec, 'dash');
+    const marking = (pixel: Rgb): boolean =>
+      matches(pixel, PALETTE.bone) || matches(pixel, PALETTE.white);
+
+    const centroid = brightCentroid(band, marking);
+    const centre = (band.width - 1) / 2;
+    expect(
+      Math.abs(centroid - centre),
+      `dash centroid ${centroid.toFixed(2)} is not the centre ${centre} of a ${band.width} px band`,
+    ).toBeLessThanOrEqual(1.5);
+
+    const painted = Array.from({ length: band.width }, (_, x) =>
+      Array.from({ length: band.height }, (_, y) => rgbAt(band, x, y)).filter(marking).length,
+    ).filter((count) => count / band.height > 0.4);
+    expect(painted).toHaveLength(1);
+
+    expect(familyShare(band, [PALETTE.bone, PALETTE.white])).toBeGreaterThan(0.02);
+  });
+
+  it('fills the terrain with the concrete wall, not the drawn void fill', async () => {
+    const wall = await bandPixels(spec, 'terrain');
+    const surface = await bandPixels(spec, 'surface');
+
+    expect(familyShare(wall, [PALETTE.steelLight, PALETTE.steel])).toBeGreaterThan(0.8);
+    expect(colourShare(wall, PALETTE.void), 'the tunnel wall is the drawn void fill').toBeLessThan(
+      0.02,
+    );
+    // A wall face, not a floor: much brighter than the asphalt the lane carries.
+    expect(meanLuma(wall)).toBeGreaterThan(90);
+    expect(meanLuma(wall)).toBeGreaterThan(meanLuma(surface) * 1.8);
+    expect(distinctColours(wall)).toBeGreaterThanOrEqual(5);
+  });
+
+  it('composes with the visibility overlay once, not twice', async () => {
+    // WO-33 darkens the world with a single void rectangle at `1 - visibility`. The tunnel
+    // sheet is sampled at its authored brightness and the tile layer is never tinted, so
+    // that overlay is the only darkening. This pins the arithmetic: the road and the wall
+    // survive one pass, and a second pass would sink both into the void fill.
+    const visibility = LEVEL_PROFILES.tunnel.visibility;
+    const alpha = 1 - visibility;
+    const darkness = luma(paletteRgb(PALETTE.void));
+    const once = (value: number): number => value * visibility + darkness * alpha;
+    const twice = (value: number): number => once(value) * visibility + darkness * alpha;
+
+    const road = meanLuma(await bandPixels(spec, 'surface'));
+    const wall = meanLuma(await bandPixels(spec, 'terrain'));
+
+    expect(
+      once(road),
+      'the sheet road is crushed by its own level darkness',
+    ).toBeGreaterThan(26);
+    expect(twice(road), 'a second darkening would erase the road').toBeLessThan(26);
+    expect(once(wall), 'the sheet wall is not visible under the level darkness').toBeGreaterThan(
+      45,
+    );
+    expect(twice(wall), 'a second darkening would erase the wall').toBeLessThan(45);
+    expect(once(wall)).toBeGreaterThan(once(road) * 1.5);
   });
 });
