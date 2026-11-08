@@ -450,11 +450,11 @@
       "id": "WO-40",
       "title": "art-08 civilians: traffic from the atlas",
       "file": "gauntlet/work-orders/WO-40-art-civilians.md",
-      "status": "pending",
-      "round": 2,
+      "status": "escalated",
+      "round": 3,
       "dependsOn": [],
       "lastVerdict": "fail",
-      "note": "permanent droppedCells bans the subjects a retry needs; 8 of 14 civilians still placeholder incl all watercraft"
+      "note": "8/14 civilians incl all watercraft still placeholder; atlas now skips the open slot so art:atlas would drop the 6 shipped frames"
     },
     {
       "id": "WO-41",

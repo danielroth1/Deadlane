@@ -6,6 +6,7 @@ import {
   recordGeneration,
   releaseAttempt,
   remainingImages,
+  reopenSlot,
   selectAttempt,
   summarize,
   unstartedSlots,
@@ -176,6 +177,29 @@ describe('image budget ledger', () => {
 
     const extra = claim(approved, 'art-01', 4);
     expect(extra.ok).toBe(false);
+  });
+
+  it('reopens a rejected slot so a retry can be claimed, keeping the attempt', () => {
+    const first = claim(fresh(), 'art-01', 3);
+    if (!first.ok) throw new Error('expected claim');
+    const recorded = recordGeneration(first.ledger, 'art-01', 1, {
+      requestId: 'r',
+      url: 'u',
+      costUsd: 0.01,
+    });
+    const approved = selectAttempt(recorded, 'art-01', 1);
+
+    const reopened = reopenSlot(approved, 'art-01');
+    expect(reopened.slots['art-01']?.status).toBe('open');
+    expect(reopened.slots['art-01']?.selected).toBeUndefined();
+    expect(reopened.slots['art-01']?.attempts).toEqual(approved.slots['art-01']?.attempts);
+    expect(summarize(reopened).spendUsd).toBeCloseTo(0.01);
+
+    const retry = claim(reopened, 'art-01', 4);
+    expect(retry.ok).toBe(true);
+    if (!retry.ok) return;
+    expect(retry.attempt.attempt).toBe(2);
+    expect(retry.ledger.slots['art-01']?.attempts).toHaveLength(2);
   });
 
   it('refuses claims for skipped slots', () => {

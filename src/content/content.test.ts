@@ -141,9 +141,9 @@ describe('civilian content', () => {
  * The seam between civilian content data and the shipped atlas.
  *
  * Same invariant as `enemy art ids` above: `CivilianDef.art` is only a lookup key into
- * `public/assets/assets.json` → `.sprites`. Rename a sheet cell without updating the
- * content table and the civilian silently falls back to its procedural placeholder with
- * nothing failing.
+ * `public/assets/assets.json` → `.sprites`. A declared id that no longer resolves fails
+ * here, and so does an undeclared one, because the placeholder set is pinned by id — a
+ * civilian cannot quietly slide onto procedural art.
  */
 describe('civilian art ids', () => {
   const manifest = JSON.parse(
@@ -169,12 +169,37 @@ describe('civilian art ids', () => {
   });
 
   /**
-   * `pipeline/registry/slots.ts` declares ten `droppedCells` for `art-08-civilians`: the
-   * attempt fused three vehicles into a cross in cells 1, 2 and 5, drew cells 3 and 6
-   * side-on, put a sedan in the `skiff` cell, a motorboat in the sports-car cell, and
-   * ringed the three watercraft cells with model-drawn water. Only six cells passed the
-   * gate, so only six frames may reach the atlas. A civilian whose subject has no
-   * surviving cell declares no `art` and draws its procedural placeholder instead.
+   * Every civilian has to be placed deliberately: either against a frame that actually
+   * ships, or against a placeholder that is listed here by id. Adding a civilian, or
+   * letting one lose its `art` id by accident, fails this test instead of silently
+   * degrading to procedural art.
+   */
+  const PLACEHOLDER_CIVILIANS = [
+    'barge',
+    'boat',
+    'box-truck',
+    'coupe',
+    'hatchback',
+    'skiff',
+    'van',
+    'wagon',
+  ];
+
+  it('draws the placeholder for exactly the civilians attempt 1 could not supply', () => {
+    const placeholders = CIVILIANS.flatMap((civilian) =>
+      civilian.art === undefined ? [civilian.id] : [],
+    ).sort();
+
+    expect(placeholders).toEqual(PLACEHOLDER_CIVILIANS);
+  });
+
+  /**
+   * `pipeline/registry/slots.ts` records ten attempt-1 rejects for `art-08-civilians` as
+   * `droppedCellsByAttempt`, not as permanent `droppedCells`: the attempt fused three
+   * vehicles into a cross in cells 1, 2 and 5, drew cells 3 and 6 side-on, put a sedan in
+   * the `skiff` cell, a motorboat in the sports-car cell, and ringed the three watercraft
+   * cells with model-drawn water. Only six cells passed the gate, so only six frames may
+   * reach the atlas. A retry draws a fresh 4 × 4 sheet and is judged on its own cells.
    */
   it('ships only the six cells that passed the art-08 gate', () => {
     const frames = Object.keys(manifest.sheets['art-08-civilians']?.frames ?? {}).sort();
@@ -186,6 +211,13 @@ describe('civilian art ids', () => {
       'civilians/small-lorry',
       'civilians/taxi',
     ]);
+  });
+
+  it('claims every shipped cell and nothing else', () => {
+    const frames = Object.keys(manifest.sheets['art-08-civilians']?.frames ?? {}).sort();
+    const arts = declared.map(({ art }) => art).sort();
+
+    expect(arts).toEqual(frames);
   });
 
   it('uses a distinct cell for every civilian', () => {

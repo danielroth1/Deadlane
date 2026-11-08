@@ -99,6 +99,21 @@ export function includedCellIndexes({
   return included;
 }
 
+/**
+ * The cells to drop when packing one attempt.
+ *
+ * `SlotSpec.droppedCells` is a permanent decision about the slot; `droppedCellsByAttempt`
+ * records the rejects of a single attempt. Both apply, and only the second one is bound to
+ * the attempt number — which is the point: attempt 1's rejects must not ban the subjects a
+ * later attempt exists to supply.
+ */
+export function droppedCellsForAttempt(
+  slot: Pick<SlotSpec, 'droppedCells' | 'droppedCellsByAttempt'>,
+  attempt: number,
+): readonly number[] {
+  return [...(slot.droppedCells ?? []), ...(slot.droppedCellsByAttempt?.[attempt] ?? [])];
+}
+
 export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<SheetManifest | null> {
   const workDir = join(WORK_ROOT, slot.id, `attempt-${attempt}`);
   if (!existsSync(workDir)) return null;
@@ -114,7 +129,7 @@ export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<Sh
   const included = includedCellIndexes({
     cols,
     rows,
-    droppedCells: slot.droppedCells,
+    droppedCells: droppedCellsForAttempt(slot, attempt),
     hasCell: (index) => existsSync(join(workDir, `cell-${index}.png`)),
   });
 

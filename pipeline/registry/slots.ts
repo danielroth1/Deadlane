@@ -34,8 +34,19 @@ export interface SlotSpec {
    * This is registry data, not a `rm` of `cell-<i>.png`. Reprocessing a slot rewrites every
    * non-empty cell, so a deleted file silently comes back; a declared drop survives any
    * re-run of `art:process` and is enforced by the atlas builder.
+   *
+   * Reserve this for a frame that is wrong for the slot itself, whatever attempt drew it.
+   * A cell rejected on one attempt belongs in `droppedCellsByAttempt`: a re-run draws new
+   * cells, and a permanent drop would ban exactly the subjects the re-run exists to supply.
    */
   readonly droppedCells?: readonly number[];
+  /**
+   * Row-major cell indexes rejected in one specific attempt, keyed by attempt number.
+   *
+   * Attempt-scoped on purpose. `buildSheet` unions this with the permanent `droppedCells`
+   * for the attempt it is packing, so attempt 1's rejects never outlive attempt 1.
+   */
+  readonly droppedCellsByAttempt?: Readonly<Partial<Record<number, readonly number[]>>>;
   /** Anything the sheet must get right. Folded into the prompt. */
   readonly emphasis?: readonly string[];
 }
@@ -244,10 +255,14 @@ export const SLOTS: readonly SlotSpec[] = [
     // bus, small lorry, limousine. Cells 1, 2 and 5 fuse three vehicles into a cross;
     // cells 3 and 6 are drawn side-on; cell 9 (declared skiff) is a side-on sedan; cell 10
     // (declared civilian sports car) is a side-view motorboat; and cells 13, 14 and 15 are
-    // side-on watercraft ringed with model-drawn water. Dropping them means no watercraft
-    // ships this round — the water civilian ids stay on the placeholder — but a side-on
-    // truck must not ship in a top-down game.
-    droppedCells: [1, 2, 3, 5, 6, 9, 10, 13, 14, 15],
+    // side-on watercraft ringed with model-drawn water. A side-on truck must not ship in a
+    // top-down game, so these ten are dropped.
+    //
+    // The drop is scoped to attempt 1 on purpose: a retry draws sixteen new cells, and a
+    // permanent drop here would ban the very subjects (wagon, hatchback, van, box truck,
+    // flatbed lorry, skiff, sports car, barge, boat) that attempt exists to supply. The
+    // slot stays open so the retry can be claimed.
+    droppedCellsByAttempt: { 1: [1, 2, 3, 5, 6, 9, 10, 13, 14, 15] },
     emphasis: [
       'muted factory paint colours',
       'lower contrast than any combat vehicle',

@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { includedCellIndexes } from './build-atlas';
+import { droppedCellsForAttempt, includedCellIndexes } from './build-atlas';
+import { SLOTS } from '../registry/slots';
 
 /**
  * A sheet cell can be absent from the atlas for two different reasons.
  *
- *  - The registry declared it dropped (`droppedCells`). That is a decision, and it must
- *    survive any re-run of `art:process`, which rewrites every non-empty PNG.
+ *  - The registry declared it dropped (`droppedCells` for the slot, or
+ *    `droppedCellsByAttempt` for one attempt). That is a decision, and a permanent drop
+ *    must survive any re-run of `art:process`, which rewrites every non-empty PNG.
  *  - The processed PNG is not on disk (`hasCell` returns false). That just means the cell
  *    has not been processed yet.
  *
@@ -78,5 +80,34 @@ describe('includedCellIndexes', () => {
     });
 
     expect(included).toEqual([2, 3]);
+  });
+});
+
+/**
+ * A drop belongs to the attempt that produced the cells, not to the slot forever.
+ *
+ * `art-08-civilians` attempt 1 supplied six usable vehicles out of sixteen cells; a retry
+ * draws sixteen new cells and must be judged on those, not banned by attempt 1's rejects.
+ */
+describe('droppedCellsForAttempt', () => {
+  it('applies a permanent drop to every attempt', () => {
+    expect(droppedCellsForAttempt({ droppedCells: [0] }, 3)).toEqual([0]);
+  });
+
+  it('applies an attempt-scoped drop only to its own attempt', () => {
+    const slot = { droppedCells: [0], droppedCellsByAttempt: { 1: [1, 2] } };
+
+    expect(droppedCellsForAttempt(slot, 1)).toEqual([0, 1, 2]);
+    expect(droppedCellsForAttempt(slot, 2)).toEqual([0]);
+  });
+
+  it('leaves every later art-08 attempt free of attempt-1 rejects', () => {
+    const slot = SLOTS.find((s) => s.id === 'art-08-civilians');
+    expect(slot, 'art-08-civilians must be registered').toBeDefined();
+    if (!slot) return;
+
+    expect(slot.droppedCells ?? []).toEqual([]);
+    expect(droppedCellsForAttempt(slot, 1)).toHaveLength(10);
+    expect(droppedCellsForAttempt(slot, 2)).toEqual([]);
   });
 });

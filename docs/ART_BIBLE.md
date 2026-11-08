@@ -412,14 +412,31 @@ entire civilian pool of the `river` level, so `skiff`, `barge` and `boat` stay o
 procedural placeholder — the gap this sheet was generated to close is still open and needs
 a **new** 4 × 4 attempt, not a re-roll of this one.
 
-The ten failures are declared as `droppedCells` in `pipeline/registry/slots.ts`, which
-`build-atlas` enforces: the cells are excluded even though their processed PNGs are still in
-`pipeline/work/`, so no `rm` step and no ordering constraint is involved. The packed sheet
-carries 6 frames — `civilians/sedan`, `civilians/pickup-truck`, `civilians/taxi`,
-`civilians/city-bus`, `civilians/small-lorry`, `civilians/limousine` — and
+The ten failures are declared as `droppedCellsByAttempt: { 1: [...] }` in
+`pipeline/registry/slots.ts`, which `build-atlas` enforces together with the permanent
+`droppedCells` of other slots: the cells are excluded even though their processed PNGs are
+still in `pipeline/work/`, so no `rm` step and no ordering constraint is involved. The drop
+is **attempt-scoped on purpose** — a retry draws sixteen new cells and must be judged on
+those, so attempt 1's rejects cannot ban the subjects a new attempt exists to supply. The
+packed sheet carries 6 frames — `civilians/sedan`, `civilians/pickup-truck`,
+`civilians/taxi`, `civilians/city-bus`, `civilians/small-lorry`, `civilians/limousine` — and
 `src/content/civilians.json` declares `art` for exactly those six civilians. The other eight
 (`wagon`, `hatchback`, `coupe`, `van`, `box-truck`, `skiff`, `barge`, `boat`) declare no
 `art` and draw their placeholder. No claim beyond these numbers is made here.
+
+**The slot is open, not approved.** After the review the attempt was kept in the ledger and
+`npm run art:reopen -- --slot art-08-civilians` cleared only `status`/`selected`; the seed,
+request id, url and cost of attempt 1 remain for audit and the ledger still reads 13/150. A
+new 4 × 4 attempt can therefore be claimed and judged on its own cells. `art:atlas` only
+packs approved slots, so the six frames above live in the committed manifest until a new
+attempt is selected and packed — re-running `art:atlas` while the slot is open would drop
+them from the manifest, and the content tests fail loudly if that happens.
+
+**This is a blocker for the `river` civilian pool.** `src/levels/types.ts` sets the river
+level's `vehiclePool` to `['skiff', 'barge', 'boat']`, and attempt 1 produced zero
+watercraft — all three cells that were meant to hold one were side-on and ringed with
+model-drawn water. Until a new attempt supplies them, the entire river civilian pool draws
+procedural placeholder art.
 
 ## 6. Motion
 

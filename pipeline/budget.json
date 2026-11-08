@@ -185,8 +185,7 @@
           "costUsd": 0.0084
         }
       ],
-      "status": "approved",
-      "selected": 1
+      "status": "open"
     },
     "art-09-weapons-pickups": {
       "id": "art-09-weapons-pickups",
