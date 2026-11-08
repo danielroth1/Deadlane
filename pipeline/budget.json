@@ -173,8 +173,20 @@
     },
     "art-08-civilians": {
       "id": "art-08-civilians",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1473907335,
+          "promptHash": "6bf270002a6e6e88",
+          "state": "generated",
+          "claimedAt": "2026-11-08T11:33:28.856Z",
+          "requestId": "01a1baef-93d8-7ca1-8a55-47116aeece21",
+          "url": "https://v3b.fal.media/files/b/0ab1a302/Zx30bAWYRQce41fz6uMze_hZDdJLtp.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-09-weapons-pickups": {
       "id": "art-09-weapons-pickups",

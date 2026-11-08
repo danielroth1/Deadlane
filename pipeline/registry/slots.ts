@@ -219,7 +219,7 @@ export const SLOTS: readonly SlotSpec[] = [
     grid: { cols: 4, rows: 4 },
     finalSize: 64,
     subject:
-      'sixteen ordinary civilian road vehicles seen from directly above: sedans, estate wagons, hatchbacks, pickup trucks, a delivery van, a box truck, a taxi, a bus, a camper, a sports car, a small lorry and a limousine',
+      'sixteen ordinary civilian vehicles seen from directly above: sedans, an estate wagon, a hatchback, a pickup truck, a delivery van, a box truck, a taxi, a city bus, a sports car, a small lorry, a flatbed lorry and a limousine on the road, plus three small civilian watercraft — a skiff, a river barge and a pleasure boat — one whole vehicle per cell, every vehicle drawn at the same scale, square to the frame and pointing straight up, centred in its own cell',
     cells: padCells([
       'sedan',
       'sedan alt',
@@ -230,18 +230,25 @@ export const SLOTS: readonly SlotSpec[] = [
       'box truck',
       'taxi',
       'city bus',
-      'camper van',
+      // WO-40: the civilian ids skiff, barge and boat had no cell at all.
+      'skiff',
       'civilian sports car',
       'small lorry',
       'limousine',
-      'minibus',
+      'barge',
       'flatbed lorry',
-      'family suv',
+      'pleasure boat',
     ]),
     emphasis: [
       'muted factory paint colours',
       'lower contrast than any combat vehicle',
       'never looks aggressive',
+      'every vehicle and boat is axis-aligned with its nose or bow pointing up',
+      'no rotation, no lean and no tilt: every subject sits square to the frame',
+      'no side-on view and no three-quarter view, only a pure square-on overhead view',
+      'no water texture, no ripples and no spray around the boats',
+      'no road markings and no terrain behind the vehicles',
+      'no shadow cast onto the background',
     ],
   },
   {

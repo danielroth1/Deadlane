@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T00:44:18.660Z",
+  "generatedAt": "2026-11-08T11:35:02.122Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -174,6 +174,112 @@
           "h": 128
         }
       }
+    },
+    "art-08-civilians": {
+      "slot": "art-08-civilians",
+      "code": "civilians",
+      "cellSize": 64,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-08-civilians.png",
+      "frames": {
+        "civilians/sedan": {
+          "x": 0,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/sedan-alt": {
+          "x": 64,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/estate-wagon": {
+          "x": 128,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/hatchback": {
+          "x": 192,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/pickup-truck": {
+          "x": 0,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/delivery-van": {
+          "x": 64,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/box-truck": {
+          "x": 128,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/taxi": {
+          "x": 192,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/city-bus": {
+          "x": 0,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/skiff": {
+          "x": 64,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/civilian-sports-car": {
+          "x": 128,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/small-lorry": {
+          "x": 192,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/limousine": {
+          "x": 0,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/barge": {
+          "x": 64,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/flatbed-lorry": {
+          "x": 128,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/pleasure-boat": {
+          "x": 192,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        }
+      }
     }
   },
   "sprites": {
@@ -309,6 +415,118 @@
       "y": 128,
       "w": 128,
       "h": 128
+    },
+    "civilians/sedan": {
+      "sheet": "art-08-civilians",
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/sedan-alt": {
+      "sheet": "art-08-civilians",
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/estate-wagon": {
+      "sheet": "art-08-civilians",
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/hatchback": {
+      "sheet": "art-08-civilians",
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/pickup-truck": {
+      "sheet": "art-08-civilians",
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/delivery-van": {
+      "sheet": "art-08-civilians",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/box-truck": {
+      "sheet": "art-08-civilians",
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/taxi": {
+      "sheet": "art-08-civilians",
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/city-bus": {
+      "sheet": "art-08-civilians",
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/skiff": {
+      "sheet": "art-08-civilians",
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/civilian-sports-car": {
+      "sheet": "art-08-civilians",
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/small-lorry": {
+      "sheet": "art-08-civilians",
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/limousine": {
+      "sheet": "art-08-civilians",
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/barge": {
+      "sheet": "art-08-civilians",
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/flatbed-lorry": {
+      "sheet": "art-08-civilians",
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/pleasure-boat": {
+      "sheet": "art-08-civilians",
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
     }
   }
 }

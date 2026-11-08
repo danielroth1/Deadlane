@@ -45,9 +45,16 @@ export class CivilianVehicle {
     this.speedFactor = speedFactor;
 
     const x = laneCenter(road, lane);
-    const artId = `${ART_SLOTS[0]}/${SLOT_BY_SHAPE[def.shape]}`;
 
-    this.sprite = art.imageAny([artId], x, -80, () => ({
+    // An explicit `def.art` names a real manifest frame id and wins outright. The
+    // shape-derived `<slot>/<shape>` candidates stay as a fallback for civilians whose
+    // cell slug happens to match, and the placeholder covers a missing sheet.
+    const artCandidates = [
+      ...(def.art ? [def.art] : []),
+      ...ART_SLOTS.map((slot) => `${slot}/${SLOT_BY_SHAPE[def.shape]}`),
+    ];
+
+    this.sprite = art.imageAny(artCandidates, x, -80, () => ({
       shape: def.shape,
       bodyColor: civilianColorFor(def.id),
       faction: 'civilian',

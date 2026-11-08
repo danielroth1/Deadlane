@@ -137,6 +137,64 @@ describe('civilian content', () => {
   });
 });
 
+/**
+ * The seam between civilian content data and the shipped atlas.
+ *
+ * Same invariant as `enemy art ids` above: `CivilianDef.art` is only a lookup key into
+ * `public/assets/assets.json` → `.sprites`. Rename a sheet cell without updating the
+ * content table and the civilian silently falls back to its procedural placeholder with
+ * nothing failing.
+ */
+describe('civilian art ids', () => {
+  const manifest = JSON.parse(
+    readFileSync(resolve(process.cwd(), 'public/assets/assets.json'), 'utf8'),
+  ) as SpriteManifest;
+
+  const sprites = new Set(Object.keys(manifest.sprites));
+
+  /** Civilians with a declared art id, narrowed to `{ id, art: string }` without assertions. */
+  const declared = CIVILIANS.flatMap((civilian) => {
+    const art = civilian.art;
+    return art === undefined ? [] : [{ id: civilian.id, art }];
+  });
+
+  it('resolves every declared art id in the shipped manifest', () => {
+    expect(declared.length).toBeGreaterThan(0);
+    for (const { id, art } of declared) {
+      expect(
+        sprites.has(art),
+        `${id}.art=${art} is not a key of .sprites in public/assets/assets.json`,
+      ).toBe(true);
+    }
+  });
+
+  it('declares art for every civilian, and only shipped frames', () => {
+    const ids = declared.map(({ id }) => id).sort();
+    expect(ids).toHaveLength(CIVILIANS.length);
+    expect(ids).toEqual([
+      'barge',
+      'boat',
+      'box-truck',
+      'bus',
+      'coupe',
+      'hatchback',
+      'limo',
+      'lorry',
+      'pickup',
+      'sedan',
+      'skiff',
+      'taxi',
+      'van',
+      'wagon',
+    ]);
+  });
+
+  it('uses a distinct cell for every civilian', () => {
+    const arts = declared.map(({ art }) => art);
+    expect(new Set(arts).size).toBe(arts.length);
+  });
+});
+
 describe('weapon content', () => {
   it('covers the three player verbs', () => {
     expect(WEAPONS.map((w) => w.id).sort()).toEqual(['gun', 'oil', 'smoke']);

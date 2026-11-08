@@ -49,6 +49,13 @@ export interface CivilianDef {
   size: number;
   speed: number;
   weight: number;
+  /**
+   * Full manifest sprite id of the form `<sheet-code>/<cell-slug>`, as keyed in
+   * `public/assets/assets.json` → `.sprites`. This is **not** a civilian id: sheet cells
+   * are labelled by hand and rarely match an id verbatim. Omit it and the civilian draws
+   * the procedural placeholder.
+   */
+  readonly art?: string;
 }
 
 export interface WeaponDef {
