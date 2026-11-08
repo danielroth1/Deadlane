@@ -9,6 +9,7 @@ import {
   decode,
   dropExhaustPlume,
   encode,
+  fillCanvas,
   fitCentered,
   keyEnclosedMagenta,
   loadPalette,
@@ -19,6 +20,7 @@ import {
   rotate180,
   seamError,
   subjectBounds,
+  surfaceTileBounds,
   type Palette,
   type Raster,
 } from '../lib/image.js';
@@ -109,6 +111,15 @@ export interface SlotMetrics {
   readonly grid: { cols: number; rows: number };
   readonly finalSize: number;
   readonly cells: CellMetrics[];
+  /**
+   * Indexes of the cells that are full-bleed surface tiles, in ascending order.
+   *
+   * A tile sheet also carries object cells (an arrow, a sign) that are never repeated. The
+   * shipped sheet cannot tell the two apart by inspection — both are rectangular patches
+   * after framing — so the build records the decision here, and `art:validate` gates the
+   * seam only on the frames named here.
+   */
+  readonly surfaceCells?: number[];
   readonly summary: {
     readonly totalCells: number;
     readonly usableCells: number;
@@ -160,6 +171,8 @@ export async function processSlot(
 
   const cells: CellMetrics[] = [];
   const frames = new Map<number, string>();
+  /** Indexes of full-bleed surface tiles: the only cells a seam can be measured on. */
+  const tileFrames: number[] = [];
   const sizes: number[] = [];
 
   for (let index = 0; index < cols * rows; index += 1) {
@@ -177,7 +190,13 @@ export async function processSlot(
     // sprite the game will actually draw.
     const region = cellRotationDegrees(slot.id, index) === 180 ? rotate180(sliced) : sliced;
 
-    const bounds = subjectBounds(region);
+    // A tile cell whose art is a rectangular patch covering most of the cell is a surface:
+    // it is drawn edge to edge and repeats. A cell holding an object drawn on transparency
+    // (an arrow, a sign, a tunnel mouth) is framed like a sprite instead, because stretching
+    // that object to fill a cell would not make it tile.
+    const surfaceBox = slot.target === 'tile' ? surfaceTileBounds(region) : null;
+    const isSurfaceTile = surfaceBox !== null;
+    const bounds = surfaceBox ?? subjectBounds(region);
     const name = slot.cells?.[index] ?? null;
 
     if (!bounds) {
@@ -194,16 +213,27 @@ export async function processSlot(
     }
 
     const trimmed = crop(region, bounds);
-    const canvas = fitCentered(trimmed, slot.finalSize);
+
+    // Surface tiles are the one target that must not be framed like a sprite. A sprite sits
+    // alone in its cell, so `fitCentered`'s 6 % margin and `outline`'s 1 px ring help it
+    // read. A tile is drawn beside copies of itself, so both of those become a lattice of
+    // bare road between every cell: the margin is transparent, and the otherwise-desirable
+    // outline traces the margin. Surfaces therefore fill their cell edge to edge and skip
+    // the outline, at the cost of the trim box's slight aspect ratio.
+    const canvas = isSurfaceTile
+      ? fillCanvas(trimmed, slot.finalSize)
+      : fitCentered(trimmed, slot.finalSize);
 
     const quantised = quantize(canvas, quantisePalette);
-    const outlined = outline(quantised.raster, quantisePalette);
+    const final = isSurfaceTile
+      ? quantised.raster
+      : outline(quantised.raster, quantisePalette);
 
     const framePath = join(workDir, `cell-${index}.png`);
-    await encode(outlined, framePath);
+    await encode(final, framePath);
     frames.set(index, framePath);
 
-    const coverPixels = countOpaque(outlined);
+    const coverPixels = countOpaque(final);
     cells.push({
       index,
       name,
@@ -211,8 +241,9 @@ export async function processSlot(
       fill: coverPixels / (slot.finalSize * slot.finalSize),
       meanPaletteDistance: quantised.meanDistance,
       distinctColors: quantised.distinctColors,
-      symmetry: slot.target === 'tile' ? 0 : mirrorSymmetry(outlined),
+      symmetry: slot.target === 'tile' ? 0 : mirrorSymmetry(final),
     });
+    if (isSurfaceTile) tileFrames.push(index);
     sizes.push(Math.max(bounds.width, bounds.height));
   }
 
@@ -222,7 +253,7 @@ export async function processSlot(
   const meanSymmetry = average(usable.map((c) => c.symmetry));
   const meanDistinctColors = average(usable.map((c) => c.distinctColors));
   const sizeVariance = coefficientOfVariation(sizes);
-  const meanSeamError = await measureSeam(frames);
+  const meanSeamError = await measureSeam(frames, tileFrames);
 
   const expected = cols * rows;
   const score = computeScore({
@@ -243,6 +274,7 @@ export async function processSlot(
     grid: { cols, rows },
     finalSize: slot.finalSize,
     cells,
+    surfaceCells: slot.target === 'tile' ? tileFrames : undefined,
     summary: {
       totalCells: expected,
       usableCells,
@@ -281,15 +313,15 @@ function coefficientOfVariation(values: readonly number[]): number {
   return Math.sqrt(variance) / mean;
 }
 
-async function measureSeam(frames: Map<number, string>): Promise<number> {
-  if (frames.size === 0) return 255;
+async function measureSeam(frames: Map<number, string>, tileFrames: readonly number[]): Promise<number> {
+  if (tileFrames.length === 0) return 255;
   let sum = 0;
-  let n = 0;
-  for (const path of frames.values()) {
+  for (const index of tileFrames) {
+    const path = frames.get(index);
+    if (!path) continue;
     sum += seamError(await decode(path));
-    n += 1;
   }
-  return n === 0 ? 255 : sum / n;
+  return sum / tileFrames.length;
 }
 
 interface ScoreInput {

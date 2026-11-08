@@ -1,10 +1,10 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import sharp from 'sharp';
 import { REPO_ROOT } from '../lib/ledger.js';
 import type { SlotSpec } from '../registry/slots.js';
-import { WORK_ROOT } from './process-slot.js';
+import { WORK_ROOT, metricsPath } from './process-slot.js';
 
 /**
  * Compose selected cell sprites into the sprite sheets the game loads.
@@ -29,6 +29,15 @@ export interface SheetManifest {
   readonly rows: number;
   readonly image: string;
   readonly frames: Record<string, FrameRect>;
+  /**
+   * Frame ids that are full-bleed surface tiles, for tile slots only.
+   *
+   * The seam gate in `art:validate` uses this list: a frame named here is repeated by the
+   * game and must wrap, while an object cell on the same sheet (an arrow, a sign) is drawn
+   * once on transparency and is not tiled. The distinction is decided at process time and
+   * carried here because it cannot be recovered reliably from the packed sheet.
+   */
+  readonly tiles?: string[];
 }
 
 export interface AssetsManifest {
@@ -125,6 +134,8 @@ export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<Sh
 
   const composites: sharp.OverlayOptions[] = [];
   const frames: Record<string, FrameRect> = {};
+  const tiles: string[] = [];
+  const surfaceCells = new Set(readSurfaceCells(slot, attempt));
 
   const included = includedCellIndexes({
     cols,
@@ -144,7 +155,9 @@ export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<Sh
       top: y,
     });
 
-    frames[frameId(slot, index)] = { x, y, w: size, h: size };
+    const id = frameId(slot, index);
+    frames[id] = { x, y, w: size, h: size };
+    if (surfaceCells.has(index)) tiles.push(id);
   }
 
   if (composites.length === 0) return null;
@@ -174,6 +187,7 @@ export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<Sh
     rows,
     image: `assets/sheets/${imageName}`,
     frames,
+    ...(tiles.length > 0 ? { tiles } : {}),
   };
 
   await writeFile(
@@ -183,6 +197,23 @@ export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<Sh
   );
 
   return manifest;
+}
+
+/**
+ * Cells the processed attempt declared as full-bleed surface tiles.
+ *
+ * Returns an empty list when there is no metrics file (a cell set packed by hand) so an
+ * older work directory still builds; the seam gate then simply has nothing to check.
+ */
+function readSurfaceCells(slot: SlotSpec, attempt: number): readonly number[] {
+  const path = metricsPath(slot.id, attempt);
+  if (!existsSync(path)) return [];
+  try {
+    const metrics = JSON.parse(readFileSync(path, 'utf8')) as { surfaceCells?: number[] };
+    return metrics.surfaceCells ?? [];
+  } catch {
+    return [];
+  }
 }
 
 /**

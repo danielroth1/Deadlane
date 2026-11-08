@@ -76,13 +76,21 @@ run(async () => {
           failures.push(`${id}: ${offPalette} off-palette pixel(s) (${(ratio * 100).toFixed(2)}%)`);
         }
       }
+
+      // Only a full-bleed surface frame is ever repeated, so only it can seam. The build
+      // records those frames in `sheet.tiles`; an object cell (a painted arrow, a sign) is
+      // drawn once on transparency and is not tiled. A tile sheet that declares none of
+      // its frames as surface tiles cannot be gated at all, so it is a failure, not a pass.
+      if (spec?.target === 'tile' && sheet.tiles?.includes(id)) {
+        const err = seamError(cell);
+        if (err > 72) {
+          failures.push(`${id}: tiles do not wrap (seam error ${err.toFixed(1)} > 72)`);
+        }
+      }
     }
 
-    if (spec?.target === 'tile') {
-      const err = seamError(raster);
-      if (err > 72) {
-        failures.push(`${slotId}: tiles do not wrap (seam error ${err.toFixed(1)} > 72)`);
-      }
+    if (spec?.target === 'tile' && (sheet.tiles === undefined || sheet.tiles.length === 0)) {
+      failures.push(`${slotId}: tile sheet declares no surface frames — rebuild with art:atlas`);
     }
   }
 

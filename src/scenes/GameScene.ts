@@ -98,6 +98,14 @@ export interface RunDebugState {
   readonly muted: boolean;
   readonly enemies: number;
   readonly civilians: number;
+  /**
+   * The unrounded scroll cursor in pixels — the exact value `RoadSystem.render` receives.
+   *
+   * `hud.distance` is metres rounded to a whole metre (25 px), which is right for the HUD
+   * and useless for a spec that has to relate two rendered frames to how far the world
+   * moved. Read-only, like the rest of this surface.
+   */
+  readonly worldDistance: number;
   /** The card on screen right now, or null once play has resumed. */
   readonly sectorCard: SectorCardState | null;
   /** The most recent card this run has presented, whether or not it is still up. */
@@ -273,6 +281,7 @@ export class GameScene extends Phaser.Scene {
       muted: this.audio?.isMuted ?? false,
       enemies: this.enemies.length,
       civilians: this.civilians.length,
+      worldDistance: this.distance,
       sectorCard: this.sectorCard,
       lastSectorCard: this.lastSectorCard,
       lastScoreEvent: this.lastScoreEvent,

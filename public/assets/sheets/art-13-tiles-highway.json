@@ -102,5 +102,17 @@
       "w": 32,
       "h": 32
     }
-  }
+  },
+  "tiles": [
+    "tiles-highway/asphalt-plain",
+    "tiles-highway/asphalt-lane-dash",
+    "tiles-highway/asphalt-edge-line",
+    "tiles-highway/asphalt-double-line",
+    "tiles-highway/shoulder-asphalt",
+    "tiles-highway/shoulder-gravel",
+    "tiles-highway/grass-verge",
+    "tiles-highway/oil-stain-overlay",
+    "tiles-highway/road-seam",
+    "tiles-highway/cats-eye"
+  ]
 }

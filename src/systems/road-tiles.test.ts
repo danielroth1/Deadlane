@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GAME, ROAD } from '@/config';
 import type { RoadProfile } from '@/levels/types';
 import {
+  DASH_SAMPLE_X,
   DASH_WIDTH,
   SHOULDER_WIDTH,
   TILE_SIZE,
@@ -85,7 +86,38 @@ describe('planHighwayTiles', () => {
       const lane = index + 1;
       expect(dash.x).toBe(HIGHWAY.left + lane * HIGHWAY.laneWidth - DASH_WIDTH / 2);
       expect(dash.width).toBe(DASH_WIDTH);
+      expect(dash.sourceX).toBe(DASH_SAMPLE_X);
+      // 1:1, not stretched: the dash column keeps its own pixel size (ART_BIBLE §2).
+      expect(dash.sourceWidth).toBe(DASH_WIDTH);
     });
+  });
+
+  it('samples every band 1:1 inside its own frame', () => {
+    for (const band of planHighwayTiles(HIGHWAY, 0)) {
+      expect(band.sourceX).toBeGreaterThanOrEqual(0);
+      expect(band.sourceWidth).toBeGreaterThan(0);
+      expect(band.sourceX + band.sourceWidth).toBeLessThanOrEqual(TILE_SIZE);
+    }
+  });
+
+  it('scrolls the tile pattern down the screen as distance grows', () => {
+    // Sign pin: Phaser feeds `tilePositionY` into the quad's top v-coordinate, so a
+    // positive value samples further down the texture and moves the pattern up. The world
+    // scrolls down (world y = player.y + distance - at), so the offset must be negative.
+    // Before this test the planner returned the positive wrap, the tile layer scrolled
+    // against the traffic, and no test could see it.
+    const at0 = planHighwayTiles(HIGHWAY, 0)[0]!.offset;
+    const at4 = planHighwayTiles(HIGHWAY, 4)[0]!.offset;
+
+    expect(at0).toBeCloseTo(0, 10);
+    expect(at4).toBeLessThan(at0);
+    expect(at4).toBeCloseTo(-4, 10);
+    expect(planHighwayTiles(HIGHWAY, TILE_SIZE + 1)[0]!.offset).toBeCloseTo(-1, 10);
+
+    for (const band of planHighwayTiles(HIGHWAY, 17.5)) {
+      expect(band.offset).toBeLessThanOrEqual(0);
+      expect(band.offset).toBeGreaterThan(-TILE_SIZE);
+    }
   });
 
   it('scrolls every band continuously with distance', () => {
@@ -98,23 +130,25 @@ describe('planHighwayTiles', () => {
         const next = after[index];
         expect(next).toBeDefined();
         expect(next?.kind).toBe(band.kind);
-        expect(next?.offset).toBeCloseTo(tileOffset(distance + 0.5), 10);
+        expect(next?.offset).toBeCloseTo(-tileOffset(distance + 0.5), 10);
       });
     }
   });
 
   it('never lets band edges drift with distance', () => {
-    const reference = planHighwayTiles(HIGHWAY, 0).map(({ kind, x, width, sourceX, scaleX }) => ({
-      kind,
-      x,
-      width,
-      sourceX,
-      scaleX,
-    }));
+    const reference = planHighwayTiles(HIGHWAY, 0).map(
+      ({ kind, x, width, sourceX, sourceWidth }) => ({ kind, x, width, sourceX, sourceWidth }),
+    );
 
     for (const distance of DISTANCES) {
       const bands = planHighwayTiles(HIGHWAY, distance).map(
-        ({ kind, x, width, sourceX, scaleX }) => ({ kind, x, width, sourceX, scaleX }),
+        ({ kind, x, width, sourceX, sourceWidth }) => ({
+          kind,
+          x,
+          width,
+          sourceX,
+          sourceWidth,
+        }),
       );
       expect(bands).toEqual(reference);
     }
@@ -135,7 +169,7 @@ describe('planHighwayTiles', () => {
         expect(next?.x).toBe(band.x);
         expect(next?.width).toBe(band.width);
         expect(next?.sourceX).toBe(band.sourceX);
-        expect(next?.scaleX).toBe(band.scaleX);
+        expect(next?.sourceWidth).toBe(band.sourceWidth);
         expect(next?.offset).toBeCloseTo(band.offset, 9);
       });
     }

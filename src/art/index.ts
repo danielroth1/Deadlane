@@ -24,6 +24,8 @@ export interface AssetsManifest {
       rows: number;
       image: string;
       frames: Record<string, { x: number; y: number; w: number; h: number }>;
+      /** Frame ids on a tile sheet that are full-bleed surfaces and may be repeated. */
+      tiles?: string[];
     }
   >;
   sprites: Record<string, { sheet: string; x: number; y: number; w: number; h: number }>;

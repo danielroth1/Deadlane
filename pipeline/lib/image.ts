@@ -625,22 +625,16 @@ export function alphaBounds(raster: Raster, threshold = 8): Box | null {
 export const MIN_SUBJECT_COMPONENT_AREA = 16;
 
 /**
- * Trim box for a sprite: like {@link alphaBounds}, but each 4-connected component is
- * measured first and components smaller than `minComponentArea` are ignored.
+ * Union and largest box over a raster's 4-connected opaque components.
  *
- * Connectivity is 4-way on purpose. An 8-way fill would join a speck that merely touches
- * the subject diagonally onto the subject component, which is exactly the case the area
- * floor is meant to reject.
- *
- * If *every* component is below the floor, the largest one is still returned: a cell is
- * never reported empty merely because its content is small, and the pipeline degrades to
- * the old behaviour rather than discarding a cell.
+ * Shared by {@link subjectBounds} and {@link dominantComponent} so the two trimming rules
+ * cannot drift apart.
  */
-export function subjectBounds(
+function scanComponents(
   raster: Raster,
-  threshold = 8,
-  minComponentArea = MIN_SUBJECT_COMPONENT_AREA,
-): Box | null {
+  threshold: number,
+  minComponentArea: number,
+): { readonly union: Box | null; readonly largest: Box | null; readonly largestArea: number } {
   const { width, height, data } = raster;
   const seen = new Uint8Array(width * height);
   const stack = new Int32Array(width * height);
@@ -713,8 +707,132 @@ export function subjectBounds(
     if (maxY > bottom) bottom = maxY;
   }
 
-  if (!kept) return largestBox;
+  const union = kept ? { left, top, width: right - left + 1, height: bottom - top + 1 } : largestBox;
+  return { union, largest: largestBox, largestArea };
+}
+
+/**
+ * Trim box for a sprite: like {@link alphaBounds}, but each 4-connected component is
+ * measured first and components smaller than `minComponentArea` are ignored.
+ *
+ * Connectivity is 4-way on purpose. An 8-way fill would join a speck that merely touches
+ * the subject diagonally onto the subject component, which is exactly the case the area
+ * floor is meant to reject.
+ *
+ * If *every* component is below the floor, the largest one is still returned: a cell is
+ * never reported empty merely because its content is small, and the pipeline degrades to
+ * the old behaviour rather than discarding a cell.
+ */
+export function subjectBounds(
+  raster: Raster,
+  threshold = 8,
+  minComponentArea = MIN_SUBJECT_COMPONENT_AREA,
+): Box | null {
+  return scanComponents(raster, threshold, minComponentArea).union;
+}
+
+/**
+ * Largest opaque component of a cell, with the share of the cell it covers.
+ *
+ * This is the right trim for a **tile**, and `subjectBounds` is not. The union rule exists
+ * so a sprite's detached details (a lamp, a shadow) stay inside its cell, but a tile has no
+ * detached details worth keeping: anything else in the cell is a speck. On art-13 attempt 1
+ * a 16 px speck twelve pixels to the left of the asphalt stretched the union box by 12 px,
+ * so scaling that box to a 32 px cell shrank the tile and pushed it off-centre — the trim
+ * reported a 3 % opaque left edge on the very tile meant to meet its neighbour there.
+ *
+ * `coverage` is what separates a surface tile (most of the cell is art) from an object cell
+ * (an arrow, a sign, an overlay drawn small in the middle of the cell). See
+ * {@link TILE_MIN_COVERAGE}.
+ */
+export interface DominantComponent {
+  readonly box: Box;
+  /** Opaque pixels of the component / raster pixels, 0–1. */
+  readonly coverage: number;
+}
+
+export function dominantComponent(raster: Raster, threshold = 8): DominantComponent | null {
+  const { largest, largestArea } = scanComponents(raster, threshold, MIN_SUBJECT_COMPONENT_AREA);
+  if (!largest) return null;
+  return { box: largest, coverage: largestArea / (raster.width * raster.height) };
+}
+
+/**
+ * Share of its cell a surface tile must cover, and how much of its own trim box it must fill.
+ *
+ * Both are needed, and measured on art-13 attempt 1 (4x4 cells of 256 px):
+ *
+ * | family                       | cell coverage  | trim-box fill |
+ * | ---------------------------- | -------------- | ------------- |
+ * | asphalt / lane / grass tiles | 0.47 – 0.70    | 0.95 – 0.99   |
+ * | tunnel mouth, bridge plate   | 0.36 – 0.42    | 0.65 – 0.82   |
+ * | chevron sign, painted arrow  | 0.13 – 0.33    | 0.56 – 0.98   |
+ *
+ * Coverage alone cannot separate the chevron sign (a small rectangular plate) from a tile,
+ * and rectangularity alone cannot separate the bridge plate (a large ragged patch) from
+ * one. Together they leave an empty band between the families on both axes.
+ */
+export const TILE_MIN_COVERAGE = 0.45;
+export const TILE_MIN_RECTANGULARITY = 0.9;
+
+/**
+ * Shrink a trim box until each side is mostly opaque.
+ *
+ * Even a tile's own bounding box can be stretched by a one-pixel lint that survived the
+ * component area floor: on art-13 cell 0 the box reached a single pixel at x = 0 and two at
+ * y = 0, which at 32 px becomes an almost fully transparent left column and top row — a
+ * dotted lattice after tiling. Each edge is therefore advanced until at least
+ * `minCoverage` of it is opaque, so the cell the tile is scaled into is one the tile really
+ * occupies.
+ */
+export function shrinkToSolidEdges(raster: Raster, box: Box, minCoverage = 0.9): Box {
+  const { width, height } = raster;
+  const opaque = (x: number, y: number): boolean =>
+    x >= 0 && y >= 0 && x < width && y < height && raster.data[(y * width + x) * 4 + 3]! > 8;
+
+  let left = box.left;
+  let top = box.top;
+  let right = box.left + box.width - 1;
+  let bottom = box.top + box.height - 1;
+
+  const columnCoverage = (x: number): number => {
+    let opaquePixels = 0;
+    for (let y = top; y <= bottom; y += 1) if (opaque(x, y)) opaquePixels += 1;
+    return opaquePixels / Math.max(1, bottom - top + 1);
+  };
+  const rowCoverage = (y: number): number => {
+    let opaquePixels = 0;
+    for (let x = left; x <= right; x += 1) if (opaque(x, y)) opaquePixels += 1;
+    return opaquePixels / Math.max(1, right - left + 1);
+  };
+
+  while (left < right && columnCoverage(left) < minCoverage) left += 1;
+  while (right > left && columnCoverage(right) < minCoverage) right -= 1;
+  while (top < bottom && rowCoverage(top) < minCoverage) top += 1;
+  while (bottom > top && rowCoverage(bottom) < minCoverage) bottom -= 1;
+
   return { left, top, width: right - left + 1, height: bottom - top + 1 };
+}
+
+/**
+ * Trim box for a cell that is a full-bleed surface tile, or null when it is an object.
+ *
+ * A tile sheet also carries object cells — an arrow, a sign, a tunnel mouth — drawn on
+ * transparency and never repeated. Those must be framed like sprites: stretching them to
+ * fill a cell does not make them tile. This function decides which is which from how the
+ * cell is drawn (see {@link TILE_MIN_COVERAGE} and {@link TILE_MIN_RECTANGULARITY}) and
+ * returns the tile's rectangle for {@link fillCanvas}.
+ */
+export function surfaceTileBounds(raster: Raster, threshold = 8): Box | null {
+  const dominant = dominantComponent(raster, threshold);
+  if (!dominant) return null;
+  if (dominant.coverage < TILE_MIN_COVERAGE) return null;
+
+  const componentArea = dominant.coverage * raster.width * raster.height;
+  const boxArea = dominant.box.width * dominant.box.height;
+  if (componentArea / boxArea < TILE_MIN_RECTANGULARITY) return null;
+
+  return shrinkToSolidEdges(raster, dominant.box);
 }
 
 /**
@@ -763,6 +881,36 @@ export function fitCentered(source: Raster, canvasSize: number, maxFill = 0.94):
       const sx = Math.min(source.width - 1, Math.floor((x * source.width) / targetW));
       const si = (sy * source.width + sx) * 4;
       const di = ((offY + y) * canvasSize + offX + x) * 4;
+      out[di] = source.data[si]!;
+      out[di + 1] = source.data[si + 1]!;
+      out[di + 2] = source.data[si + 2]!;
+      out[di + 3] = source.data[si + 3]!;
+    }
+  }
+
+  return { width: canvasSize, height: canvasSize, data: out };
+}
+
+/**
+ * Nearest-neighbour scale of a tile subject so it fills its whole cell, edge to edge.
+ *
+ * A tile is laid beside copies of itself, so a transparent margin in the cell becomes a
+ * strip of drawn road showing between every tile — a lattice on a 32 px grid. The generator
+ * draws each tile only approximately square (art-13 attempt 1 ranges 0.68:1 to 1.02:1), so
+ * aspect ratio is deliberately not preserved: the trim box is mapped onto the full cell.
+ * Preserving aspect would reopen the margin this function exists to close, whereas the
+ * distortion at 32 px is a couple of pixels and the tile is noise, not a subject with a
+ * recognisable proportion.
+ */
+export function fillCanvas(source: Raster, canvasSize: number): Raster {
+  const out = Buffer.alloc(canvasSize * canvasSize * 4);
+
+  for (let y = 0; y < canvasSize; y += 1) {
+    const sy = Math.min(source.height - 1, Math.floor((y * source.height) / canvasSize));
+    for (let x = 0; x < canvasSize; x += 1) {
+      const sx = Math.min(source.width - 1, Math.floor((x * source.width) / canvasSize));
+      const si = (sy * source.width + sx) * 4;
+      const di = (y * canvasSize + x) * 4;
       out[di] = source.data[si]!;
       out[di + 1] = source.data[si + 1]!;
       out[di + 2] = source.data[si + 2]!;
@@ -921,28 +1069,52 @@ export function mirrorSymmetry(raster: Raster): number {
   return opaque === 0 ? 0 : matching / opaque;
 }
 
-/** Mean absolute difference between opposing edges, 0–255. Lower means more tileable. */
+/** Share of an edge that must be opaque before a seam can be judged at all. */
+export const MIN_SEAM_COVERAGE = 0.5;
+
+/**
+ * Mean absolute difference between opposing tile edges, 0–255. Lower means more tileable.
+ *
+ * A tile is drawn beside copies of itself, so column 0 of one copy abuts column `width - 1`
+ * of the copy before it: those two columns must describe the same pattern or the repeat is
+ * a visible join. Only pairs where **both** sides carry an opaque pixel are compared. A
+ * transparent pixel on the border is absence of tile, not the colour black, and treating it
+ * as RGB 0 is how a cell with a 1 px transparent margin used to score a seam error of 0
+ * while painting a lattice of bare road between every tile.
+ *
+ * That is also why coverage is checked: an edge that is mostly transparent cannot be
+ * judged, and is reported as a total seam failure rather than a free pass. A tight tile
+ * whose subject genuinely reaches its own border still has every row comparable.
+ */
 export function seamError(raster: Raster): number {
   const { width, height, data } = raster;
-  let vertical = 0;
-  let horizontal = 0;
 
+  let frameDelta = 0;
+  let framePairs = 0;
   for (let y = 0; y < height; y += 1) {
-    for (let c = 0; c < 3; c += 1) {
-      const l = data[(y * width + 0) * 4 + c]!;
-      const r = data[(y * width + width - 1) * 4 + c]!;
-      vertical += Math.abs(l - r);
-    }
+    const left = (y * width) * 4;
+    const right = (y * width + width - 1) * 4;
+    if (data[left + 3]! === 0 || data[right + 3]! === 0) continue;
+    for (let c = 0; c < 3; c += 1) frameDelta += Math.abs(data[left + c]! - data[right + c]!);
+    framePairs += 1;
   }
 
+  let rowDelta = 0;
+  let rowPairs = 0;
   for (let x = 0; x < width; x += 1) {
-    for (let c = 0; c < 3; c += 1) {
-      const t = data[(0 * width + x) * 4 + c]!;
-      const b = data[((height - 1) * width + x) * 4 + c]!;
-      horizontal += Math.abs(t - b);
-    }
+    const top = x * 4;
+    const bottom = ((height - 1) * width + x) * 4;
+    if (data[top + 3]! === 0 || data[bottom + 3]! === 0) continue;
+    for (let c = 0; c < 3; c += 1) rowDelta += Math.abs(data[top + c]! - data[bottom + c]!);
+    rowPairs += 1;
   }
 
-  const samples = height * 3 + width * 3;
-  return samples === 0 ? 0 : (vertical + horizontal) / samples;
+  const frameCoverage = height === 0 ? 0 : framePairs / height;
+  const rowCoverage = width === 0 ? 0 : rowPairs / width;
+  const frameError = frameCoverage < MIN_SEAM_COVERAGE ? 255 : frameDelta / (framePairs * 3);
+  const rowError = rowCoverage < MIN_SEAM_COVERAGE ? 255 : rowDelta / (rowPairs * 3);
+
+  // The worse axis decides: a tile that wraps vertically but leaves a lattice horizontally
+  // is not seamless, and averaging the two would hide it.
+  return Math.max(frameError, rowError);
 }

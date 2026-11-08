@@ -99,6 +99,45 @@ function highwayTileFrames(art: Art): HighwayTileFrames | null {
   return { surface, dash, shoulder, terrain };
 }
 
+/**
+ * Register (once) and return the frame that shows a band's 1:1 window of its cell.
+ *
+ * A `TileSprite` repeats its whole frame, so repeating a 32 px cell across a wide band
+ * replays every border column of the cell as a vertical line. Registering a sub-frame of
+ * the window makes the repeat the window itself, at its own pixel size — no scaling. The
+ * frame lives on the shared sheet texture and is named after its rect, so a restarted run
+ * reuses it instead of leaking one frame per band per scene.
+ */
+function windowFrame(
+  scene: Phaser.Scene,
+  frame: SpriteRef,
+  band: HighwayTileBandPlan,
+): string | number {
+  const index = frame.frame ?? 0;
+  const texture = scene.textures.get(frame.key);
+  // Addressed as a string so frame 0 does not fall into `Texture.get(0)`'s falsy-name
+  // branch, which resolves `firstFrame` instead of the frame asked for.
+  const base = texture.get(String(index));
+
+  if (band.sourceX === 0 && band.sourceWidth >= base.cutWidth) return index;
+
+  const name = `${index}:${band.sourceX}+${band.sourceWidth}`;
+  if (texture.has(name)) return name;
+
+  // `cutX/cutY/cutWidth/cutHeight` are the source rectangle. `x/y` are render offsets and
+  // are zero on every untrimmed spritesheet frame — using them samples the sheet's
+  // top-left cell for every band, which is exactly what the first render did.
+  const added = texture.add(
+    name,
+    base.sourceIndex,
+    base.cutX + band.sourceX,
+    base.cutY,
+    band.sourceWidth,
+    base.cutHeight,
+  );
+  return added ? name : index;
+}
+
 /** The tiled highway surface, scrolled by the same distance the drawn road uses. */
 class HighwayTileLayer {
   private readonly road: RoadProfile;
@@ -122,12 +161,10 @@ class HighwayTileLayer {
       band.width,
       GAME.height,
       frame.key,
-      frame.frame,
+      windowFrame(scene, frame, band),
     );
 
     sprite.setOrigin(0, 0).setDepth(1);
-    sprite.tileScaleX = band.scaleX;
-    sprite.tilePositionX = band.sourceX;
     sprite.tilePositionY = band.offset;
 
     return sprite;
@@ -167,8 +204,8 @@ export class RoadSystem {
     this.theme = THEMES[type];
 
     // Three layers, back to front: drawn fills, generated tiles, drawn markings. The
-    // fills stay underneath so the transparent margins of the processed tiles reveal
-    // asphalt and grass instead of blanking the road.
+    // fills stay underneath so the road still reads when a sheet is missing or rejected,
+    // and so a band that has no frame for one lane divider cannot leave a hole.
     this.base = scene.add.graphics().setDepth(0);
     const frames = type === 'highway' ? highwayTileFrames(art) : null;
     this.tiles = frames ? new HighwayTileLayer(scene, road, frames) : null;
