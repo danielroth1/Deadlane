@@ -1,0 +1,167 @@
+{
+  "slotId": "art-12-props-b",
+  "attempt": 1,
+  "sourcePath": "pipeline/raw/art-12-props-b/attempt-1.png",
+  "processedAt": "2026-11-08T12:22:44.371Z",
+  "grid": {
+    "cols": 4,
+    "rows": 4
+  },
+  "finalSize": 32,
+  "cells": [
+    {
+      "index": 0,
+      "name": "boulder",
+      "empty": false,
+      "fill": 0.63671875,
+      "meanPaletteDistance": 38.32611644266863,
+      "distinctColors": 9,
+      "symmetry": 0.9008746355685131
+    },
+    {
+      "index": 1,
+      "name": "rock pile",
+      "empty": false,
+      "fill": 0.4091796875,
+      "meanPaletteDistance": 39.64957686661576,
+      "distinctColors": 8,
+      "symmetry": 0.8539823008849557
+    },
+    {
+      "index": 2,
+      "name": "dry bush",
+      "empty": false,
+      "fill": 0.3896484375,
+      "meanPaletteDistance": 67.69126359324956,
+      "distinctColors": 8,
+      "symmetry": 0.6556016597510373
+    },
+    {
+      "index": 3,
+      "name": "cactus",
+      "empty": false,
+      "fill": 0.3564453125,
+      "meanPaletteDistance": 61.298019857391594,
+      "distinctColors": 9,
+      "symmetry": 0.7136150234741784
+    },
+    {
+      "index": 4,
+      "name": "crater",
+      "empty": false,
+      "fill": 0.4560546875,
+      "meanPaletteDistance": 36.05173700471811,
+      "distinctColors": 9,
+      "symmetry": 0.8755020080321285
+    },
+    {
+      "index": 5,
+      "name": "palm tree",
+      "empty": false,
+      "fill": 0.47265625,
+      "meanPaletteDistance": 36.305338799870405,
+      "distinctColors": 9,
+      "symmetry": 0.8615384615384616
+    },
+    {
+      "index": 6,
+      "name": "burnt tree",
+      "empty": false,
+      "fill": 0.28515625,
+      "meanPaletteDistance": 58.34172746518665,
+      "distinctColors": 9,
+      "symmetry": 0.7485029940119761
+    },
+    {
+      "index": 7,
+      "name": "buoy",
+      "empty": false,
+      "fill": 0.41796875,
+      "meanPaletteDistance": 69.54250382304154,
+      "distinctColors": 10,
+      "symmetry": 0.7327935222672065
+    },
+    {
+      "index": 8,
+      "name": "reed bed",
+      "empty": false,
+      "fill": 0.328125,
+      "meanPaletteDistance": 68.75296607533986,
+      "distinctColors": 7,
+      "symmetry": 0.3603238866396761
+    },
+    {
+      "index": 9,
+      "name": "wooden pier",
+      "empty": false,
+      "fill": 0.3193359375,
+      "meanPaletteDistance": 50.83619348794111,
+      "distinctColors": 9,
+      "symmetry": 0.8268156424581006
+    },
+    {
+      "index": 10,
+      "name": "concrete pillar",
+      "empty": false,
+      "fill": 0.4697265625,
+      "meanPaletteDistance": 57.98079720940683,
+      "distinctColors": 12,
+      "symmetry": 0.8643410852713178
+    },
+    {
+      "index": 11,
+      "name": "rubble pile",
+      "empty": false,
+      "fill": 0.505859375,
+      "meanPaletteDistance": 122.36610593499924,
+      "distinctColors": 13,
+      "symmetry": 0.8700361010830325
+    },
+    {
+      "index": 12,
+      "name": "oil pump",
+      "empty": false,
+      "fill": 0.431640625,
+      "meanPaletteDistance": 49.24293268407544,
+      "distinctColors": 9,
+      "symmetry": 0.6309963099630996
+    },
+    {
+      "index": 13,
+      "name": "pipeline segment",
+      "empty": false,
+      "fill": 0.212890625,
+      "meanPaletteDistance": 43.70005496966727,
+      "distinctColors": 10,
+      "symmetry": 0.8956521739130435
+    },
+    {
+      "index": 14,
+      "name": "water tower",
+      "empty": false,
+      "fill": 0.3115234375,
+      "meanPaletteDistance": 50.39017113722916,
+      "distinctColors": 10,
+      "symmetry": 0.99375
+    },
+    {
+      "index": 15,
+      "name": "wrecked car",
+      "empty": false,
+      "fill": 0.373046875,
+      "meanPaletteDistance": 51.43300854855106,
+      "distinctColors": 14,
+      "symmetry": 0.8104265402843602
+    }
+  ],
+  "summary": {
+    "totalCells": 16,
+    "usableCells": 16,
+    "meanPaletteDistance": 56.36928211874701,
+    "sizeVariance": 0.08262546683516356,
+    "meanSymmetry": 0.7871720215713182,
+    "meanSeamError": 0,
+    "meanDistinctColors": 9.6875,
+    "score": 85.43
+  }
+}

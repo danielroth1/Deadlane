@@ -240,8 +240,20 @@
     },
     "art-12-props-b": {
       "id": "art-12-props-b",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 425036628,
+          "promptHash": "4107726641340a00",
+          "state": "generated",
+          "claimedAt": "2026-11-08T12:21:10.660Z",
+          "requestId": "01a1bb1b-33f4-71b1-afcd-f462af5cc7fb",
+          "url": "https://v3b.fal.media/files/b/0ab1a420/KBe6Gge6E2unSP7oJah9h_QZTYHlK2.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-13-tiles-highway": {
       "id": "art-13-tiles-highway",

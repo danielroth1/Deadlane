@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { DIFFICULTY, GAME, LEVEL, PLAYER, SCORE, SPAWN, SPEED, WEAPON_FX } from '@/config';
 import { PALETTE } from '@/palette';
 import { Art } from '@/art';
-import { EFFECT_ART, pickupArtIds } from '@/art/ids';
+import { EFFECT_ART, pickupArtIds, propArtIds } from '@/art/ids';
 import { flatTexture, pickupTexture, propTexture } from '@/art/placeholders';
 import { PlayerVehicle, displayScale } from '@/entities/player';
 import { EnemyVehicle } from '@/entities/enemy';
@@ -465,8 +465,13 @@ export class GameScene extends Phaser.Scene {
         break;
       }
       case 'prop': {
-        const key = propTexture(this, event.prop, 'rust');
-        const sprite = this.add.image(laneCenter(road, event.lane), -60, key).setDepth(20);
+        // The generated cell wins; the cone is only drawn when neither prop sheet has a
+        // frame for this id, so a failed art slot never blocks a run.
+        const sprite = this.art
+          .imageFrom(propArtIds(event.prop), laneCenter(road, event.lane), -60, () =>
+            propTexture(this, event.prop, 'rust'),
+          )
+          .setDepth(20);
         this.props.push({ sprite, at: event.at });
         break;
       }
