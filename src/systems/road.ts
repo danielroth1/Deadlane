@@ -1,15 +1,20 @@
 import Phaser from 'phaser';
+import type { Art, SpriteRef } from '@/art';
+import { HIGHWAY_TILE_ART, type HighwayTileKind } from '@/art/ids';
 import { GAME } from '@/config';
 import { PALETTE } from '@/palette';
 import type { LevelType, RoadProfile } from '@/levels/types';
+import { planHighwayTiles, type HighwayTileBandPlan } from './road-tiles';
 
 /**
- * Procedural road renderer.
+ * Procedural road renderer with an optional tiled surface.
  *
- * The road is drawn from the locked palette rather than from tiles, for two reasons: the
- * game must look correct before any AI tiles exist, and a drawn road scrolls at any speed
- * without texture seams. When `art-13..art-18` are approved, `tileTexture` can be layered
- * underneath without changing any of this geometry.
+ * The road is drawn from the locked palette as the baseline: the game must look correct
+ * before any AI tiles exist, and a drawn road scrolls at any speed without texture seams.
+ * When `art-13-tiles-highway` is approved, a tile layer is inserted between the fills and
+ * the markings. The profile geometry (`left`, `width`, `lanes`, `laneWidth`) stays
+ * authoritative in both modes — the tile planner only chooses where frames sit, never
+ * where the road is.
  */
 
 interface RoadTheme {
@@ -67,8 +72,88 @@ const THEMES: Readonly<Record<LevelType, RoadTheme>> = {
 const DASH_LENGTH = 22;
 const DASH_GAP = 42;
 
+type HighwayTileFrames = Readonly<Record<HighwayTileKind, SpriteRef>>;
+
+/** First generated frame for a role, or null when the sheet has none. */
+function firstTileFrame(art: Art, kind: HighwayTileKind): SpriteRef | null {
+  for (const id of HIGHWAY_TILE_ART[kind]) {
+    const ref = art.frameFor(id);
+    if (ref) return ref;
+  }
+  return null;
+}
+
+/**
+ * Frames for every role, or null if any role is missing.
+ *
+ * All-or-nothing is deliberate: a partly tiled road would show one band of generated art
+ * against three drawn bands. A sheet missing one role steps back to the drawn theme.
+ */
+function highwayTileFrames(art: Art): HighwayTileFrames | null {
+  const surface = firstTileFrame(art, 'surface');
+  const dash = firstTileFrame(art, 'dash');
+  const shoulder = firstTileFrame(art, 'shoulder');
+  const terrain = firstTileFrame(art, 'terrain');
+
+  if (!surface || !dash || !shoulder || !terrain) return null;
+  return { surface, dash, shoulder, terrain };
+}
+
+/** The tiled highway surface, scrolled by the same distance the drawn road uses. */
+class HighwayTileLayer {
+  private readonly road: RoadProfile;
+  private readonly sprites: Phaser.GameObjects.TileSprite[];
+
+  constructor(scene: Phaser.Scene, road: RoadProfile, frames: HighwayTileFrames) {
+    this.road = road;
+    this.sprites = planHighwayTiles(road, 0).map((band) =>
+      this.createSprite(scene, band, frames[band.kind]),
+    );
+  }
+
+  private createSprite(
+    scene: Phaser.Scene,
+    band: HighwayTileBandPlan,
+    frame: SpriteRef,
+  ): Phaser.GameObjects.TileSprite {
+    const sprite = scene.add.tileSprite(
+      band.x,
+      0,
+      band.width,
+      GAME.height,
+      frame.key,
+      frame.frame,
+    );
+
+    sprite.setOrigin(0, 0).setDepth(1);
+    sprite.tileScaleX = band.scaleX;
+    sprite.tilePositionX = band.sourceX;
+    sprite.tilePositionY = band.offset;
+
+    return sprite;
+  }
+
+  render(distance: number): void {
+    const bands = planHighwayTiles(this.road, distance);
+    bands.forEach((band, index) => {
+      const sprite = this.sprites[index];
+      if (sprite) sprite.tilePositionY = band.offset;
+    });
+  }
+
+  setVisible(visible: boolean): void {
+    for (const sprite of this.sprites) sprite.setVisible(visible);
+  }
+
+  destroy(): void {
+    for (const sprite of this.sprites) sprite.destroy();
+  }
+}
+
 export class RoadSystem {
-  private readonly graphics: Phaser.GameObjects.Graphics;
+  private readonly base: Phaser.GameObjects.Graphics;
+  private readonly markings: Phaser.GameObjects.Graphics;
+  private readonly tiles: HighwayTileLayer | null;
   private readonly theme: RoadTheme;
   private readonly road: RoadProfile;
 
@@ -76,16 +161,30 @@ export class RoadSystem {
     scene: Phaser.Scene,
     road: RoadProfile,
     type: LevelType,
+    art: Art,
   ) {
     this.road = road;
     this.theme = THEMES[type];
-    this.graphics = scene.add.graphics();
-    this.graphics.setDepth(0);
+
+    // Three layers, back to front: drawn fills, generated tiles, drawn markings. The
+    // fills stay underneath so the transparent margins of the processed tiles reveal
+    // asphalt and grass instead of blanking the road.
+    this.base = scene.add.graphics().setDepth(0);
+    const frames = type === 'highway' ? highwayTileFrames(art) : null;
+    this.tiles = frames ? new HighwayTileLayer(scene, road, frames) : null;
+    this.markings = scene.add.graphics().setDepth(2);
   }
 
-  /** Redraw for the current scroll offset. Cheap: a few dozen rects. */
+  /** Redraw for the current scroll offset. Cheap: a few dozen rects plus tile offsets. */
   render(distance: number): void {
-    const g = this.graphics;
+    this.drawBase();
+    this.tiles?.render(distance);
+    this.drawMarkings(distance);
+  }
+
+  /** Terrain, shoulders and surface. Covers the screen; always drawn, tiled or not. */
+  private drawBase(): void {
+    const g = this.base;
     const { road, theme } = this;
     const right = road.left + road.width;
 
@@ -105,6 +204,20 @@ export class RoadSystem {
     // Road surface.
     g.fillStyle(theme.roadFill, 1);
     g.fillRect(road.left, 0, road.width, GAME.height);
+  }
+
+  /**
+   * Edge lines, lane dashes and guardrail ticks.
+   *
+   * Edge lines and the rail always come from the profile. The lane dashes are skipped
+   * when tiles are drawing them, so the marking is not painted twice at two phases.
+   */
+  private drawMarkings(distance: number): void {
+    const g = this.markings;
+    const { road, theme } = this;
+    const right = road.left + road.width;
+
+    g.clear();
 
     // Solid edge lines.
     g.fillStyle(theme.edgeLine, 1);
@@ -112,13 +225,16 @@ export class RoadSystem {
     g.fillRect(right - 6, 0, 3, GAME.height);
 
     // Dashed lane dividers, scrolled.
-    const offset = ((distance % (DASH_LENGTH + DASH_GAP)) + DASH_LENGTH + DASH_GAP) % (DASH_LENGTH + DASH_GAP);
-    g.fillStyle(theme.dashLine, 0.85);
+    if (!this.tiles) {
+      const period = DASH_LENGTH + DASH_GAP;
+      const offset = ((distance % period) + period) % period;
+      g.fillStyle(theme.dashLine, 0.85);
 
-    for (let lane = 1; lane < road.lanes; lane += 1) {
-      const x = road.left + lane * road.laneWidth - 2;
-      for (let y = -DASH_LENGTH; y < GAME.height + DASH_LENGTH; y += DASH_LENGTH + DASH_GAP) {
-        g.fillRect(x, y + offset, 4, DASH_LENGTH);
+      for (let lane = 1; lane < road.lanes; lane += 1) {
+        const x = road.left + lane * road.laneWidth - 2;
+        for (let y = -DASH_LENGTH; y < GAME.height + DASH_LENGTH; y += period) {
+          g.fillRect(x, y + offset, 4, DASH_LENGTH);
+        }
       }
     }
 
@@ -132,10 +248,14 @@ export class RoadSystem {
   }
 
   setVisible(visible: boolean): void {
-    this.graphics.setVisible(visible);
+    this.base.setVisible(visible);
+    this.markings.setVisible(visible);
+    this.tiles?.setVisible(visible);
   }
 
   destroy(): void {
-    this.graphics.destroy();
+    this.base.destroy();
+    this.markings.destroy();
+    this.tiles?.destroy();
   }
 }

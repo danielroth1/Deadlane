@@ -67,6 +67,16 @@ export class Art {
   }
 
   /**
+   * The generated frame behind an id, or null when the manifest or the texture is missing.
+   *
+   * Unlike `resolve`, this never falls back to a placeholder, so a caller that layers
+   * generated art over a drawn fallback can decide for itself whether the art exists.
+   */
+  frameFor(id: string): SpriteRef | null {
+    return this.generated(id);
+  }
+
+  /**
    * Resolve an id, falling back to a placeholder vehicle when no art exists.
    *
    * `fallback` is only invoked when the manifest has nothing, so placeholder textures are

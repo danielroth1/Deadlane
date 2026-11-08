@@ -3,11 +3,13 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
   EFFECT_ART,
+  HIGHWAY_TILE_ART,
   PICKUP_ART,
   PROP_ART,
   PROP_PLACEHOLDER,
   propArtIds,
   type EffectKind,
+  type HighwayTileKind,
   type PickupKind,
   type PropKind,
 } from './ids';
@@ -96,14 +98,53 @@ describe('prop art ids', () => {
   });
 });
 
+describe('highway tile art ids', () => {
+  it('resolves every role in the shipped manifest', () => {
+    for (const [kind, ids] of Object.entries(HIGHWAY_TILE_ART)) {
+      expect(ids.length, `${kind} has no candidate ids`).toBeGreaterThan(0);
+      for (const id of ids) {
+        expect(
+          sprites.has(id),
+          `tile:${kind} → ${id} is not a key of .sprites in public/assets/assets.json`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('points each role at the cell that actually holds its surface', () => {
+    // Row-major cell index on art-13's 4 × 4 / 32 px sheet. The labels drifted:
+    // `oil-stain-overlay` is the clean lane strip (11), not an oil stain.
+    const cellIndex: Record<HighwayTileKind, number> = {
+      surface: 0,
+      shoulder: 5,
+      terrain: 7,
+      dash: 11,
+    };
+
+    for (const [kind, index] of Object.entries(cellIndex) as [HighwayTileKind, number][]) {
+      const id = HIGHWAY_TILE_ART[kind][0];
+      expect(id, `${kind} has no primary frame`).toBeDefined();
+      const rect = manifest.sprites[id ?? ''];
+      expect(rect, `${kind} → ${id} is missing from the manifest`).toBeDefined();
+      expect({ x: rect?.x, y: rect?.y }).toEqual({
+        x: (index % 4) * 32,
+        y: Math.floor(index / 4) * 32,
+      });
+    }
+  });
+});
+
 describe('art id manifest seam', () => {
-  it('resolves every pickup and effect id in the shipped manifest', () => {
+  it('resolves every pickup, effect and tile id in the shipped manifest', () => {
     const groups: [string, readonly string[]][] = [
       ...Object.entries(PICKUP_ART).map(
         ([kind, ids]): [string, readonly string[]] => [`pickup:${kind}`, ids],
       ),
       ...Object.entries(EFFECT_ART).map(
         ([kind, ids]): [string, readonly string[]] => [`effect:${kind}`, ids],
+      ),
+      ...Object.entries(HIGHWAY_TILE_ART).map(
+        ([kind, ids]): [string, readonly string[]] => [`tile:${kind}`, ids],
       ),
     ];
 
@@ -123,6 +164,7 @@ describe('art id manifest seam', () => {
       ...Object.values(PICKUP_ART).flat(),
       ...Object.values(EFFECT_ART).flat(),
       ...Object.values(PROP_ART).flat(),
+      ...Object.values(HIGHWAY_TILE_ART).flat(),
     ];
     for (const id of allIds) {
       expect(id.startsWith('placeholder/'), `${id} must be a manifest frame id`).toBe(false);

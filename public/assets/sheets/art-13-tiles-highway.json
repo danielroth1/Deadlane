@@ -1,0 +1,106 @@
+{
+  "slot": "art-13-tiles-highway",
+  "code": "tiles-highway",
+  "cellSize": 32,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-13-tiles-highway.png",
+  "frames": {
+    "tiles-highway/asphalt-plain": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/asphalt-lane-dash": {
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/asphalt-edge-line": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/asphalt-double-line": {
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/shoulder-asphalt": {
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/shoulder-gravel": {
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/guardrail-top": {
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/grass-verge": {
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/bridge-plate": {
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/tunnel-mouth": {
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/crack-overlay": {
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/oil-stain-overlay": {
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/road-seam": {
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/cats-eye": {
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/chevron-paint": {
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/painted-arrow": {
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    }
+  }
+}

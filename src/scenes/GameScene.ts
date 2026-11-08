@@ -194,7 +194,7 @@ export class GameScene extends Phaser.Scene {
 
     this.blueprint = levelForSeed(this.seed, this.levelIndex);
 
-    this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type);
+    this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type, this.art);
     this.player = new PlayerVehicle(this, this.art);
 
     this.challenges = this.createChallengeSystem();
@@ -988,7 +988,7 @@ export class GameScene extends Phaser.Scene {
     this.challenges = this.createChallengeSystem();
 
     this.road.destroy();
-    this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type);
+    this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type, this.art);
     this.applyVisibility();
 
     this.presentSector();

@@ -155,6 +155,43 @@ export const PROP_ART: Record<PropKind, readonly string[]> = {
  */
 export const PROP_PLACEHOLDER: readonly PropKind[] = [];
 
+/** The tile roles the highway tile layer can draw from `art-13-tiles-highway`. */
+export type HighwayTileKind = 'surface' | 'dash' | 'shoulder' | 'terrain';
+
+/**
+ * Highway tile role → candidate frame ids, most specific first.
+ *
+ * art-13 attempt 1 is shifted from its labels, so every entry was matched by looking at
+ * `pipeline/work/art-13-tiles-highway/attempt-1/cell-N.png`, not by trusting the cell
+ * name. Row-major the sheet draws:
+ *   0 plain asphalt patch · 1 road strip with a dash and an overhead rail ·
+ *   2 road strip with two solid lines · 3 road strip with two thin solid lines ·
+ *   4 asphalt with a rust shoulder · 5 road strip with gravel shoulders and a dash ·
+ *   6 guardrail · 7 grass verge · 8 steel bridge plate · 9 tunnel mouth (cracked) ·
+ *   10 tunnel mouth with oil stains · 11 clean vertical lane strip: dashed centre line
+ *   and solid edge lines · 12 road strip with amber edge lines · 13 cats eye on cracked
+ *   asphalt · 14 chevron sign · 15 painted arrow.
+ * so the lane dash lives in cell 11 (labelled `oil stain overlay`), the shoulder in cell 5
+ * (labelled `shoulder gravel`) and the surface in cell 0 (labelled correctly). Cell 1 is
+ * kept as the dash alternate even though its overhead rail breaks vertical repetition:
+ * a renamed sheet should still draw a road, not a placeholder.
+ */
+export const HIGHWAY_TILE_ART: Record<HighwayTileKind, readonly string[]> = {
+  // Cell 0 — plain asphalt, no markings.
+  surface: ['tiles-highway/asphalt-plain'],
+  // Cell 11 — the only clean vertical dash strip on the sheet.
+  dash: ['tiles-highway/oil-stain-overlay', 'tiles-highway/asphalt-lane-dash'],
+  // Cell 5 — gravel on both sides of a road strip.
+  shoulder: ['tiles-highway/shoulder-gravel', 'tiles-highway/shoulder-asphalt'],
+  // Cell 7 — grass verge.
+  terrain: ['tiles-highway/grass-verge'],
+};
+
+/** Frame ids for a highway tile role, most specific first. */
+export function highwayTileArtIds(kind: HighwayTileKind): readonly string[] {
+  return HIGHWAY_TILE_ART[kind];
+}
+
 /** Frame ids for a pickup kind, or none when the kind is unknown and the fallback wins. */
 export function pickupArtIds(kind: string): readonly string[] {
   return isPickupKind(kind) ? PICKUP_ART[kind] : [];

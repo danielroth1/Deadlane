@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T12:24:02.663Z",
+  "generatedAt": "2026-11-08T12:46:41.526Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -644,6 +644,112 @@
           "h": 32
         }
       }
+    },
+    "art-13-tiles-highway": {
+      "slot": "art-13-tiles-highway",
+      "code": "tiles-highway",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-13-tiles-highway.png",
+      "frames": {
+        "tiles-highway/asphalt-plain": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/asphalt-lane-dash": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/asphalt-edge-line": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/asphalt-double-line": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/shoulder-asphalt": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/shoulder-gravel": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/guardrail-top": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/grass-verge": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/bridge-plate": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/tunnel-mouth": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/crack-overlay": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/oil-stain-overlay": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/road-seam": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/cats-eye": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/chevron-paint": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-highway/painted-arrow": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      }
     }
   },
   "sprites": {
@@ -1265,6 +1371,118 @@
     },
     "props-b/wrecked-car": {
       "sheet": "art-12-props-b",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/asphalt-plain": {
+      "sheet": "art-13-tiles-highway",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/asphalt-lane-dash": {
+      "sheet": "art-13-tiles-highway",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/asphalt-edge-line": {
+      "sheet": "art-13-tiles-highway",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/asphalt-double-line": {
+      "sheet": "art-13-tiles-highway",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/shoulder-asphalt": {
+      "sheet": "art-13-tiles-highway",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/shoulder-gravel": {
+      "sheet": "art-13-tiles-highway",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/guardrail-top": {
+      "sheet": "art-13-tiles-highway",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/grass-verge": {
+      "sheet": "art-13-tiles-highway",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/bridge-plate": {
+      "sheet": "art-13-tiles-highway",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/tunnel-mouth": {
+      "sheet": "art-13-tiles-highway",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/crack-overlay": {
+      "sheet": "art-13-tiles-highway",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/oil-stain-overlay": {
+      "sheet": "art-13-tiles-highway",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/road-seam": {
+      "sheet": "art-13-tiles-highway",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/cats-eye": {
+      "sheet": "art-13-tiles-highway",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/chevron-paint": {
+      "sheet": "art-13-tiles-highway",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-highway/painted-arrow": {
+      "sheet": "art-13-tiles-highway",
       "x": 96,
       "y": 96,
       "w": 32,

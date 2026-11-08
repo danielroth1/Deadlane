@@ -257,8 +257,20 @@
     },
     "art-13-tiles-highway": {
       "id": "art-13-tiles-highway",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1590080849,
+          "promptHash": "8892f27ad440b0f8",
+          "state": "generated",
+          "claimedAt": "2026-11-08T12:39:27.528Z",
+          "requestId": "01a1bb2b-f26b-7000-919e-5993719805fd",
+          "url": "https://v3b.fal.media/files/b/0ab1a48e/OwAPMN4i7mYg9CqQGDsuQ_JtacXQNi.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-14-tiles-canyon": {
       "id": "art-14-tiles-canyon",
