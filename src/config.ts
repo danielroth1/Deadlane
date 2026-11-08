@@ -81,8 +81,30 @@ export const PLAYER = {
   y: WORLD.height / 2,
   startArmor: 3,
   maxArmor: 5,
+  /**
+   * Lives the run starts with.
+   *
+   * Lives are a run resource of their own, separate from armour: a hit spends armour, and
+   * only a wreck at zero armour spends a life. `maxLives` is what the HUD draws pips for.
+   */
+  startLives: 3,
+  maxLives: 3,
   /** Invulnerability window after taking a hit, in ms. */
   iFrames: 1200,
+  /**
+   * Invulnerability window after a respawn, in ms.
+   *
+   * Longer than `iFrames`: the player did not steer into the wreck, and the road around the
+   * respawn point may still be busy. Gives time to read the banner and move.
+   */
+  respawnIFrames: 2400,
+  /**
+   * Screen-pixel radius swept clean when the car respawns, in px.
+   *
+   * Hostile shells and pursuers inside it are removed without paying score, so a respawn
+   * is never a second death on the same frame's worth of trouble.
+   */
+  respawnClearRadius: 260,
   startOil: 3,
   startSmoke: 2,
   maxOil: 6,

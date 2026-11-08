@@ -10,6 +10,8 @@ interface GameOverData {
   distance: number;
   level: number;
   seed: number;
+  /** Lives left when the run ended. A run ends at zero, so this is the proof it did. */
+  lives: number;
 }
 
 /** Read-only result view served to Playwright through `window.__deadlaneOver` at `?debug=1`. */
@@ -18,6 +20,7 @@ export interface RunResultSnapshot {
   readonly distance: number;
   readonly level: number;
   readonly seed: number;
+  readonly lives: number;
   /** Best score as this screen read it back from storage. */
   readonly best: number;
   /** True when this result replaced that best. */
@@ -57,7 +60,7 @@ export class GameOverScene extends Phaser.Scene {
     );
 
     new PixelText(this, { x: centerX, y: 178, color: PALETTE.bone, scale: 1, align: 'center' }).setText(
-      `DISTANCE ${data.distance} M   SECTOR ${data.level}`,
+      `DISTANCE ${data.distance} M   SECTOR ${data.level}   LIVES ${data.lives}`,
     );
 
     if (isBest) {
@@ -127,6 +130,7 @@ export class GameOverScene extends Phaser.Scene {
       distance: data.distance,
       level: data.level,
       seed: data.seed,
+      lives: data.lives,
       best,
       isBest,
     };

@@ -20,7 +20,9 @@ export interface DebugControl {
   stageCivilianAhead(): void;
   /** Advance the run by `pixels` of world distance instead of waiting out the clock. */
   fastForward(pixels: number): void;
-  /** Destroy the player through the normal damage path, ending the run. */
+  /** Spend one life through the real wreck path, respawning or ending the run. */
+  loseLife(): void;
+  /** Spend one life through the real wreck path. Kept for specs written before lives. */
   destroyPlayer(): void;
   /** Kill the live act boss through the normal damage path, paying its reward. */
   destroyBoss(): void;
@@ -178,6 +180,8 @@ export class HudScene extends Phaser.Scene {
     const g = this.pips;
     const x = 8;
     const y = GAME.height - 18;
+    /** Where the life pips start: past the armour pips (5 × 9 px) and the gun oil counter. */
+    const livesX = x + 130;
 
     g.clear();
 
@@ -186,6 +190,21 @@ export class HudScene extends Phaser.Scene {
       const filled = i < state.armor;
       g.fillStyle(filled ? PALETTE.hotPink : PALETTE.steel, filled ? 1 : 0.5);
       g.fillRect(x + i * 9, y, 7, 7);
+    }
+
+    // Lives. Deliberately a different shape from an armour pip — a wider block with a
+    // punched centre — so the two counters are never read as one bar. Lives sit in the
+    // free stretch of the bottom strip, right of the weapon counters and left of the speed
+    // bar.
+    for (let i = 0; i < state.maxLives; i += 1) {
+      const filled = i < state.lives;
+      const lifeX = livesX + i * 11;
+      g.fillStyle(filled ? PALETTE.sand : PALETTE.steel, filled ? 1 : 0.5);
+      g.fillRect(lifeX, y, 9, 7);
+      if (filled) {
+        g.fillStyle(PALETTE.void, 1);
+        g.fillRect(lifeX + 3, y + 2, 3, 3);
+      }
     }
 
     // Oil and smoke counters.
@@ -368,6 +387,7 @@ export class HudScene extends Phaser.Scene {
     window.__deadlaneControl = {
       stageCivilianAhead: () => this.gameScene.debugStageCivilianAhead(),
       fastForward: (pixels: number) => this.gameScene.debugFastForward(pixels),
+      loseLife: () => this.gameScene.debugLoseLife(),
       destroyPlayer: () => this.gameScene.debugDestroyPlayer(),
       destroyBoss: () => this.gameScene.debugDestroyBoss(),
     };

@@ -349,6 +349,50 @@ describe('player art states', () => {
     expect(before).toBe(PLAYER.spriteSize);
     expect(player.sprite.displayWidth).toBe(PLAYER.spriteSize);
   });
+
+  it('comes back on the clean frame with a full loadout after a respawn', () => {
+    const { player, image, calls, clock } = makeFixture();
+
+    wreck(player, clock);
+    expect(player.isDestroyed).toBe(true);
+
+    clock.now += 50;
+    player.respawn(clock.now);
+
+    expect(player.armor).toBe(PLAYER.startArmor);
+    expect(player.isDestroyed).toBe(false);
+    expect(calls.at(-1)?.ids[0]).toBe('player-vehicle/interceptor-clean');
+    expect(image.textureKey).toBe('sheet:player-vehicle/interceptor-clean');
+  });
+
+  it('grants a longer invulnerability window on respawn than on a hit', () => {
+    const { player, clock } = makeFixture();
+
+    wreck(player, clock);
+    player.respawn(clock.now);
+
+    expect(player.isInvulnerable).toBe(true);
+    // Past the ordinary i-frame window and still protected: a respawn is not a hit.
+    clock.now += PLAYER.iFrames + 1;
+    expect(player.isInvulnerable).toBe(true);
+    clock.now += PLAYER.respawnIFrames;
+    expect(player.isInvulnerable).toBe(false);
+  });
+
+  it('lets the debug control arm a killing hit past the i-frame window', () => {
+    const { player, clock } = makeFixture();
+
+    wreck(player, clock);
+    player.respawn(clock.now);
+    expect(player.isInvulnerable).toBe(true);
+
+    player.debugArmLastHit();
+
+    expect(player.armor).toBe(1);
+    expect(player.isInvulnerable).toBe(false);
+    expect(player.takeHit(clock.now)).toBe(true);
+    expect(player.isDestroyed).toBe(true);
+  });
 });
 
 describe('weapon cooldowns', () => {

@@ -228,7 +228,8 @@ export class PlayerVehicle {
    * Apply one hit.
    *
    * Returns true when the hit landed. Armour absorbs it and grants a short invulnerability
-   * window; at zero armour the run ends.
+   * window; at zero armour the car is wrecked and the scene decides what that costs — a
+   * life, or the run.
    */
   takeHit(time: number): boolean {
     if (this.isInvulnerable) return false;
@@ -237,6 +238,35 @@ export class PlayerVehicle {
     this.refreshArt();
     this.flash();
     return true;
+  }
+
+  /**
+   * Put a fresh car back on the road after a lost life.
+   *
+   * Armour returns to the starting loadout and the wrecked frame is released, so a respawn
+   * is the only thing that can undo `showWrecked()`. The longer respawn grace window is what
+   * keeps the player from being hit again before they have read the banner.
+   */
+  respawn(time: number): void {
+    this.armor = PLAYER.startArmor;
+    // Clear the terminal wreck state first: `setArtState()` refuses to repaint a wreck.
+    this.wrecked = false;
+    this.invulnerableUntil = time + PLAYER.respawnIFrames;
+    this.refreshArt();
+  }
+
+  /**
+   * Debug-only: arm the last armour point and drop the i-frame window.
+   *
+   * After a hit or a respawn the car is invulnerable for a while, so a spec that proves the
+   * life counter steps 3 → 2 → 1 → 0 would otherwise have to wait out real time. The hit
+   * that follows still runs the shipped `takeHit()` / `spendLife()` path; only the wait is
+   * skipped. Reached through `window.__deadlaneControl` at `?debug=1`; nothing in the run
+   * calls it.
+   */
+  debugArmLastHit(): void {
+    this.armor = 1;
+    this.invulnerableUntil = 0;
   }
 
   get isDestroyed(): boolean {

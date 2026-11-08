@@ -602,11 +602,13 @@
       "id": "WO-53",
       "title": "Lives and respawn",
       "file": "gauntlet/work-orders/WO-53-lives.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-52"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "3 lives, single-fire spendLife/respawn with i-frames, HUD pips, e2e proves 3-2-1-0"
     },
     {
       "id": "WO-54",

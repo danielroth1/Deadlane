@@ -23,7 +23,16 @@ interface DeadlaneSnapshot {
   enemies: number;
   boss: { id: string; hp: number; maxHp: number } | null;
   lastScoreEvent: { kind: string; delta: number } | null;
-  hud: { score: number; distance: number; speed: number; level: number };
+  hud: {
+    score: number;
+    distance: number;
+    speed: number;
+    level: number;
+    armor: number;
+    maxArmor: number;
+    lives: number;
+    maxLives: number;
+  };
 }
 
 /** Mirror of the read-only `window.__deadlaneOver` snapshot the result screen installs. */
@@ -32,6 +41,7 @@ interface RunResultSnapshot {
   distance: number;
   level: number;
   seed: number;
+  lives: number;
   best: number;
   isBest: boolean;
 }
@@ -39,6 +49,7 @@ interface RunResultSnapshot {
 /** Mirror of the debug-only `window.__deadlaneControl` actions. */
 interface DeadlaneControl {
   fastForward(pixels: number): void;
+  loseLife(): void;
   destroyPlayer(): void;
   destroyBoss(): void;
 }
@@ -71,13 +82,13 @@ async function fastForward(page: Page, pixels: number): Promise<void> {
   }, pixels);
 }
 
-/** Wreck the player through the normal damage path, ending the run. */
-async function destroyPlayer(page: Page): Promise<void> {
+/** Spend one life through the real wreck path (armour to zero, then the respawn). */
+async function loseLife(page: Page): Promise<void> {
   await page.evaluate(() => {
     const api = (window as unknown as { __deadlaneControl?: DeadlaneControl })
       .__deadlaneControl;
     if (!api) throw new Error('window.__deadlaneControl missing — open the page with ?debug=1');
-    api.destroyPlayer();
+    api.loseLife();
   });
 }
 
@@ -137,7 +148,30 @@ test('a run reaches game over, redeploys on Space and keeps the best score acros
     .poll(async () => (await readSnapshot(page)).hud.score, { timeout: 10_000 })
     .toBeGreaterThan(0);
 
-  await destroyPlayer(page);
+  // Three lives start the run, and they are separate from armour: every wreck spends one
+  // life and respawns the car with a full loadout, so the run only ends on the third.
+  const started = await readSnapshot(page);
+  expect(started.hud.lives).toBe(3);
+  expect(started.hud.maxLives).toBe(3);
+  // `PLAYER.startArmor` in src/config.ts; the starting loadout a respawn restores.
+  expect(started.hud.armor).toBe(3);
+
+  const distanceAtFirstWreck = started.hud.distance;
+  await loseLife(page);
+  await expect
+    .poll(async () => (await snapshot(page))?.hud.lives ?? null, { timeout: 5_000 })
+    .toBe(2);
+  const afterFirst = await readSnapshot(page);
+  // A respawn restores armour and keeps the road moving instead of handing off to the result.
+  expect(afterFirst.hud.armor).toBe(3);
+  expect(afterFirst.hud.distance).toBeGreaterThanOrEqual(distanceAtFirstWreck);
+
+  await loseLife(page);
+  await expect
+    .poll(async () => (await snapshot(page))?.hud.lives ?? null, { timeout: 5_000 })
+    .toBe(1);
+
+  await loseLife(page);
 
   // Game over: the run's snapshot is gone with the HUD, and the result screen is up.
   await expect
@@ -153,6 +187,7 @@ test('a run reaches game over, redeploys on Space and keeps the best score acros
   expect(lost.level).toBe(1);
   expect(lost.score).toBeGreaterThan(0);
   expect(lost.distance).toBeGreaterThan(0);
+  expect(lost.lives).toBe(0);
   expect(lost.best).toBe(lost.score);
   expect(lost.isBest).toBe(true);
 
@@ -169,6 +204,7 @@ test('a run reaches game over, redeploys on Space and keeps the best score acros
   const redeployed = await readSnapshot(page);
   expect(redeployed.hud.level).toBe(1);
   expect(redeployed.hud.score).toBe(0);
+  expect(redeployed.hud.lives).toBe(3);
   expect(redeployed.lastSectorCard?.level).toBe(1);
   await expect.poll(() => page.evaluate(() => '__deadlaneOver' in window)).toBe(false);
 

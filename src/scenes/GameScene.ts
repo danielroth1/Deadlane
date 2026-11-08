@@ -93,6 +93,9 @@ export interface HudState {
   score: number;
   armor: number;
   maxArmor: number;
+  /** Lives left in the run. Separate from armour: armour refills on every respawn. */
+  lives: number;
+  maxLives: number;
   oil: number;
   smoke: number;
   speed: number;
@@ -207,6 +210,10 @@ export class GameScene extends Phaser.Scene {
   private distance = 0;
   private intensity = 0;
   private score = 0;
+  /** Lives left. A run resource of its own; armour is what a hit spends. */
+  private lives: number = PLAYER.startLives;
+  /** True once `endRun()` has run, so the end-of-run hand-off can never fire twice. */
+  private runEnded = false;
   private spawner: SpawnerState = createSpawnerState();
   /**
    * The car's own forward speed, world px/s.
@@ -266,6 +273,8 @@ export class GameScene extends Phaser.Scene {
     this.distance = 0;
     this.intensity = 0;
     this.score = 0;
+    this.lives = PLAYER.startLives;
+    this.runEnded = false;
     this.spawner = createSpawnerState();
     this.runSeconds = 0;
     this.introActive = false;
@@ -353,6 +362,8 @@ export class GameScene extends Phaser.Scene {
       score: Math.max(0, Math.round(this.score)),
       armor: this.player?.armor ?? 0,
       maxArmor: PLAYER.maxArmor,
+      lives: this.lives,
+      maxLives: PLAYER.maxLives,
       oil: this.player?.oil ?? 0,
       smoke: this.player?.smoke ?? 0,
       speed: Math.round(this.worldSpeed),
@@ -446,18 +457,30 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Debug-only: spend one life through the real wreck path.
+   *
+   * The car is put on its last armour point with the i-frame window dropped, then
+   * `damagePlayer()` runs exactly as an incoming shell would: armour to zero, one life
+   * spent, either a respawn or the end of the run. Playwright reaches it through
+   * `window.__deadlaneControl` at `?debug=1`; nothing in the run calls it. Refused while the
+   * sector card is up, because the HUD that owns the snapshot is not what is being tested
+   * there, and once the run has ended, because no life is left to spend.
+   */
+  debugLoseLife(): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+    this.player.debugArmLastHit();
+    this.damagePlayer(this.time.now);
+  }
+
+  /**
    * Debug-only: end the run by destroying the player.
    *
-   * The last armour point is spent by `damagePlayer()`, which is the same call an incoming
-   * shell makes, so the wreck, the score write and the game-over hand-off all run for real.
-   * Playwright reaches it through `window.__deadlaneControl` at `?debug=1`; nothing in the
-   * run calls it. Refused while the sector card is up, because the HUD that owns the
-   * snapshot is not the thing being tested there.
+   * Now that a wreck costs a life before it ends anything, ending the run means losing the
+   * last one; the spec that proves the result screen spends all three through `debugLoseLife()`.
+   * Kept as an alias so a stale spec still hits a real path instead of a no-op.
    */
   debugDestroyPlayer(): void {
-    if (!this.player || this.paused || this.introActive) return;
-    this.player.armor = Math.min(1, Math.max(0, this.player.armor));
-    this.damagePlayer(this.time.now);
+    this.debugLoseLife();
   }
 
   /**
@@ -1122,9 +1145,11 @@ export class GameScene extends Phaser.Scene {
     }
     this.bullets = this.bullets.filter((b) => Number.isFinite(b.at));
 
-    // Enemy bullets vs player.
+    // Enemy bullets vs player. A respawn sweeps the shells around the car mid-loop, so the
+    // ones already removed are skipped instead of hitting twice.
     for (const bullet of this.bullets) {
       if (bullet.from !== 'enemy') continue;
+      if (!bullet.sprite.active || !Number.isFinite(bullet.at)) continue;
       if (this.overlapsPlayer(bullet.sprite.x, bullet.sprite.y, 6, 6)) {
         bullet.sprite.destroy();
         bullet.at = Number.NEGATIVE_INFINITY;
@@ -1133,8 +1158,11 @@ export class GameScene extends Phaser.Scene {
     }
     this.bullets = this.bullets.filter((b) => Number.isFinite(b.at));
 
-    // Enemies vs player.
-    for (const enemy of this.enemies) {
+    // Enemies vs player. A respawn clears the threats around the car, which replaces the
+    // array this loop holds, so iterate the same array it started with and skip anything the
+    // sweep already destroyed — a cleared pursuer must not pay a kill.
+    for (const enemy of [...this.enemies]) {
+      if (!enemy.sprite.active) continue;
       if (this.overlapsPlayer(enemy.sprite.x, enemy.sprite.y, enemy.sprite.displayWidth * 0.4, enemy.sprite.displayHeight * 0.4)) {
         enemy.hit(99);
         this.killEnemy(enemy);
@@ -1191,6 +1219,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   private damagePlayer(time: number): void {
+    // The scene keeps ticking during the game-over delay, and two collisions can land on
+    // the same frame: once the run is over, nothing else may touch the wreck.
+    if (this.runEnded) return;
     if (!this.player.takeHit(time)) return;
     this.cameras.main.shake(160, 0.008);
     this.audio.play('hit');
@@ -1199,8 +1230,77 @@ export class GameScene extends Phaser.Scene {
     this.applyScore('armourHit');
 
     if (this.player.isDestroyed) {
-      this.endRun();
+      this.spendLife(time);
     }
+  }
+
+  /**
+   * Spend one life on a wreck.
+   *
+   * Every zero-armour path funnels through here — an enemy shell, a ram, the boss, the debug
+   * control — so the life counter, the respawn and the single end-of-run hand-off cannot
+   * drift apart. Lives are separate from armour precisely because a respawn refills armour:
+   * without a counter of their own a wreck could never end a run.
+   */
+  private spendLife(time: number): void {
+    if (this.runEnded) return;
+
+    this.lives = Math.max(0, this.lives - 1);
+    if (this.lives === 0) {
+      this.endRun();
+      return;
+    }
+
+    this.respawn(time);
+  }
+
+  /**
+   * Put a fresh car on the road, at the same stretch of highway the wreck happened on.
+   *
+   * World distance is deliberately untouched: a respawn must not refund road already driven
+   * or skip the sector the player died in. Speed resets to cruise, because the pedals of the
+   * run that just ended are not the ones the player is holding now.
+   */
+  private respawn(time: number): void {
+    this.player.respawn(time);
+    this.speed = MOTION.cruiseSpeed;
+    this.steer = 0;
+    this.touchInput.reset();
+    this.clearNearbyThreats();
+    this.audio.play('pickup');
+    this.showBanner(`RESPAWN · ${this.lives} LEFT`);
+  }
+
+  /**
+   * Sweep hostile threats out of the respawn window.
+   *
+   * Only threats: enemy shells already in the air are dropped and pursuers sitting on the
+   * respawn point are removed. They are removed rather than killed — a respawn must not pay
+   * score for the road that killed the player. Traffic, pickups, props and the act boss are
+   * left alone; they are part of the level, not the wreck.
+   */
+  private clearNearbyThreats(): void {
+    const radius = PLAYER.respawnClearRadius;
+    const near = (sprite: { x: number; y: number }): boolean =>
+      Math.abs(sprite.x - this.player.x) <= radius &&
+      Math.abs(sprite.y - this.player.y) <= radius;
+
+    for (const bullet of this.bullets) {
+      if (bullet.from !== 'enemy' || !near(bullet.sprite)) continue;
+      bullet.sprite.destroy();
+      bullet.at = Number.NEGATIVE_INFINITY;
+    }
+    this.bullets = this.bullets.filter((bullet) => Number.isFinite(bullet.at));
+
+    const survivors: EnemyVehicle[] = [];
+    for (const enemy of this.enemies) {
+      if (near(enemy.sprite)) {
+        enemy.destroy();
+        continue;
+      }
+      survivors.push(enemy);
+    }
+    this.enemies = survivors;
   }
 
   /** Apply one scoring rule, clamped at zero, and record it for the debug surface. */
@@ -1387,6 +1487,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private endRun(): void {
+    // Exactly once: two collisions on the same frame must not start the result screen twice.
+    if (this.runEnded) return;
+    this.runEnded = true;
+
     this.player.showWrecked();
     this.audio.play('engineFail');
     this.cameras.main.shake(400, 0.02);
@@ -1401,6 +1505,7 @@ export class GameScene extends Phaser.Scene {
       distance: Math.round(this.distance * LEVEL.metresPerPixel),
       level: this.levelIndex,
       seed: this.seed,
+      lives: this.lives,
     };
 
     const best = Number(localStorage.getItem(`${GAME.storagePrefix}best`) ?? '0');
