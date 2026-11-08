@@ -342,8 +342,20 @@
     },
     "art-18-tiles-transition": {
       "id": "art-18-tiles-transition",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1720281235,
+          "promptHash": "cd23b848ef528113",
+          "state": "generated",
+          "claimedAt": "2026-11-08T16:01:50.791Z",
+          "requestId": "01a1bbe5-3d5d-77e0-83b5-8a55648ad9ed",
+          "url": "https://v3b.fal.media/files/b/0ab1a94c/VfOJaay1ZowUXDQv_B_DB_lWjSl4PV.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-19-ui-icons": {
       "id": "art-19-ui-icons",

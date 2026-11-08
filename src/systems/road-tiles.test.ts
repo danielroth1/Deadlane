@@ -10,18 +10,23 @@ import {
 } from '@/art/ids';
 import { LEVEL_PROFILES, type RoadProfile } from '@/levels/types';
 import {
+  CANYON_EDGE_CHEVRON,
   CANYON_TILE_WINDOWS,
   CITY_TILE_WINDOWS,
   DASH_SAMPLE_X,
   DASH_WIDTH,
+  HIGHWAY_EDGE_BLEND,
   HIGHWAY_TILE_WINDOWS,
+  ROAD_EDGE_SPECS,
   ROAD_TILE_SPECS,
   SHOULDER_WIDTH,
   TILE_SIZE,
   TUNNEL_TILE_WINDOWS,
   WATER_TILE_WINDOWS,
+  planRoadEdges,
   planRoadTiles,
   tileOffset,
+  type EdgeTileSpec,
   type RoadTileTheme,
 } from './road-tiles';
 
@@ -88,6 +93,71 @@ describe('tileOffset', () => {
     expect(tileOffset(31, 30)).toBeCloseTo(1, 10);
     expect(tileOffset(29.5, 30)).toBeCloseTo(29.5, 10);
     expect(tileOffset(-1, 30)).toBeCloseTo(29, 10);
+  });
+});
+
+describe('planRoadEdges', () => {
+  const specs: readonly [string, EdgeTileSpec][] = [
+    ['highway blend', HIGHWAY_EDGE_BLEND],
+    ['canyon chevron', CANYON_EDGE_CHEVRON],
+  ];
+
+  it('puts each strip exactly over the shoulder band it replaces', () => {
+    const right = HIGHWAY.left + HIGHWAY.width;
+
+    for (const distance of DISTANCES) {
+      const edges = planRoadEdges(HIGHWAY, distance, HIGHWAY_EDGE_BLEND);
+      expect(edges.map((edge) => edge.x)).toEqual([HIGHWAY.left - SHOULDER_WIDTH, right]);
+      for (const edge of edges) {
+        expect(edge.width).toBe(SHOULDER_WIDTH);
+        expect(edge.sourceWidth).toBe(SHOULDER_WIDTH);
+        expect(edge.sourceX).toBeGreaterThanOrEqual(0);
+        expect(edge.sourceX + edge.sourceWidth).toBeLessThanOrEqual(TILE_SIZE);
+        expect(edge.sourceY + edge.sourceHeight).toBeLessThanOrEqual(TILE_SIZE);
+      }
+    }
+  });
+
+  it('wraps each strip at its own window height, never at 32 by accident', () => {
+    for (const [label, spec] of specs) {
+      for (const distance of [0, 1, 12, 100.5]) {
+        const [left, right] = planRoadEdges(HIGHWAY, distance, spec);
+        expect(left, `${label} left strip missing`).toBeDefined();
+        expect(right, `${label} right strip missing`).toBeDefined();
+        for (const edge of [left, right]) {
+          if (!edge) continue;
+          expect(edge.offset).toBeGreaterThan(-edge.sourceHeight);
+          expect(edge.offset).toBeLessThanOrEqual(0);
+          expect(edge.offset).toBeCloseTo(-tileOffset(distance, edge.sourceHeight), 10);
+        }
+      }
+    }
+
+    // The two windows are trimmed differently on purpose: the blend drops the model's
+    // dark top border (30 rows), the chevron takes the period that wraps (23 rows).
+    expect(HIGHWAY_EDGE_BLEND.left.sourceHeight).toBe(30);
+    expect(CANYON_EDGE_CHEVRON.left.sourceHeight).toBe(23);
+  });
+
+  it('never puts a strip on a theme whose transition cell did not qualify', () => {
+    expect(Object.keys(ROAD_EDGE_SPECS).sort()).toEqual(['canyon', 'highway']);
+    expect(ROAD_EDGE_SPECS.river).toBeUndefined();
+    expect(ROAD_EDGE_SPECS.city).toBeUndefined();
+    expect(ROAD_EDGE_SPECS.tunnel).toBeUndefined();
+  });
+
+  it('keeps both strips inside the screen', () => {
+    for (const distance of DISTANCES) {
+      for (const [label, spec] of specs) {
+        for (const edge of planRoadEdges(HIGHWAY, distance, spec)) {
+          expect(edge.x, `${label} strip starts off screen`).toBeGreaterThanOrEqual(0);
+          expect(
+            edge.x + edge.width,
+            `${label} strip ends off screen`,
+          ).toBeLessThanOrEqual(GAME.width);
+        }
+      }
+    }
   });
 });
 

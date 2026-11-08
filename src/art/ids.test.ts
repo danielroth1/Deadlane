@@ -9,6 +9,8 @@ import {
   PICKUP_ART,
   PROP_ART,
   PROP_PLACEHOLDER,
+  TRANSITION_PLACEHOLDER,
+  TRANSITION_TILE_ART,
   TUNNEL_TILE_ART,
   WATER_TILE_ART,
   propArtIds,
@@ -17,6 +19,7 @@ import {
   type PropKind,
   type TileArtByKind,
   type TileKind,
+  type TransitionKind,
 } from './ids';
 import { PICKUP_POOL } from '@/levels/generators/shared';
 import { LEVEL_PROFILES } from '@/levels/types';
@@ -200,6 +203,113 @@ describe('canyon, water, city and tunnel tile art ids', () => {
       for (const id of ids) {
         expect(id.startsWith('tiles-water/'), `${id} is not a water frame`).toBe(true);
       }
+    }
+  });
+});
+
+describe('transition tile art ids', () => {
+  it('resolves every id it names in the shipped manifest', () => {
+    for (const [kind, ids] of Object.entries(TRANSITION_TILE_ART)) {
+      for (const id of ids) {
+        expect(
+          sprites.has(id),
+          `transition:${kind} → ${id} is not a key of .sprites in public/assets/assets.json`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  it('uses only the two cells that are clean, whole and on subject', () => {
+    const used = Object.entries(TRANSITION_TILE_ART).flatMap(([kind, ids]) =>
+      ids.map((id) => ({ kind, id })),
+    );
+
+    expect(used).toEqual([
+      // Cell 4 — the only clean blend. Labelled `grass to rock`; it actually holds the
+      // grass/road/grass strip whose two edges the highway shoulder draws.
+      { kind: 'shoulder-grass', id: 'tiles-transition/grass-to-rock' },
+      // Cell 5 — the chevron shoulder, the one cell whose label matches its subject.
+      { kind: 'chevron', id: 'tiles-transition/chevron-shoulder' },
+    ]);
+  });
+
+  it('points each used role at its row-major cell on the art-18 sheet', () => {
+    const cellOf = (id: string): { readonly col: number; readonly row: number } => {
+      const rect = manifest.sprites[id];
+      expect(rect, `${id} is missing from the manifest`).toBeDefined();
+      expect(rect?.sheet, `${id} is not on the art-18 sheet`).toBe(
+        'art-18-tiles-transition',
+      );
+      return { col: (rect?.x ?? 0) / 32, row: (rect?.y ?? 0) / 32 };
+    };
+
+    const blend = TRANSITION_TILE_ART['shoulder-grass'][0];
+    const chevron = TRANSITION_TILE_ART.chevron[0];
+    expect(cellOf(blend ?? '')).toEqual({ col: 0, row: 1 });
+    expect(cellOf(chevron ?? '')).toEqual({ col: 1, row: 1 });
+  });
+
+  it('leaves every vehicle-bearing, scene-only and fragment cell on the fallback', () => {
+    const rejected: readonly TransitionKind[] = [
+      'asphalt-sand',
+      'asphalt-water',
+      'asphalt-concrete',
+      'grass-rock',
+      'faded-paint',
+      'rain',
+      'snow',
+      'fog',
+      'scanline',
+      'vignette',
+      'dirt',
+      'crack',
+      'blend-mask',
+    ];
+
+    for (const kind of rejected) {
+      expect(TRANSITION_TILE_ART[kind], `${kind} must stay on the drawn fallback`).toEqual(
+        [],
+      );
+      expect(
+        TRANSITION_PLACEHOLDER,
+        `${kind} is drawn by fallback but not declared as a placeholder`,
+      ).toContain(kind);
+    }
+
+    // The complement: every non-placeholder role actually has art, so the two lists can
+    // never both claim a role or both ignore it.
+    const backed = (Object.keys(TRANSITION_TILE_ART) as TransitionKind[]).filter(
+      (kind) => !TRANSITION_PLACEHOLDER.includes(kind),
+    );
+    expect(backed.sort()).toEqual(['chevron', 'shoulder-grass']);
+  });
+
+  it('never references a rejected frame id anywhere', () => {
+    // Cells 0–3 and 11–14 carry vehicles; 6–10 and 15 are scenes or fragments. Their ids
+    // are still in the atlas, but nothing may ask the game to draw them.
+    const rejectedIds = [
+      'tiles-transition/asphalt-to-sand',
+      'tiles-transition/asphalt-to-water',
+      'tiles-transition/asphalt-to-concrete',
+      'tiles-transition/shoulder-to-grass',
+      'tiles-transition/rain-overlay',
+      'tiles-transition/faded-paint-overlay',
+      'tiles-transition/snow-overlay',
+      'tiles-transition/fog-overlay',
+      'tiles-transition/scanline-overlay',
+      'tiles-transition/vignette-corner',
+      'tiles-transition/dirt-overlay',
+      'tiles-transition/crack-overlay',
+      'tiles-transition/blend-mask-a',
+      'tiles-transition/blend-mask-b',
+    ];
+    const referenced = Object.values(TRANSITION_TILE_ART).flat();
+
+    for (const id of rejectedIds) {
+      expect(referenced, `${id} must never be referenced by the game`).not.toContain(id);
+      expect(sprites.has(id), `${id} should still exist as an unreferenced atlas frame`).toBe(
+        true,
+      );
     }
   });
 });

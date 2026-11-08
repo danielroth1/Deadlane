@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T15:04:45.968Z",
+  "generatedAt": "2026-11-08T16:08:30.644Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -1215,6 +1215,117 @@
         "tiles-tunnel/wall-cable-run",
         "tiles-tunnel/floor-grate"
       ]
+    },
+    "art-18-tiles-transition": {
+      "slot": "art-18-tiles-transition",
+      "code": "tiles-transition",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-18-tiles-transition.png",
+      "frames": {
+        "tiles-transition/asphalt-to-sand": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/asphalt-to-water": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/asphalt-to-concrete": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/shoulder-to-grass": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/grass-to-rock": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/chevron-shoulder": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/faded-paint-overlay": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/rain-overlay": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/snow-overlay": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/fog-overlay": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/scanline-overlay": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/vignette-corner": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/dirt-overlay": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/crack-overlay": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/blend-mask-a": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-transition/blend-mask-b": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "tiles": [
+        "tiles-transition/asphalt-to-concrete",
+        "tiles-transition/grass-to-rock",
+        "tiles-transition/vignette-corner"
+      ]
     }
   },
   "sprites": {
@@ -2396,6 +2507,118 @@
     },
     "tiles-tunnel/hazard-stripe": {
       "sheet": "art-17-tiles-tunnel",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/asphalt-to-sand": {
+      "sheet": "art-18-tiles-transition",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/asphalt-to-water": {
+      "sheet": "art-18-tiles-transition",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/asphalt-to-concrete": {
+      "sheet": "art-18-tiles-transition",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/shoulder-to-grass": {
+      "sheet": "art-18-tiles-transition",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/grass-to-rock": {
+      "sheet": "art-18-tiles-transition",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/chevron-shoulder": {
+      "sheet": "art-18-tiles-transition",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/faded-paint-overlay": {
+      "sheet": "art-18-tiles-transition",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/rain-overlay": {
+      "sheet": "art-18-tiles-transition",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/snow-overlay": {
+      "sheet": "art-18-tiles-transition",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/fog-overlay": {
+      "sheet": "art-18-tiles-transition",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/scanline-overlay": {
+      "sheet": "art-18-tiles-transition",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/vignette-corner": {
+      "sheet": "art-18-tiles-transition",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/dirt-overlay": {
+      "sheet": "art-18-tiles-transition",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/crack-overlay": {
+      "sheet": "art-18-tiles-transition",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/blend-mask-a": {
+      "sheet": "art-18-tiles-transition",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-transition/blend-mask-b": {
+      "sheet": "art-18-tiles-transition",
       "x": 96,
       "y": 96,
       "w": 32,

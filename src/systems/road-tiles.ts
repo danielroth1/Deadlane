@@ -4,6 +4,7 @@ import {
   CANYON_TILE_ART,
   CITY_TILE_ART,
   HIGHWAY_TILE_ART,
+  TRANSITION_TILE_ART,
   TUNNEL_TILE_ART,
   WATER_TILE_ART,
   type TileArtByKind,
@@ -230,6 +231,88 @@ export const ROAD_TILE_SPECS: Readonly<Partial<Record<LevelType, RoadTileSpec>>>
   city: { windows: CITY_TILE_WINDOWS, art: CITY_TILE_ART },
   tunnel: { windows: TUNNEL_TILE_WINDOWS, art: TUNNEL_TILE_ART },
 };
+
+/**
+ * A transition cell drawn as an 8 px strip over a theme's shoulder.
+ *
+ * The strip is a material boundary, not a band: `left` is sampled with terrain on its
+ * left edge and drivable surface on its right, `right` the other way round. A theme whose
+ * transition cell did not qualify keeps its shoulder from `ROAD_TILE_SPECS` — the drawn
+ * fallback contract — so a missing strip is never a hole or a black band.
+ */
+export interface EdgeTileSpec {
+  readonly art: readonly string[];
+  readonly left: TileWindow;
+  readonly right: TileWindow;
+}
+
+/**
+ * Windows measured on the shipped `art-18-tiles-transition` cells.
+ *
+ * Cell 4 is the one clean blend on the sheet: a grass verge, a narrow worn road strip and
+ * grass again. Row 0 is the model's dark border, so every window starts at row 1 and
+ * repeats at 30 rows (measured wrap step 0.0 luma against 16–19 luma inside). The left
+ * window starts in olive and ends in the road's steel; the right window reverses that.
+ * Neither window contains the painted centre dash at column 15, so repeating the shoulder
+ * cannot scribble a dashed line into it.
+ */
+export const HIGHWAY_EDGE_BLEND: EdgeTileSpec = {
+  art: TRANSITION_TILE_ART['shoulder-grass'],
+  left: { sourceX: 7, sourceWidth: SHOULDER_WIDTH, sourceY: 1, sourceHeight: 30 },
+  right: { sourceX: 16, sourceWidth: SHOULDER_WIDTH, sourceY: 1, sourceHeight: 30 },
+};
+
+/**
+ * Windows measured on the shipped `art-18` chevron cell (cell 5).
+ *
+ * Columns 13–19 hold the amber chevrons; columns 12–19 keep asphalt either side so the
+ * 8 px strip is opaque. Rows 1–23 are the vertical period that wraps with a 0.0 luma step;
+ * the whole 32 px cell wraps at 59.3 luma, which would be a visible notch every 32 px, so
+ * the strip scrolls at 23 px instead.
+ */
+export const CANYON_EDGE_CHEVRON: EdgeTileSpec = {
+  art: TRANSITION_TILE_ART.chevron,
+  left: { sourceX: 12, sourceWidth: SHOULDER_WIDTH, sourceY: 1, sourceHeight: 23 },
+  right: { sourceX: 12, sourceWidth: SHOULDER_WIDTH, sourceY: 1, sourceHeight: 23 },
+};
+
+/**
+ * Level type → the transition strip that replaces its shoulder.
+ *
+ * Only themes whose transition cell qualified get a strip. Highway gets the grass →
+ * asphalt blend; canyon gets the chevron hazard shoulder (its cliff edge). River, city and
+ * tunnel keep their sheet shoulders because their asphalt → water/concrete blend cells
+ * carry a vehicle.
+ */
+export const ROAD_EDGE_SPECS: Readonly<Partial<Record<LevelType, EdgeTileSpec>>> = {
+  highway: HIGHWAY_EDGE_BLEND,
+  canyon: CANYON_EDGE_CHEVRON,
+};
+
+/** One strip, at the same x and width as the shoulder band it covers. */
+export interface EdgeBandPlan extends TileWindow {
+  readonly x: number;
+  readonly width: number;
+  readonly offset: number;
+}
+
+/** Road profile + distance → the two strips that paint the shoulders, back to front. */
+export function planRoadEdges(
+  road: RoadProfile,
+  distance: number,
+  spec: EdgeTileSpec,
+): readonly EdgeBandPlan[] {
+  const right = road.left + road.width;
+
+  const strip = (x: number, window: TileWindow): EdgeBandPlan => ({
+    x,
+    width: SHOULDER_WIDTH,
+    ...window,
+    offset: -tileOffset(distance, window.sourceHeight),
+  });
+
+  return [strip(road.left - SHOULDER_WIDTH, spec.left), strip(right, spec.right)];
+}
 
 export interface TileBandPlan extends TileWindow {
   readonly kind: TileKind;

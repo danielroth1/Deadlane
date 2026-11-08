@@ -533,11 +533,13 @@
       "id": "WO-47",
       "title": "art-18 transition and overlay tiles",
       "file": "gauntlet/work-orders/WO-47-tiles-transition.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-44"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "two usable cells wired as shoulder blend + chevron strip with pixel proof; overlay half owed to a new attempt"
     },
     {
       "id": "WO-48",

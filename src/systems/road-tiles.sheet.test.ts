@@ -6,7 +6,10 @@ import type { TileKind } from '@/art/ids';
 import { LEVEL_PROFILES } from '@/levels/types';
 import { decode, type Raster } from '../../pipeline/lib/image.js';
 import {
+  CANYON_EDGE_CHEVRON,
+  HIGHWAY_EDGE_BLEND,
   ROAD_TILE_SPECS,
+  type EdgeTileSpec,
   type RoadTileSpec,
   type RoadTileTheme,
   type TileWindow,
@@ -236,6 +239,29 @@ function brightCentroid(raster: Raster, test: (pixel: Rgb) => boolean): number {
     }
   }
   return total === 0 ? Number.NaN : weighted / total;
+}
+
+/** The pixels of one transition strip, exactly as the road layer repeats them. */
+async function edgePixels(spec: EdgeTileSpec, side: 'left' | 'right'): Promise<Raster> {
+  const id = spec.art[0];
+  if (!id) throw new Error(`the ${side} edge spec names no frame`);
+  const frame = manifest.sprites[id];
+  if (!frame) throw new Error(`${id} is not a frame in public/assets/assets.json`);
+
+  const sheet = await sheetRaster(frame.sheet);
+  const window = spec[side];
+  return crop(
+    sheet,
+    frame.x + window.sourceX,
+    frame.y + window.sourceY,
+    window.sourceWidth,
+    window.sourceHeight,
+  );
+}
+
+/** One window column of a strip. */
+function columnOf(raster: Raster, x: number): Raster {
+  return crop(raster, x, 0, 1, raster.height);
 }
 
 const THEMES = [
@@ -645,5 +671,104 @@ describe('tunnel sheet cells', () => {
     );
     expect(twice(wall), 'a second darkening would erase the wall').toBeLessThan(45);
     expect(once(wall)).toBeGreaterThan(once(road) * 1.5);
+  });
+});
+
+describe('transition sheet cells', () => {
+  it('draws the highway shoulder as grass outside and road inside, on both sides', async () => {
+    for (const side of ['left', 'right'] as const) {
+      const band = await edgePixels(HIGHWAY_EDGE_BLEND, side);
+
+      // A transition, not a flat fill: the outer column is the grass verge and the inner
+      // column is the worn road the surface abuts. Cell 4's measured columns are 5/5
+      // olive on the outside of each window and 5/5 steel on the inside.
+      const outer = columnOf(band, side === 'left' ? 0 : band.width - 1);
+      const inner = columnOf(band, side === 'left' ? band.width - 1 : 0);
+      expect(
+        colourShare(outer, PALETTE.olive),
+        `${side} shoulder's outer column is not grass`,
+      ).toBeGreaterThan(0.5);
+      expect(
+        colourShare(inner, PALETTE.steel),
+        `${side} shoulder's inner column is not the road edge`,
+      ).toBeGreaterThan(0.5);
+
+      // The window deliberately stops before the cell's painted centre dash, so nothing
+      // that repeats down the shoulder can read as a lane marking.
+      expect(
+        familyShare(band, [PALETTE.bone, PALETTE.white]),
+        `${side} shoulder window contains a painted dash`,
+      ).toBe(0);
+
+      // Fully opaque: a transparent column would let the drawn shoulder fill show through
+      // the strip, which is the lattice failure the window code exists to avoid.
+      for (let y = 0; y < band.height; y += 1) {
+        for (let x = 0; x < band.width; x += 1) {
+          expect(alphaAt(band, x, y), `${side} shoulder ${x},${y} is transparent`).toBeGreaterThan(
+            0,
+          );
+        }
+      }
+    }
+  });
+
+  it('keeps the highway shoulder wrap below its own internal variation', async () => {
+    for (const side of ['left', 'right'] as const) {
+      const band = await edgePixels(HIGHWAY_EDGE_BLEND, side);
+      const rows = wrapReport(rowProfile(band));
+      expect(
+        rows.seam,
+        `${side} shoulder wraps a ${rows.seam.toFixed(1)} luma step where its own rows never step more than ${rows.internalMax.toFixed(1)}`,
+      ).toBeLessThanOrEqual(rows.internalMax);
+    }
+  });
+
+  it('draws the canyon shoulder as the sheet chevron, with no transparent or blank row', async () => {
+    for (const side of ['left', 'right'] as const) {
+      const band = await edgePixels(CANYON_EDGE_CHEVRON, side);
+
+      // Chevrons are amber and sand paint on asphalt; a drawn shoulder would be one flat
+      // palette colour. Both the paint and the ground must be present.
+      expect(
+        familyShare(band, [PALETTE.amber, PALETTE.sand]),
+        `${side} chevron strip has no amber/sand paint`,
+      ).toBeGreaterThan(0.4);
+      expect(
+        colourShare(band, PALETTE.asphaltLight),
+        `${side} chevron strip has no asphalt ground`,
+      ).toBeGreaterThan(0.2);
+      expect(distinctColours(band)).toBeGreaterThanOrEqual(3);
+
+      for (let y = 0; y < band.height; y += 1) {
+        for (let x = 0; x < band.width; x += 1) {
+          expect(alphaAt(band, x, y), `${side} chevron ${x},${y} is transparent`).toBeGreaterThan(
+            0,
+          );
+        }
+      }
+    }
+  });
+
+  it('keeps the chevron wrap below its own internal variation', async () => {
+    for (const side of ['left', 'right'] as const) {
+      const band = await edgePixels(CANYON_EDGE_CHEVRON, side);
+      const rows = wrapReport(rowProfile(band));
+      expect(
+        rows.seam,
+        `${side} chevron wraps a ${rows.seam.toFixed(1)} luma step where its own rows never step more than ${rows.internalMax.toFixed(1)}`,
+      ).toBeLessThanOrEqual(rows.internalMax);
+    }
+  });
+
+  it('never samples a rejected cell', async () => {
+    // The blend id is cell 4 (labelled `grass to rock`) and the chevron id is cell 5.
+    // Every vehicle-bearing blend (0–3, 11–14), every opaque scene (6, 8–10) and the
+    // bordered pair (7, 15) stay out of the game. This is the sheet-level complement of
+    // `ids.test.ts`: the windows are measured on the cells the game will actually draw.
+    expect(HIGHWAY_EDGE_BLEND.art).toEqual(['tiles-transition/grass-to-rock']);
+    expect(CANYON_EDGE_CHEVRON.art).toEqual(['tiles-transition/chevron-shoulder']);
+
+    const blend = await edgePixels(HIGHWAY_EDGE_BLEND, 'left');
+    expect(colourShare(blend, PALETTE.olive)).toBeGreaterThan(0.5);
   });
 });

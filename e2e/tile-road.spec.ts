@@ -558,6 +558,32 @@ test('the highway is drawn from the art-13 tile sheet, without a grid', async ({
   ).toBeLessThan(0.4);
 });
 
+test('the highway shoulder is drawn from the art-18 grass/road blend', async ({ page }) => {
+  await startRun(page);
+  const frame = await grab(page);
+
+  // The 8 px strip outside each edge line is `art-18` cell 4 through the `HIGHWAY_EDGE_BLEND`
+  // window: a grass verge that meets a worn road edge. The drawn fallback shoulder is one
+  // flat palette colour, so seeing both families in the strip proves the transition cell
+  // reached the screen. The guardrail ticks are painted over it at 35 % bone; the
+  // thresholds sit well below the measured shares so the ticks cannot mask a fallback.
+  const strips = [
+    { label: 'left', x0: HIGHWAY.left - 8, x1: HIGHWAY.left - 1 },
+    { label: 'right', x0: HIGHWAY.left + HIGHWAY.width, x1: HIGHWAY.left + HIGHWAY.width + 7 },
+  ] as const;
+
+  for (const strip of strips) {
+    const grass = paletteShare(frame, strip.x0, strip.x1, 100, 300, ['olive']);
+    const road = paletteShare(frame, strip.x0, strip.x1, 100, 300, [
+      'steel',
+      'asphaltLight',
+      'asphalt',
+    ]);
+    expect(grass, `${strip.label} shoulder has no grass side`).toBeGreaterThan(0.15);
+    expect(road, `${strip.label} shoulder has no road side`).toBeGreaterThan(0.1);
+  }
+});
+
 test('the tile pattern scrolls down the screen with the world', async ({ page }) => {
   await startRun(page);
   // The sand window is 32 rows tall, so that is its scroll period — and a shift larger than
@@ -638,6 +664,31 @@ test('the canyon road is drawn from the art-14 tile sheet, with no marking insid
     const [beside] = columnMedians(frame, [boundary - 7], 60, 320);
     expect(beside, `the dash band at x=${boundary} is wider than 15 px`).toBeLessThan(
       ASPHALT_LUMA_CEILING,
+    );
+  }
+});
+
+test('the canyon shoulder is drawn from the art-18 chevron cell', async ({ page }) => {
+  await startRun(page);
+  await crossSector(page, 'REDLINE CANYON');
+  const frame = await grab(page);
+
+  // The canyon shoulder is the sheet's chevron cell, windowed to the 8 px strip. The drawn
+  // fallback shoulder is flat rust with sand guardrail ticks, so amber paint in the strip
+  // can only come from the transition sheet.
+  const strips = [
+    { label: 'left', x0: CANYON.left - 8, x1: CANYON.left - 1 },
+    { label: 'right', x0: CANYON.left + CANYON.width, x1: CANYON.left + CANYON.width + 7 },
+  ] as const;
+
+  for (const strip of strips) {
+    const amber = paletteShare(frame, strip.x0, strip.x1, 100, 300, ['amber']);
+    const ground = paletteShare(frame, strip.x0, strip.x1, 100, 300, ['asphaltLight', 'steel']);
+    expect(amber, `${strip.label} canyon shoulder carries no chevron paint`).toBeGreaterThan(
+      0.05,
+    );
+    expect(ground, `${strip.label} canyon shoulder has no asphalt under the chevron`).toBeGreaterThan(
+      0.1,
     );
   }
 });

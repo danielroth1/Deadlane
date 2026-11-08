@@ -161,6 +161,24 @@ export type TileKind = 'surface' | 'dash' | 'shoulder' | 'terrain';
 /** Tile role → candidate frame ids, most specific first. */
 export type TileArtByKind = Readonly<Record<TileKind, readonly string[]>>;
 
+/** The transition and overlay roles `art-18-tiles-transition` was asked to draw. */
+export type TransitionKind =
+  | 'asphalt-sand'
+  | 'asphalt-water'
+  | 'asphalt-concrete'
+  | 'shoulder-grass'
+  | 'grass-rock'
+  | 'chevron'
+  | 'faded-paint'
+  | 'rain'
+  | 'snow'
+  | 'fog'
+  | 'scanline'
+  | 'vignette'
+  | 'dirt'
+  | 'crack'
+  | 'blend-mask';
+
 /**
  * Highway tile role → candidate frame ids, most specific first.
  *
@@ -310,6 +328,81 @@ export const TUNNEL_TILE_ART: TileArtByKind = {
   // Cell 2 — the concrete wall. Cell 3 is the same wall with cable runs.
   terrain: ['tiles-tunnel/concrete-wall', 'tiles-tunnel/wall-cable-run'],
 };
+
+/**
+ * Transition role → candidate frame ids, matched on the processed cells.
+ *
+ * art-18 attempt 1 is heavily shifted from its labels and, unlike every previous tile
+ * sheet, most of its cells carry a vehicle or an opaque scene. The table therefore names
+ * only the cells that are clean, whole and on subject; every other role is `[]` and stays
+ * on the drawn fallback. That is a decision, not a missing entry — see
+ * `TRANSITION_PLACEHOLDER` below.
+ *
+ * Row-major the sheet draws:
+ *   0 asphalt | sand with a car straddling the seam · 1 asphalt | water, red car ·
+ *   2 asphalt | grass, car · 3 concrete paving, red car ·
+ *   4 grass with a narrow worn road strip through it — clean, and the only blend cell ·
+ *   5 amber chevrons on asphalt/concrete — clean, the only on-subject cell ·
+ *   6 an opaque chevron/concrete scene with rain streaks ·
+ *   7 grass | rock, but framed as a bordered object with a second strip below ·
+ *   8 an asphalt | sand strip and a snow fragment in one cell ·
+ *   9–10 more scene fragments with transparent gaps ·
+ *   11 a crack network over a car · 12 a car on transparency ·
+ *   13 a car in rust dirt · 14 a car under a crack network ·
+ *   15 a bordered grey plate with no readable pattern.
+ *
+ * Cell 4 is labelled `grass to rock` and cell 5 `chevron shoulder`: cell 5 is the only cell
+ * whose label matches its subject. A frame id names the cell by its *label*, so the clean
+ * blend is `tiles-transition/grass-to-rock` and the chevron is
+ * `tiles-transition/chevron-shoulder`.
+ */
+export const TRANSITION_TILE_ART: Readonly<Record<TransitionKind, readonly string[]>> = {
+  // Cells 0–2 are asphalt/sand/water/concrete seams with a car on each.
+  'asphalt-sand': [],
+  'asphalt-water': [],
+  'asphalt-concrete': [],
+  // Cell 4 — grass → worn road → grass. Its two boundaries are the shoulder windows in
+  // `HIGHWAY_EDGE_BLEND`.
+  'shoulder-grass': ['tiles-transition/grass-to-rock'],
+  // Cell 7 holds grass | rock, but it is object-framed with a black border and a detached
+  // strip below, so it cannot be repeated as a band.
+  'grass-rock': [],
+  // Cell 5 — the only clean, on-subject transition cell on the sheet.
+  chevron: ['tiles-transition/chevron-shoulder'],
+  // Every overlay cell below was rejected: opaque scene, vehicle, or grey plate.
+  'faded-paint': [],
+  rain: [],
+  snow: [],
+  fog: [],
+  scanline: [],
+  vignette: [],
+  dirt: [],
+  crack: [],
+  'blend-mask': [],
+};
+
+/**
+ * Transition roles deliberately left on the drawn fallback.
+ *
+ * Empty today: a role is either backed by a clean cell above or listed here, and never
+ * both. It exists so a test can tell "not drawn yet, on purpose" apart from "somebody
+ * forgot a role".
+ */
+export const TRANSITION_PLACEHOLDER: readonly TransitionKind[] = [
+  'asphalt-sand',
+  'asphalt-water',
+  'asphalt-concrete',
+  'grass-rock',
+  'faded-paint',
+  'rain',
+  'snow',
+  'fog',
+  'scanline',
+  'vignette',
+  'dirt',
+  'crack',
+  'blend-mask',
+];
 
 /** Frame ids for a pickup kind, or none when the kind is unknown and the fallback wins. */
 export function pickupArtIds(kind: string): readonly string[] {

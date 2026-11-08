@@ -5,10 +5,15 @@ import { GAME } from '@/config';
 import { PALETTE } from '@/palette';
 import type { LevelType, RoadProfile } from '@/levels/types';
 import {
+  ROAD_EDGE_SPECS,
   ROAD_TILE_SPECS,
+  planRoadEdges,
   planRoadTiles,
+  type EdgeBandPlan,
+  type EdgeTileSpec,
   type RoadTileTheme,
   type TileBandPlan,
+  type TileWindow,
 } from './road-tiles';
 
 /**
@@ -79,13 +84,18 @@ const DASH_GAP = 42;
 
 type TileFrames = Readonly<Record<TileKind, SpriteRef>>;
 
-/** First generated frame for a role, or null when the sheet has none. */
-function firstTileFrame(art: Art, table: TileArtByKind, kind: TileKind): SpriteRef | null {
-  for (const id of table[kind]) {
+/** First generated frame among these ids, or null when none exists. */
+function firstFrame(art: Art, ids: readonly string[]): SpriteRef | null {
+  for (const id of ids) {
     const ref = art.frameFor(id);
     if (ref) return ref;
   }
   return null;
+}
+
+/** First generated frame for a role, or null when the sheet has none. */
+function firstTileFrame(art: Art, table: TileArtByKind, kind: TileKind): SpriteRef | null {
+  return firstFrame(art, table[kind]);
 }
 
 /**
@@ -117,7 +127,7 @@ function tileFrames(art: Art, table: TileArtByKind): TileFrames | null {
 function windowFrame(
   scene: Phaser.Scene,
   frame: SpriteRef,
-  band: TileBandPlan,
+  window: TileWindow,
 ): string | number {
   const index = frame.frame ?? 0;
   const texture = scene.textures.get(frame.key);
@@ -125,11 +135,11 @@ function windowFrame(
   // branch, which resolves `firstFrame` instead of the frame asked for.
   const base = texture.get(String(index));
 
-  const fullWidth = band.sourceX === 0 && band.sourceWidth >= base.cutWidth;
-  const fullHeight = band.sourceY === 0 && band.sourceHeight >= base.cutHeight;
+  const fullWidth = window.sourceX === 0 && window.sourceWidth >= base.cutWidth;
+  const fullHeight = window.sourceY === 0 && window.sourceHeight >= base.cutHeight;
   if (fullWidth && fullHeight) return index;
 
-  const name = `${index}:${band.sourceX}+${band.sourceWidth}:${band.sourceY}+${band.sourceHeight}`;
+  const name = `${index}:${window.sourceX}+${window.sourceWidth}:${window.sourceY}+${window.sourceHeight}`;
   if (texture.has(name)) return name;
 
   // `cutX/cutY/cutWidth/cutHeight` are the source rectangle. `x/y` are render offsets and
@@ -138,10 +148,10 @@ function windowFrame(
   const added = texture.add(
     name,
     base.sourceIndex,
-    base.cutX + band.sourceX,
-    base.cutY + band.sourceY,
-    band.sourceWidth,
-    band.sourceHeight,
+    base.cutX + window.sourceX,
+    base.cutY + window.sourceY,
+    window.sourceWidth,
+    window.sourceHeight,
   );
   return added ? name : index;
 }
@@ -151,18 +161,29 @@ class RoadTileLayer {
   private readonly road: RoadProfile;
   private readonly windows: RoadTileTheme;
   private readonly sprites: Phaser.GameObjects.TileSprite[];
+  private readonly edgeSpec: EdgeTileSpec | null;
+  private readonly edgeSprites: Phaser.GameObjects.TileSprite[];
 
   constructor(
     scene: Phaser.Scene,
     road: RoadProfile,
     frames: TileFrames,
     windows: RoadTileTheme,
+    edgeSpec: EdgeTileSpec | null,
+    edgeFrame: SpriteRef | null,
   ) {
     this.road = road;
     this.windows = windows;
+    const edge = edgeSpec && edgeFrame ? { spec: edgeSpec, frame: edgeFrame } : null;
+    this.edgeSpec = edge?.spec ?? null;
     this.sprites = planRoadTiles(road, 0, windows).map((band) =>
       this.createSprite(scene, band, frames[band.kind]),
     );
+    this.edgeSprites = edge
+      ? planRoadEdges(road, 0, edge.spec).map((band) =>
+          this.createEdgeSprite(scene, band, edge.frame),
+        )
+      : [];
   }
 
   private createSprite(
@@ -185,20 +206,55 @@ class RoadTileLayer {
     return sprite;
   }
 
+  /**
+   * The transition strip covering a shoulder.
+   *
+   * One depth above the bands and one below the drawn markings, so the road furniture
+   * (edge line, guardrail ticks) still paints over it.
+   */
+  private createEdgeSprite(
+    scene: Phaser.Scene,
+    band: EdgeBandPlan,
+    frame: SpriteRef,
+  ): Phaser.GameObjects.TileSprite {
+    const sprite = scene.add.tileSprite(
+      band.x,
+      0,
+      band.width,
+      GAME.height,
+      frame.key,
+      windowFrame(scene, frame, band),
+    );
+
+    sprite.setOrigin(0, 0).setDepth(1.5);
+    sprite.tilePositionY = band.offset;
+
+    return sprite;
+  }
+
   render(distance: number): void {
     const bands = planRoadTiles(this.road, distance, this.windows);
     bands.forEach((band, index) => {
       const sprite = this.sprites[index];
       if (sprite) sprite.tilePositionY = band.offset;
     });
+
+    if (!this.edgeSpec) return;
+    const edges = planRoadEdges(this.road, distance, this.edgeSpec);
+    edges.forEach((band, index) => {
+      const sprite = this.edgeSprites[index];
+      if (sprite) sprite.tilePositionY = band.offset;
+    });
   }
 
   setVisible(visible: boolean): void {
     for (const sprite of this.sprites) sprite.setVisible(visible);
+    for (const sprite of this.edgeSprites) sprite.setVisible(visible);
   }
 
   destroy(): void {
     for (const sprite of this.sprites) sprite.destroy();
+    for (const sprite of this.edgeSprites) sprite.destroy();
   }
 }
 
@@ -233,7 +289,12 @@ export class RoadSystem {
     this.base = scene.add.graphics().setDepth(0);
     const spec = ROAD_TILE_SPECS[type];
     const frames = spec ? tileFrames(art, spec.art) : null;
-    this.tiles = spec && frames ? new RoadTileLayer(scene, road, frames, spec.windows) : null;
+    const edgeSpec = ROAD_EDGE_SPECS[type] ?? null;
+    const edgeFrame = edgeSpec ? firstFrame(art, edgeSpec.art) : null;
+    this.tiles =
+      spec && frames
+        ? new RoadTileLayer(scene, road, frames, spec.windows, edgeSpec, edgeFrame)
+        : null;
     this.painted = !(type === 'river' && this.tiles !== null);
     this.markings = scene.add.graphics().setDepth(2);
   }
