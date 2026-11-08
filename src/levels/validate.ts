@@ -1,5 +1,5 @@
 import { DECOR, ROAD, SPAWN, WORLD } from '@/config';
-import { LEVEL_PROFILES, decorX, laneCenter, roadAt, type LevelBlueprint } from './types';
+import { LEVEL_PROFILES, decorX, laneCenterAt, roadAt, type LevelBlueprint } from './types';
 
 /**
  * Playability invariants for a generated level.
@@ -100,7 +100,8 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
     }
 
     const profile = roadAt(shape, event.at);
-    const center = laneCenter(profile, Math.max(0, Math.min(shape.lanes - 1, event.lane)));
+    const lane = Math.max(0, Math.min(shape.lanes - 1, event.lane));
+    const center = laneCenterAt(shape, event.at, lane);
     if (center < profile.left || center > profile.left + profile.width) {
       issues.push({ code: 'lane-center', message: `Lane ${event.lane} centre is off-road`, at: event.at });
     }

@@ -181,17 +181,29 @@ export type ScenerySurface = 'roadside' | 'water' | 'urban';
  * sheet is cell 9, whose label says `direction sign blank`; the whole van in cell 11 is
  * labelled `wrecked sedan` and is skipped for the same reason — it is not a wreck.
  *
- * art-23 attempt 1 is close to its labels: reeds (0–1), a plank dock cross (2), a moored
- * hull (3), two buoys (4–5), two moored boats (6–7), a rock in water (8), a brick jetty
- * corner (9), a bridge pier frame (10), a dock ladder (11), a tyre fender (12), a mooring
- * bollard (13), a second bollard (14) and a floating pontoon (15).
+ * art-23 attempt 1 drifts one cell from its labels from cell 8 onward. A frame id is derived
+ * from its label, so each entry below names the cell by its label and the comment says what
+ * is actually drawn there. Row-major the sheet draws:
+ *   0 reed bank · 1 reed clump · 2 plank dock cross · 3 moored hull (labelled `dock
+ *   ladder`) · 4 channel buoy · 5 marker buoy · 6 moored dinghy · 7 moored skiff ·
+ *   8 rock in water (labelled `moored barge`) · 9 brick jetty corner (labelled `water
+ *   rock`) · 10 truss bridge pier (labelled `stone jetty`) · 11 dock ladder (labelled
+ *   `bridge pier`) · 12 post in a tyre (labelled `tall bridge pier`) · 13 truss pier
+ *   (labelled `tire fender`) · 14 a second post in a tyre (labelled `mooring post`) ·
+ *   15 floating pontoon, the one cell whose label matches.
+ * Cells 11 and 13 are deliberately **not** referenced: cell 11 is a dock ladder and no
+ * scenery id wants one (the `dock` prop is the plank cross in cell 2), and cell 13 is a
+ * second truss pier that adds no variety over the cleaner one in cell 10. Cell 3 is a
+ * moored hull rather than the ladder its label promises, so it is spent as the third
+ * `boat` variant instead of being wasted.
  *
  * art-24 attempt 1 matches its labels throughout: roofs (0–3), blank signs (4–5), AC units
  * (6–7), a dumpster and a skip (8–9), lamp heads (10–11), planters (12–13), a water tank
  * (14) and a satellite dish (15).
  *
- * Several ids list two candidates, so the scene can vary a stretch of road without a second
- * sheet: `pickSceneryVariant()` chooses between them from the prop's own world position.
+ * Several ids list more than one candidate, so the scene can vary a stretch of road without
+ * a second sheet: `pickSceneryVariant()` chooses between them from the prop's own world
+ * position.
  */
 export const SCENERY_ART: Readonly<
   Record<ScenerySurface, Readonly<Record<string, readonly string[]>>>
@@ -215,15 +227,30 @@ export const SCENERY_ART: Readonly<
     pylon: ['scenery-roadside/pylon-concrete', 'scenery-roadside/pylon-lattice'],
   },
   water: {
+    // Cells 0 and 1 — two reed banks.
     reeds: ['scenery-water/reed-bank', 'scenery-water/reed-clump'],
+    // Cell 2 — the plank dock cross.
     dock: ['scenery-water/wooden-dock'],
+    // Cells 4 and 5 — a channel buoy and a marker buoy.
     buoy: ['scenery-water/channel-buoy', 'scenery-water/marker-buoy'],
-    boat: ['scenery-water/moored-dinghy', 'scenery-water/moored-skiff'],
-    'water-rock': ['scenery-water/water-rock'],
-    jetty: ['scenery-water/stone-jetty'],
-    'bridge-pier': ['scenery-water/bridge-pier'],
-    'tire-fender': ['scenery-water/tire-fender'],
+    // Cells 6, 7 and 3 — two moored boats, then the moored hull drawn in the cell the
+    // label calls `dock ladder`.
+    boat: [
+      'scenery-water/moored-dinghy',
+      'scenery-water/moored-skiff',
+      'scenery-water/dock-ladder',
+    ],
+    // Cell 8 — a rock in water. The label on this cell says "moored barge".
+    'water-rock': ['scenery-water/moored-barge'],
+    // Cell 9 — a brick jetty corner. The label on this cell says "water rock".
+    jetty: ['scenery-water/water-rock'],
+    // Cell 10 — a truss bridge pier. The label on this cell says "stone jetty".
+    'bridge-pier': ['scenery-water/stone-jetty'],
+    // Cell 12 — a post set in a tyre. The label on this cell says "tall bridge pier".
+    'tire-fender': ['scenery-water/tall-bridge-pier'],
+    // Cell 14 — a second post in a tyre; the label matches closely enough to keep it.
     'mooring-post': ['scenery-water/mooring-post'],
+    // Cell 15 — the floating pontoon.
     pontoon: ['scenery-water/floating-pontoon'],
   },
   urban: {

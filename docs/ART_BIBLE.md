@@ -492,6 +492,35 @@ watercraft — all three cells that were meant to hold one were side-on and ring
 model-drawn water. Until a new attempt supplies them, the entire river civilian pool draws
 procedural placeholder art.
 
+### Measured yield: scenery sheets 22–24 (WO-54, one attempt per slot)
+
+One attempt per scenery slot was paid for and pulled under the 4 × 4 @ 64 px prop contract.
+`art:process` reports `usableCells 16/16` for all three, which as stated above is only the
+non-empty counter and **not** the yield. None of these sheets declares surface tiles, so
+`meanSeamError 255` is the documented no-tile sentinel, not a gate; `meanPaletteDistance`
+and `sizeVariance` are score inputs.
+
+| Slot | Attempt | `usableCells` (non-empty tool counter) | `meanPaletteDistance` | `sizeVariance` | `meanSymmetry` | `meanDistinctColors` | `score` | Cells used |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| `art-22-scenery-roadside` | 1 | 16/16 | 48.8 | 0.106 | 78.5% | 12.1 | 89.57 | 11 of 16 |
+| `art-23-scenery-water` | 1 | 16/16 | 53.6 | 0.150 | 83.8% | 12.3 | 88.06 | 14 of 16 |
+| `art-24-scenery-urban` | 1 | 16/16 | 43.4 | 0.123 | 88.1% | 10.9 | 88.83 | 16 of 16 |
+
+Cells left unused, and why:
+
+- **art-22 cells 4–7** each carry a second, half-drawn object below its subject, so slicing
+  them ships a fence fragment. **Cell 11** is a whole van labelled `wrecked sedan`; the
+  genuine wrecks are cells 12–13.
+- **art-23 cells 11 and 13.** The sheet drifts one cell from its labels from cell 8 onward:
+  8 is the rock in water, 9 the brick jetty corner, 10 the truss bridge pier, 11 a dock
+  ladder and 12 the tyre fender, while 13 is a second truss pier. No scenery id wants a
+  ladder, and the second pier adds nothing over the cleaner cell 10. `src/art/ids.ts` maps
+  every water prop at the cell that actually holds it, so the labels and the table disagree
+  on purpose; cell 3 is a moored hull rather than a ladder and is spent as a third `boat`.
+- **art-24** uses all sixteen cells.
+
+No claim beyond these numbers is made here.
+
 ## 6. Motion
 
 We prefer **not** to ask a diffusion model for animation. Animation is assembled in code:

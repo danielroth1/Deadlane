@@ -1373,7 +1373,8 @@ export class GameScene extends Phaser.Scene {
   private damagePlayer(time: number): void {
     // The scene keeps ticking during the game-over delay, and two collisions can land on
     // the same frame: once the run is over, nothing else may touch the wreck.
-    if (this.runEnded) return;    if (!this.player.takeHit(time)) return;
+    if (this.runEnded) return;
+    if (!this.player.takeHit(time)) return;
     this.cameras.main.shake(160, 0.008);
     this.audio.play('hit');
     // Armour and score are separate resources: a hit that the car survives costs no

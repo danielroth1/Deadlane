@@ -301,10 +301,12 @@ test('leaving the road warns, slows the car and costs armour', async ({ page }) 
   await page.keyboard.up('ArrowRight');
 
   // The rough-ground speed penalty: the car cannot be doing more than a share of cruise.
-  expect(
-    offRoad.hud.speed,
-    `the car held ${offRoad.hud.speed} px/s on rough ground — the penalty is not applied`,
-  ).toBeLessThanOrEqual(OFF_ROAD_SPEED_CEILING);
+  // The first snapshot taken while the warning appears can still carry the pre-clamp speed,
+  // so wait for a frame that has actually applied the penalty instead of reading that one.
+  expect(offRoad.offRoad, 'the car left the road before the speed check').toBe(true);
+  await expect
+    .poll(async () => (await readSnapshot(page)).hud.speed, { timeout: 5_000 })
+    .toBeLessThanOrEqual(OFF_ROAD_SPEED_CEILING);
 
   // Left alone, the car keeps losing armour on the ordinary damage path.
   await expect
