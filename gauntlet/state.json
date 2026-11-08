@@ -368,9 +368,11 @@
       "id": "WO-32",
       "title": "Pause that can be resumed",
       "file": "gauntlet/work-orders/WO-32-pause.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "Esc owned by HUD, pause card in HUD, ?debug=1 read-only snapshot, e2e pause/resume test"
     },
     {
       "id": "WO-33",

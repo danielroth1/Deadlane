@@ -15,6 +15,9 @@ import { ChallengeSystem } from '@/systems/challenges';
 import { PixelText, measureText } from '@/ui/pixel-text';
 import { seedFromLocation } from '@/rng';
 
+/** Emitted by this scene whenever the run is paused or resumed. The HUD owns the key. */
+export const RUN_PAUSED_EVENT = 'run:paused';
+
 interface Bullet {
   readonly sprite: Phaser.GameObjects.Image;
   at: number;
@@ -51,6 +54,15 @@ export interface HudState {
   challenge: string;
   challengeProgress: number;
   challengeTarget: number;
+}
+
+/** Read-only run view served to Playwright through `window.__deadlane` at `?debug=1`. */
+export interface RunDebugState {
+  readonly paused: boolean;
+  readonly muted: boolean;
+  readonly enemies: number;
+  readonly civilians: number;
+  readonly hud: HudState;
 }
 
 /**
@@ -134,13 +146,13 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.cursors = this.input.keyboard!.createCursorKeys();
-    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,SHIFT,ESC') as Record<
+    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,SHIFT') as Record<
       string,
       Phaser.Input.Keyboard.Key
     >;
 
+    // Esc is owned by the HUD, which keeps running while this scene is paused.
     this.scene.launch('Hud', { game: this });
-    this.input.keyboard!.on('keydown-ESC', () => this.togglePause());
 
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       this.audio.unlock();
@@ -153,8 +165,8 @@ export class GameScene extends Phaser.Scene {
 
   /* ------------------------------- public API ------------------------------ */
 
+  /** Pure pull: challenge windows are advanced by `updateChallenge()`, never by a read. */
   get hudState(): HudState {
-    const challenge = this.challenges?.update(this.distance);
     return {
       score: Math.max(0, Math.round(this.score)),
       armor: this.player?.armor ?? 0,
@@ -169,6 +181,46 @@ export class GameScene extends Phaser.Scene {
       challengeProgress: this.challengeProgress,
       challengeTarget: this.challengeTarget,
     };
+  }
+
+  get isPaused(): boolean {
+    return this.paused;
+  }
+
+  /** Read-only snapshot for the debug surface. Must never mutate gameplay. */
+  get debugState(): RunDebugState {
+    return {
+      paused: this.paused,
+      muted: this.audio?.isMuted ?? false,
+      enemies: this.enemies.length,
+      civilians: this.civilians.length,
+      hud: this.hudState,
+    };
+  }
+
+  /**
+   * Pause/resume the run.
+   *
+   * Phaser refuses keyboard input to a scene that is not RUNNING, so the pause key lives in
+   * the HUD; this scene only owns the state and the scene lifecycle.
+   */
+  togglePause(): void {
+    if (this.paused) this.resumeRun();
+    else this.pauseRun();
+  }
+
+  pauseRun(): void {
+    if (this.paused) return;
+    this.paused = true;
+    this.events.emit(RUN_PAUSED_EVENT, true);
+    this.scene.pause();
+  }
+
+  resumeRun(): void {
+    if (!this.paused) return;
+    this.paused = false;
+    this.scene.resume();
+    this.events.emit(RUN_PAUSED_EVENT, false);
   }
 
   /* --------------------------------- update -------------------------------- */
@@ -229,9 +281,6 @@ export class GameScene extends Phaser.Scene {
     }
     if (Phaser.Input.Keyboard.JustDown(this.keys['SHIFT']!)) {
       this.dropSmoke(time);
-    }
-    if (Phaser.Input.Keyboard.JustDown(this.keys['ESC']!)) {
-      this.togglePause();
     }
   }
 
@@ -640,14 +689,6 @@ export class GameScene extends Phaser.Scene {
         seed: this.seed,
       });
     });
-  }
-
-  private togglePause(): void {
-    this.paused = !this.paused;
-    if (this.paused) {
-      this.scene.pause();
-      this.showBanner('PAUSED · ESC TO RESUME');
-    }
   }
 
   private showBanner(text: string): void {

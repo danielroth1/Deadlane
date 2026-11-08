@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 /**
  * Production smoke test.
@@ -8,6 +8,24 @@ import { expect, test } from '@playwright/test';
  */
 
 const BASE = '/deadlane/';
+
+/** Mirror of the read-only `window.__deadlane` snapshot the HUD installs at `?debug=1`. */
+interface DeadlaneSnapshot {
+  paused: boolean;
+  pauseCard: boolean;
+  muted: boolean;
+  enemies: number;
+  civilians: number;
+  hud: { distance: number; speed: number; score: number; level: number };
+}
+
+async function readSnapshot(page: Page): Promise<DeadlaneSnapshot> {
+  return page.evaluate(() => {
+    const snap = (window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane;
+    if (!snap) throw new Error('window.__deadlane missing — open the page with ?debug=1');
+    return snap;
+  });
+}
 
 test('boots from the production bundle under the GitHub Pages base path', async ({ page }) => {
   const errors: string[] = [];
@@ -69,4 +87,74 @@ test('serves the asset manifest so the fallback art path is exercised', async ({
   const manifest = (await response.json()) as { sprites: Record<string, unknown>; sheets: Record<string, unknown> };
   expect(manifest).toHaveProperty('sprites');
   expect(manifest).toHaveProperty('sheets');
+});
+
+test('Esc pauses the run, and Esc resumes it', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+
+  await page.goto(`${BASE}?debug=1&seed=424242`);
+  await expect(page.locator('#dl-root canvas')).toBeVisible({ timeout: 15_000 });
+
+  // The title scene only arms its Space listener once preload finishes, so press until the
+  // HUD has installed the snapshot rather than racing the boot sequence.
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press('Space');
+        return page.evaluate(() =>
+          Boolean((window as unknown as { __deadlane?: unknown }).__deadlane),
+        );
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+
+  await page.waitForFunction(
+    () => {
+      const snap = (window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane;
+      return snap !== undefined && snap.hud.distance > 0;
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(
+    () => (window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane?.paused === true,
+    undefined,
+    { timeout: 5_000 },
+  );
+
+  const paused = await readSnapshot(page);
+  expect(paused.pauseCard).toBe(true);
+
+  // The world must be frozen: one second of real time changes nothing.
+  await page.waitForTimeout(1_000);
+  const stillPaused = await readSnapshot(page);
+  expect(stillPaused.paused).toBe(true);
+  expect(stillPaused.pauseCard).toBe(true);
+  expect(stillPaused.hud.distance).toBe(paused.hud.distance);
+  expect(stillPaused.enemies).toBe(paused.enemies);
+  expect(stillPaused.civilians).toBe(paused.civilians);
+
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(
+    () => (window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane?.paused === false,
+    undefined,
+    { timeout: 5_000 },
+  );
+
+  const resumed = await readSnapshot(page);
+  expect(resumed.pauseCard).toBe(false);
+
+  // Input is live again: holding accelerate raises the recorded scroll speed.
+  await page.keyboard.down('ArrowUp');
+  await page.waitForTimeout(300);
+  const boosting = await readSnapshot(page);
+  await page.keyboard.up('ArrowUp');
+
+  expect(boosting.hud.speed).toBeGreaterThan(resumed.hud.speed);
+  expect(boosting.hud.distance).toBeGreaterThan(resumed.hud.distance);
+  expect(errors).toEqual([]);
 });
