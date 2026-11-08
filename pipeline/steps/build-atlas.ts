@@ -75,8 +75,14 @@ export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<Sh
 
   const composites: sharp.OverlayOptions[] = [];
   const frames: Record<string, FrameRect> = {};
+  const dropped = slot.droppedCells ?? [];
 
   for (let index = 0; index < cols * rows; index += 1) {
+    // A declared drop is a decision, not an accident: the cell is excluded even when the
+    // processed PNG is sitting in the work directory. That is different from a missing
+    // file (`existsSync` below), which just means the cell has not been processed yet.
+    if (dropped.includes(index)) continue;
+
     const cellPath = join(workDir, `cell-${index}.png`);
     if (!existsSync(cellPath)) continue;
 

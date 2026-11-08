@@ -334,9 +334,11 @@
       "id": "WO-29",
       "title": "Pipeline: declared dropped cells instead of rm",
       "file": "gauntlet/work-orders/WO-29-declared-drops.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "droppedCells declared for art-03[0]/art-06[1]; atlas skips them even with cell PNGs present"
     }
   ]
 }

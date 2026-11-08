@@ -27,6 +27,15 @@ export interface SlotSpec {
   readonly subject: string;
   /** Named contents of each grid cell, row-major. Undefined cells are discarded. */
   readonly cells?: readonly (string | null)[];
+  /**
+   * Row-major cell indexes that must never reach the atlas, even when the processed PNG
+   * exists in the work directory.
+   *
+   * This is registry data, not a `rm` of `cell-<i>.png`. Reprocessing a slot rewrites every
+   * non-empty cell, so a deleted file silently comes back; a declared drop survives any
+   * re-run of `art:process` and is enforced by the atlas builder.
+   */
+  readonly droppedCells?: readonly number[];
   /** Anything the sheet must get right. Folded into the prompt. */
   readonly emphasis?: readonly string[];
 }
@@ -96,6 +105,9 @@ export const SLOTS: readonly SlotSpec[] = [
       'road lord heavy',
       'division sports coupe',
     ]),
+    // Cell 0 (enforcer motorcycle) is drawn nose-down: the frame contradicts the
+    // nose-up contract every vehicle sprite carries, so it must never ship.
+    droppedCells: [0],
     emphasis: [
       'red nose lights on every hostile',
       'silhouettes wider at the front',
@@ -173,6 +185,9 @@ export const SLOTS: readonly SlotSpec[] = [
       'hovercraft',
       'torpedo boat',
     ]),
+    // Cell 1 (speedboat hostile) is rendered in three-quarter view: the only sprite in the
+    // set that breaks the square-on overhead camera, so it must never ship.
+    droppedCells: [1],
     emphasis: [
       'hull silhouettes must differ strongly',
       'every hostile boat is always axis-aligned with its bow pointing up',
