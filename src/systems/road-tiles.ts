@@ -1,6 +1,12 @@
 import { GAME } from '@/config';
-import type { RoadProfile } from '@/levels/types';
-import type { HighwayTileKind } from '@/art/ids';
+import type { LevelType, RoadProfile } from '@/levels/types';
+import {
+  CANYON_TILE_ART,
+  HIGHWAY_TILE_ART,
+  WATER_TILE_ART,
+  type TileArtByKind,
+  type TileKind,
+} from '@/art/ids';
 
 /**
  * Frame selection for the highway tile layer.
@@ -20,6 +26,38 @@ export const TILE_SIZE = 32;
 
 /** Shoulder strips are 8 px wide, matching the drawn road geometry. */
 export const SHOULDER_WIDTH = 8;
+
+/** The rectangle of a cell one band repeats, drawn 1:1. */
+export interface TileWindow {
+  readonly sourceX: number;
+  readonly sourceWidth: number;
+  readonly sourceY: number;
+  readonly sourceHeight: number;
+}
+
+/**
+ * Every window a level type needs to draw its road from tile cells.
+ *
+ * A theme is a rectangle per role: both axes are windowed because the model draws a dark
+ * border down the top and left of most cells, and repeating either one is a line every
+ * tile. Each band wraps its scroll at its own window height, so a band with a trimmed row
+ * still moves continuously with every other band.
+ */
+export interface RoadTileTheme {
+  readonly terrain: TileWindow;
+  readonly shoulderLeft: TileWindow;
+  readonly shoulderRight: TileWindow;
+  /** The drivable surface. One contiguous window, so the band repeats evenly. */
+  readonly surface: TileWindow;
+  /** Lane dividers. The band's width is the window's width. */
+  readonly dash: TileWindow;
+}
+
+/** A theme's art table plus the windows measured on that sheet. */
+export interface RoadTileSpec {
+  readonly windows: RoadTileTheme;
+  readonly art: TileArtByKind;
+}
 
 /**
  * Windows, measured on the shipped `art-13-tiles-highway` cells.
@@ -42,16 +80,80 @@ export const SHOULDER_SAMPLE_RIGHT = 24;
 export const DASH_WIDTH = 16;
 export const DASH_SAMPLE_X = 8;
 
-export interface HighwayTileBandPlan {
-  readonly kind: HighwayTileKind;
+export const HIGHWAY_TILE_WINDOWS: RoadTileTheme = {
+  surface: { sourceX: SURFACE_SAMPLE_X, sourceWidth: SURFACE_SAMPLE_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  terrain: { sourceX: TERRAIN_SAMPLE_X, sourceWidth: TERRAIN_SAMPLE_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  shoulderLeft: { sourceX: SHOULDER_SAMPLE_LEFT, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  shoulderRight: { sourceX: SHOULDER_SAMPLE_RIGHT, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  dash: { sourceX: DASH_SAMPLE_X, sourceWidth: DASH_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+};
+
+/**
+ * Windows measured on the shipped `art-14-tiles-canyon` cells (`cell-N.png`).
+ *
+ * - surface (cell 0): columns 3–15, rows 1–30. The cell is a road strip, not plain
+ *   asphalt — it carries a solid edge line at column 2 and a painted white dash at column
+ *   16, and a dark model border on row 0. Sampling left of the dash and below the border
+ *   keeps only cracked asphalt and leaves the marking to the lane bands, where it lines up
+ *   with the lane geometry instead of repeating every window width.
+ * - terrain (cell 1): the whole sand plain, which is uniform edge to edge.
+ * - shoulder (cell 6): cracked stone, uniform across its columns; each strip takes its
+ *   own outer eight columns so the verge does not repeat a road edge.
+ * - dash (cell 0): columns 8–23 put the painted dash at local column 8, the centre of the
+ *   16 px band, with asphalt either side of it; rows 1–30 drop the same dark border row.
+ */
+export const CANYON_TILE_WINDOWS: RoadTileTheme = {
+  surface: { sourceX: 3, sourceWidth: 13, sourceY: 1, sourceHeight: 30 },
+  terrain: { sourceX: 0, sourceWidth: 32, sourceY: 0, sourceHeight: TILE_SIZE },
+  shoulderLeft: { sourceX: 0, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  shoulderRight: { sourceX: 24, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  dash: { sourceX: 8, sourceWidth: DASH_WIDTH, sourceY: 1, sourceHeight: 30 },
+};
+
+/**
+ * Windows measured on the shipped `art-15-tiles-water` cells (`cell-N.png`).
+ *
+ * On water the road *is* water, so every band is sampled from the sheet's water cells and
+ * no band is ever asphalt.
+ *
+ * - surface (cell 0, open water): columns 1–30, rows 1–30. Column 0 is the dark border
+ *   the model draws down the left of every cell and row 0 the same border across its top;
+ *   repeating either would be a line every tile.
+ * - terrain (cell 9, deep water): the same trim on the water outside the channel. The
+ *   channel is marked by its shoulders, not by a different material.
+ * - shoulder (cell 12, the wooden pier the sheet labels `stone bank edge`): columns 10–18
+ *   are the plank deck, which repeats as mooring posts along the channel edge. One window
+ *   serves both sides because planks have no inside or outside.
+ * - dash (cell 2, foam): columns 8–23 cut through the white patch, so repeating the band
+ *   draws a dashed wake down each lane boundary. The 32 px cell has transparent rows above
+ *   and below the patch; they are gaps in the dash, and the surface water shows through.
+ */
+export const WATER_TILE_WINDOWS: RoadTileTheme = {
+  surface: { sourceX: 1, sourceWidth: 30, sourceY: 1, sourceHeight: 30 },
+  terrain: { sourceX: 1, sourceWidth: 30, sourceY: 1, sourceHeight: 30 },
+  shoulderLeft: { sourceX: 10, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  shoulderRight: { sourceX: 10, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  dash: { sourceX: 8, sourceWidth: DASH_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+};
+
+/**
+ * Level type → the sheet and windows its road is drawn from.
+ *
+ * City and tunnel are deliberately absent: they keep the drawn theme until their own
+ * sheets land, and a missing entry is the only thing that has to change to opt them in.
+ */
+export const ROAD_TILE_SPECS: Readonly<Partial<Record<LevelType, RoadTileSpec>>> = {
+  highway: { windows: HIGHWAY_TILE_WINDOWS, art: HIGHWAY_TILE_ART },
+  canyon: { windows: CANYON_TILE_WINDOWS, art: CANYON_TILE_ART },
+  river: { windows: WATER_TILE_WINDOWS, art: WATER_TILE_ART },
+};
+
+export interface TileBandPlan extends TileWindow {
+  readonly kind: TileKind;
   /** Screen x of the band's left edge. */
   readonly x: number;
   /** Screen width of the band. */
   readonly width: number;
-  /** Left edge of the window inside the frame, in source pixels. */
-  readonly sourceX: number;
-  /** Width of the window inside the frame, in source pixels. Drawn 1:1. */
-  readonly sourceWidth: number;
   /**
    * `tilePositionY` for the band.
    *
@@ -67,14 +169,33 @@ export interface HighwayTileBandPlan {
 }
 
 /**
- * Distance → position inside one tile, in `[0, TILE_SIZE)`.
+ * Distance → position inside one repeat, in `[0, period)`.
  *
- * Wrapping keeps the number small and the pattern periodic with exactly one tile, so a
- * seam can never creep in through accumulated float error.
+ * Wrapping keeps the number small and the pattern periodic with exactly one repeat, so a
+ * seam can never creep in through accumulated float error. The period is the window's own
+ * height: a band that trims the top row of its cell repeats at 30 px, not 32, and wrapping
+ * it at 32 would jump the pattern by 2 px every tile.
  */
-export function tileOffset(distance: number): number {
-  const wrapped = distance % TILE_SIZE;
-  return wrapped < 0 ? wrapped + TILE_SIZE : wrapped;
+export function tileOffset(distance: number, period: number = TILE_SIZE): number {
+  const wrapped = distance % period;
+  return wrapped < 0 ? wrapped + period : wrapped;
+}
+
+/** One band, with its scroll offset derived from its own window height. */
+function band(
+  kind: TileKind,
+  x: number,
+  width: number,
+  window: TileWindow,
+  distance: number,
+): TileBandPlan {
+  return {
+    kind,
+    x,
+    width,
+    ...window,
+    offset: -tileOffset(distance, window.sourceHeight),
+  };
 }
 
 /**
@@ -83,67 +204,37 @@ export function tileOffset(distance: number): number {
  * The first five bands are fixed by the profile: terrain fills the screen edges, the
  * shoulders straddle the drivable surface, and the surface fills it exactly. The dash
  * bands sit on the interior lane boundaries, one per divider, and scroll with `distance`.
+ *
+ * The theme only supplies windows; it never moves a band, so a level type can change how
+ * its road is drawn without touching the geometry the collision code uses.
  */
-export function planHighwayTiles(
+export function planRoadTiles(
   road: RoadProfile,
   distance: number,
-): readonly HighwayTileBandPlan[] {
+  windows: RoadTileTheme = HIGHWAY_TILE_WINDOWS,
+): readonly TileBandPlan[] {
   const right = road.left + road.width;
-  const offset = -tileOffset(distance);
+  const dashWidth = windows.dash.sourceWidth;
 
-  const bands: HighwayTileBandPlan[] = [
-    {
-      kind: 'terrain',
-      x: 0,
-      width: road.left,
-      sourceX: TERRAIN_SAMPLE_X,
-      sourceWidth: TERRAIN_SAMPLE_WIDTH,
-      offset,
-    },
-    {
-      kind: 'terrain',
-      x: right,
-      width: GAME.width - right,
-      sourceX: TERRAIN_SAMPLE_X,
-      sourceWidth: TERRAIN_SAMPLE_WIDTH,
-      offset,
-    },
-    {
-      kind: 'shoulder',
-      x: road.left - SHOULDER_WIDTH,
-      width: SHOULDER_WIDTH,
-      sourceX: SHOULDER_SAMPLE_LEFT,
-      sourceWidth: SHOULDER_WIDTH,
-      offset,
-    },
-    {
-      kind: 'shoulder',
-      x: right,
-      width: SHOULDER_WIDTH,
-      sourceX: SHOULDER_SAMPLE_RIGHT,
-      sourceWidth: SHOULDER_WIDTH,
-      offset,
-    },
-    {
-      kind: 'surface',
-      x: road.left,
-      width: road.width,
-      sourceX: SURFACE_SAMPLE_X,
-      sourceWidth: SURFACE_SAMPLE_WIDTH,
-      offset,
-    },
+  const bands: TileBandPlan[] = [
+    band('terrain', 0, road.left, windows.terrain, distance),
+    band('terrain', right, GAME.width - right, windows.terrain, distance),
+    band('shoulder', road.left - SHOULDER_WIDTH, SHOULDER_WIDTH, windows.shoulderLeft, distance),
+    band('shoulder', right, SHOULDER_WIDTH, windows.shoulderRight, distance),
+    band('surface', road.left, road.width, windows.surface, distance),
   ];
 
   for (let lane = 1; lane < road.lanes; lane += 1) {
-    bands.push({
-      kind: 'dash',
-      x: road.left + lane * road.laneWidth - DASH_WIDTH / 2,
-      width: DASH_WIDTH,
-      sourceX: DASH_SAMPLE_X,
-      sourceWidth: DASH_WIDTH,
-      offset,
-    });
+    bands.push(
+      band(
+        'dash',
+        road.left + lane * road.laneWidth - dashWidth / 2,
+        dashWidth,
+        windows.dash,
+        distance,
+      ),
+    );
   }
 
-  return bands.filter((band) => band.width > 0);
+  return bands.filter((plan) => plan.width > 0);
 }

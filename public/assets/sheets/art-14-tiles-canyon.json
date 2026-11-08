@@ -1,0 +1,114 @@
+{
+  "slot": "art-14-tiles-canyon",
+  "code": "tiles-canyon",
+  "cellSize": 32,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-14-tiles-canyon.png",
+  "frames": {
+    "tiles-canyon/cracked-asphalt": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/sand-plain": {
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/dry-dirt": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/cliff-rock": {
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/cliff-edge": {
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/loose-gravel": {
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/cracked-stone": {
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/red-rock": {
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/dry-scrub": {
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/roadside-dirt": {
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/rock-scree": {
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/painted-centre-line": {
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/culvert-grate": {
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/dust-overlay": {
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/rock-wall-a": {
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/rock-wall-b": {
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    }
+  },
+  "tiles": [
+    "tiles-canyon/cracked-asphalt",
+    "tiles-canyon/sand-plain",
+    "tiles-canyon/dry-dirt",
+    "tiles-canyon/cracked-stone",
+    "tiles-canyon/roadside-dirt",
+    "tiles-canyon/rock-wall-b"
+  ]
+}

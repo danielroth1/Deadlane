@@ -510,10 +510,12 @@
       "title": "art-14 canyon and art-15 water tiles",
       "file": "gauntlet/work-orders/WO-45-tiles-canyon-water.md",
       "status": "pending",
-      "round": 0,
+      "round": 1,
       "dependsOn": [
         "WO-44"
-      ]
+      ],
+      "lastVerdict": "fail",
+      "note": "canyon/water render paths unproven by pixels; frame windows only checked against their own prose"
     },
     {
       "id": "WO-46",

@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { REPO_ROOT } from '../lib/ledger.js';
 import type { SlotSpec } from '../registry/slots.js';
 import {
+  MAX_TILE_SEAM_ERROR,
   chromaKey,
   crop,
   decode,
@@ -101,6 +102,12 @@ export interface CellMetrics {
   readonly meanPaletteDistance: number;
   readonly distinctColors: number;
   readonly symmetry: number;
+  /**
+   * Mean edge difference for a cell that looked like a full-bleed surface, 0–255.
+   * Absent for object cells and for non-tile slots. Recorded so a cell rejected from
+   * `surfaceCells` for not wrapping is auditable instead of silently disappearing.
+   */
+  readonly seamError?: number;
 }
 
 export interface SlotMetrics {
@@ -112,12 +119,17 @@ export interface SlotMetrics {
   readonly finalSize: number;
   readonly cells: CellMetrics[];
   /**
-   * Indexes of the cells that are full-bleed surface tiles, in ascending order.
+   * Indexes of the cells that are full-bleed surface tiles **and** wrap, ascending.
    *
    * A tile sheet also carries object cells (an arrow, a sign) that are never repeated. The
    * shipped sheet cannot tell the two apart by inspection — both are rectangular patches
    * after framing — so the build records the decision here, and `art:validate` gates the
    * seam only on the frames named here.
+   *
+   * Being full-bleed is not enough: a shore or a diagonal current is drawn edge to edge and
+   * still does not wrap (art-15 cells 7 and 8), so a cell is only declared a surface when
+   * its measured `seamError` is at or below {@link MAX_TILE_SEAM_ERROR}. The frames stay in
+   * the atlas — they are still usable as single sprites — they are just not repeatable.
    */
   readonly surfaceCells?: number[];
   readonly summary: {
@@ -152,8 +164,14 @@ export async function processSlot(
   // Hostile sheets carry two defects the border key cannot see: magenta residue fenced in by
   // the subject outline (WO-24 defect 2) and exhaust plumes hanging off the rear. Both are
   // keyed before slicing so that trim, fit and metrics all describe the art that ships.
+  //
+  // Tile sheets carry the first defect too: a model that frames every cell with its own
+  // magenta plate fences that plate inside a dark cell border, so the border fill never
+  // reaches it and quantise turns most of the cell into opaque hot-pink (art-15 cells 2, 3,
+  // 14 and 15). Tiles have nothing to key *for*, so the residue pass is safe on them.
   const base = chromaKey(source, palette.transparentKey);
-  const keyed = isEnemySlot(slot.id) ? dropExhaustPlume(keyEnclosedMagenta(base)) : base;
+  const residueFree = isEnemySlot(slot.id) || slot.target === 'tile' ? keyEnclosedMagenta(base) : base;
+  const keyed = isEnemySlot(slot.id) ? dropExhaustPlume(residueFree) : residueFree;
   const quantisePalette = cellPalette(palette, slot.id);
 
   const { cols, rows } = slot.grid;
@@ -171,7 +189,7 @@ export async function processSlot(
 
   const cells: CellMetrics[] = [];
   const frames = new Map<number, string>();
-  /** Indexes of full-bleed surface tiles: the only cells a seam can be measured on. */
+  /** Indexes of full-bleed cells that also wrap: the only cells declared as tiles. */
   const tileFrames: number[] = [];
   const sizes: number[] = [];
 
@@ -233,6 +251,11 @@ export async function processSlot(
     await encode(final, framePath);
     frames.set(index, framePath);
 
+    // A full-bleed cell is only repeatable when it wraps, and the only honest test of that
+    // is the seam measurement on the frame that ships. A cell that fails stays in the atlas
+    // as an ordinary sprite frame; it just never becomes a tile.
+    const seam = isSurfaceTile ? seamError(final) : undefined;
+
     const coverPixels = countOpaque(final);
     cells.push({
       index,
@@ -242,8 +265,9 @@ export async function processSlot(
       meanPaletteDistance: quantised.meanDistance,
       distinctColors: quantised.distinctColors,
       symmetry: slot.target === 'tile' ? 0 : mirrorSymmetry(final),
+      ...(seam === undefined ? {} : { seamError: seam }),
     });
-    if (isSurfaceTile) tileFrames.push(index);
+    if (seam !== undefined && seam <= MAX_TILE_SEAM_ERROR) tileFrames.push(index);
     sizes.push(Math.max(bounds.width, bounds.height));
   }
 

@@ -155,8 +155,11 @@ export const PROP_ART: Record<PropKind, readonly string[]> = {
  */
 export const PROP_PLACEHOLDER: readonly PropKind[] = [];
 
-/** The tile roles the highway tile layer can draw from `art-13-tiles-highway`. */
-export type HighwayTileKind = 'surface' | 'dash' | 'shoulder' | 'terrain';
+/** The tile roles the road tile layer can draw from a tile sheet. */
+export type TileKind = 'surface' | 'dash' | 'shoulder' | 'terrain';
+
+/** Tile role → candidate frame ids, most specific first. */
+export type TileArtByKind = Readonly<Record<TileKind, readonly string[]>>;
 
 /**
  * Highway tile role → candidate frame ids, most specific first.
@@ -176,7 +179,7 @@ export type HighwayTileKind = 'surface' | 'dash' | 'shoulder' | 'terrain';
  * kept as the dash alternate even though its overhead rail breaks vertical repetition:
  * a renamed sheet should still draw a road, not a placeholder.
  */
-export const HIGHWAY_TILE_ART: Record<HighwayTileKind, readonly string[]> = {
+export const HIGHWAY_TILE_ART: TileArtByKind = {
   // Cell 0 — plain asphalt, no markings.
   surface: ['tiles-highway/asphalt-plain'],
   // Cell 11 — the only clean vertical dash strip on the sheet.
@@ -187,10 +190,56 @@ export const HIGHWAY_TILE_ART: Record<HighwayTileKind, readonly string[]> = {
   terrain: ['tiles-highway/grass-verge'],
 };
 
-/** Frame ids for a highway tile role, most specific first. */
-export function highwayTileArtIds(kind: HighwayTileKind): readonly string[] {
-  return HIGHWAY_TILE_ART[kind];
-}
+/**
+ * Canyon tile role → candidate frame ids, most specific first.
+ *
+ * art-14 attempt 1 is shifted too, so this was matched on the processed cells:
+ *   0 road strip: cracked asphalt, solid edge line at column 2, painted white dash at
+ *   column 16 · 1 sand plain · 2 sand/dirt/red-rock transition · 3 cliff rock ·
+ *   4 cliff edge · 5 loose gravel · 6 cracked stone · 7 red rock · 8 dry scrub ·
+ *   9 road strip with sand shoulders · 10 rock scree · 11 a 13 × 25 painted-line overlay ·
+ *   12 rock wall with road and a yellow dash · 13 metal grate · 14 dust spray ·
+ *   15 road between rock walls with a yellow dash.
+ * The road surface is cell 0; its painted dash is sampled as the lane band rather than
+ * as part of the surface (see `CANYON_TILE_WINDOWS`), which is why the same cell appears
+ * in two roles. Cell 6 is the only uniform stone texture, so it carries the shoulders.
+ */
+export const CANYON_TILE_ART: TileArtByKind = {
+  // Cell 0 — cracked asphalt.
+  surface: ['tiles-canyon/cracked-asphalt'],
+  // Cell 0 again — the painted dash at column 16, windowed for the lane band.
+  dash: ['tiles-canyon/cracked-asphalt'],
+  // Cell 6 — cracked stone, uniform edge to edge.
+  shoulder: ['tiles-canyon/cracked-stone'],
+  // Cell 1 — open sand.
+  terrain: ['tiles-canyon/sand-plain'],
+};
+
+/**
+ * Water tile role → candidate frame ids, most specific first.
+ *
+ * art-15 attempt 1 is shifted from its labels as well:
+ *   0 open water · 1 choppy water · 2 foam patch · 3 wake · 4 sand bank ·
+ *   5 muddy bank · 6 reed bed · 7 gravel shore · 8 shallow water over sand ·
+ *   9 deep water with a diagonal crest · 10 current streak · 11 pier structure ·
+ *   12 wooden pier deck (labelled `stone bank edge`) · 13 stone bank with a water pool
+ *   (labelled `pier plank`) · 14 plank stack · 15 mooring buoy.
+ * The channel is water: the surface and the terrain outside it are both water cells, and
+ * the shoulders are the pier deck, whose posts read as the channel edge. Nothing here is
+ * asphalt — a city road painted on water would be the wrong material.
+ */
+export const WATER_TILE_ART: TileArtByKind = {
+  // Cell 0 — open water.
+  surface: ['tiles-water/open-water'],
+  // Cell 2 — the foam patch, repeated as a dashed wake along each lane boundary. The
+  // current streak (cell 10) is the alternate: it is the cleaner water tile, but its
+  // diagonal crest disappears against the surface at this size.
+  dash: ['tiles-water/foam', 'tiles-water/current-streak'],
+  // Cell 12 — plank deck, the sheet's `stone bank edge`.
+  shoulder: ['tiles-water/stone-bank-edge'],
+  // Cell 9 — deep water.
+  terrain: ['tiles-water/deep-water'],
+};
 
 /** Frame ids for a pickup kind, or none when the kind is unknown and the fallback wins. */
 export function pickupArtIds(kind: string): readonly string[] {

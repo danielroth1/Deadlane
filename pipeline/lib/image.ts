@@ -1073,6 +1073,16 @@ export function mirrorSymmetry(raster: Raster): number {
 export const MIN_SEAM_COVERAGE = 0.5;
 
 /**
+ * Worst mean edge difference a frame may have and still be repeated as a tile.
+ *
+ * Shared by `art:process` (which decides which cells are declared surfaces) and
+ * `art:validate` (which gates the declared ones) so the two can never disagree about
+ * what "wraps" means: a cell the processor declares must pass the validator by
+ * construction, and a hand-edited manifest is still caught.
+ */
+export const MAX_TILE_SEAM_ERROR = 72;
+
+/**
  * Mean absolute difference between opposing tile edges, 0–255. Lower means more tileable.
  *
  * A tile is drawn beside copies of itself, so column 0 of one copy abuts column `width - 1`

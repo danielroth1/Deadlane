@@ -2,16 +2,19 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import {
+  CANYON_TILE_ART,
   EFFECT_ART,
   HIGHWAY_TILE_ART,
   PICKUP_ART,
   PROP_ART,
   PROP_PLACEHOLDER,
+  WATER_TILE_ART,
   propArtIds,
   type EffectKind,
-  type HighwayTileKind,
   type PickupKind,
   type PropKind,
+  type TileArtByKind,
+  type TileKind,
 } from './ids';
 import { PICKUP_POOL } from '@/levels/generators/shared';
 import { LEVEL_PROFILES } from '@/levels/types';
@@ -114,14 +117,14 @@ describe('highway tile art ids', () => {
   it('points each role at the cell that actually holds its surface', () => {
     // Row-major cell index on art-13's 4 × 4 / 32 px sheet. The labels drifted:
     // `oil-stain-overlay` is the clean lane strip (11), not an oil stain.
-    const cellIndex: Record<HighwayTileKind, number> = {
+    const cellIndex: Record<TileKind, number> = {
       surface: 0,
       shoulder: 5,
       terrain: 7,
       dash: 11,
     };
 
-    for (const [kind, index] of Object.entries(cellIndex) as [HighwayTileKind, number][]) {
+    for (const [kind, index] of Object.entries(cellIndex) as [TileKind, number][]) {
       const id = HIGHWAY_TILE_ART[kind][0];
       expect(id, `${kind} has no primary frame`).toBeDefined();
       const rect = manifest.sprites[id ?? ''];
@@ -130,6 +133,56 @@ describe('highway tile art ids', () => {
         x: (index % 4) * 32,
         y: Math.floor(index / 4) * 32,
       });
+    }
+  });
+});
+
+describe('canyon and water tile art ids', () => {
+  const sheets: readonly [string, TileArtByKind, Record<TileKind, number>][] = [
+    [
+      'art-14-tiles-canyon',
+      CANYON_TILE_ART,
+      { surface: 0, dash: 0, shoulder: 6, terrain: 1 },
+    ],
+    [
+      'art-15-tiles-water',
+      WATER_TILE_ART,
+      { surface: 0, dash: 2, shoulder: 12, terrain: 9 },
+    ],
+  ];
+
+  for (const [label, art, cellIndex] of sheets) {
+    it(`resolves every ${label} role in the shipped manifest`, () => {
+      for (const [kind, ids] of Object.entries(art)) {
+        expect(ids.length, `${label}:${kind} has no candidate ids`).toBeGreaterThan(0);
+        for (const id of ids) {
+          expect(sprites.has(id), `${label}:${kind} → ${id} is not a manifest frame`).toBe(
+            true,
+          );
+          expect(id.startsWith('placeholder/'), `${id} must be a manifest frame id`).toBe(false);
+        }
+      }
+    });
+
+    it(`points each ${label} role at the cell that holds it`, () => {
+      for (const [kind, index] of Object.entries(cellIndex) as [TileKind, number][]) {
+        const id = art[kind][0];
+        expect(id, `${label}:${kind} has no primary frame`).toBeDefined();
+        expect(manifest.sprites[id ?? '']?.sheet, `${kind} → ${id}`).toBe(label);
+        const rect = manifest.sprites[id ?? ''];
+        expect({ x: rect?.x, y: rect?.y }).toEqual({
+          x: (index % 4) * 32,
+          y: Math.floor(index / 4) * 32,
+        });
+      }
+    });
+  }
+
+  it('never names an asphalt frame for the water channel', () => {
+    for (const ids of Object.values(WATER_TILE_ART)) {
+      for (const id of ids) {
+        expect(id.startsWith('tiles-water/'), `${id} is not a water frame`).toBe(true);
+      }
     }
   });
 });
@@ -144,7 +197,13 @@ describe('art id manifest seam', () => {
         ([kind, ids]): [string, readonly string[]] => [`effect:${kind}`, ids],
       ),
       ...Object.entries(HIGHWAY_TILE_ART).map(
-        ([kind, ids]): [string, readonly string[]] => [`tile:${kind}`, ids],
+        ([kind, ids]): [string, readonly string[]] => [`tile:highway:${kind}`, ids],
+      ),
+      ...Object.entries(CANYON_TILE_ART).map(
+        ([kind, ids]): [string, readonly string[]] => [`tile:canyon:${kind}`, ids],
+      ),
+      ...Object.entries(WATER_TILE_ART).map(
+        ([kind, ids]): [string, readonly string[]] => [`tile:water:${kind}`, ids],
       ),
     ];
 
@@ -165,6 +224,8 @@ describe('art id manifest seam', () => {
       ...Object.values(EFFECT_ART).flat(),
       ...Object.values(PROP_ART).flat(),
       ...Object.values(HIGHWAY_TILE_ART).flat(),
+      ...Object.values(CANYON_TILE_ART).flat(),
+      ...Object.values(WATER_TILE_ART).flat(),
     ];
     for (const id of allIds) {
       expect(id.startsWith('placeholder/'), `${id} must be a manifest frame id`).toBe(false);

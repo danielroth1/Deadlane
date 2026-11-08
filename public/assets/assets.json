@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T13:08:57.656Z",
+  "generatedAt": "2026-11-08T14:11:18.503Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -762,6 +762,236 @@
         "tiles-highway/road-seam",
         "tiles-highway/cats-eye"
       ]
+    },
+    "art-14-tiles-canyon": {
+      "slot": "art-14-tiles-canyon",
+      "code": "tiles-canyon",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-14-tiles-canyon.png",
+      "frames": {
+        "tiles-canyon/cracked-asphalt": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/sand-plain": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/dry-dirt": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/cliff-rock": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/cliff-edge": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/loose-gravel": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/cracked-stone": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/red-rock": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/dry-scrub": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/roadside-dirt": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/rock-scree": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/painted-centre-line": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/culvert-grate": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/dust-overlay": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/rock-wall-a": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-canyon/rock-wall-b": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "tiles": [
+        "tiles-canyon/cracked-asphalt",
+        "tiles-canyon/sand-plain",
+        "tiles-canyon/dry-dirt",
+        "tiles-canyon/cracked-stone",
+        "tiles-canyon/roadside-dirt",
+        "tiles-canyon/rock-wall-b"
+      ]
+    },
+    "art-15-tiles-water": {
+      "slot": "art-15-tiles-water",
+      "code": "tiles-water",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-15-tiles-water.png",
+      "frames": {
+        "tiles-water/open-water": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/choppy-water": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/foam": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/wake": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/sand-bank": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/muddy-bank": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/reed-bed": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/gravel-shore": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/shallow-water": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/deep-water": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/current-streak": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/ripple-overlay": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/stone-bank-edge": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/pier-plank": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/buoy": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "tiles-water/moored-tyre": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      },
+      "tiles": [
+        "tiles-water/open-water",
+        "tiles-water/choppy-water",
+        "tiles-water/shallow-water",
+        "tiles-water/deep-water",
+        "tiles-water/current-streak",
+        "tiles-water/ripple-overlay",
+        "tiles-water/stone-bank-edge",
+        "tiles-water/pier-plank"
+      ]
     }
   },
   "sprites": {
@@ -1495,6 +1725,230 @@
     },
     "tiles-highway/painted-arrow": {
       "sheet": "art-13-tiles-highway",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/cracked-asphalt": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/sand-plain": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/dry-dirt": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/cliff-rock": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/cliff-edge": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/loose-gravel": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/cracked-stone": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/red-rock": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/dry-scrub": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/roadside-dirt": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/rock-scree": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/painted-centre-line": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/culvert-grate": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/dust-overlay": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/rock-wall-a": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-canyon/rock-wall-b": {
+      "sheet": "art-14-tiles-canyon",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/open-water": {
+      "sheet": "art-15-tiles-water",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/choppy-water": {
+      "sheet": "art-15-tiles-water",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/foam": {
+      "sheet": "art-15-tiles-water",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/wake": {
+      "sheet": "art-15-tiles-water",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/sand-bank": {
+      "sheet": "art-15-tiles-water",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/muddy-bank": {
+      "sheet": "art-15-tiles-water",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/reed-bed": {
+      "sheet": "art-15-tiles-water",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/gravel-shore": {
+      "sheet": "art-15-tiles-water",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/shallow-water": {
+      "sheet": "art-15-tiles-water",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/deep-water": {
+      "sheet": "art-15-tiles-water",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/current-streak": {
+      "sheet": "art-15-tiles-water",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/ripple-overlay": {
+      "sheet": "art-15-tiles-water",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/stone-bank-edge": {
+      "sheet": "art-15-tiles-water",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/pier-plank": {
+      "sheet": "art-15-tiles-water",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/buoy": {
+      "sheet": "art-15-tiles-water",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "tiles-water/moored-tyre": {
+      "sheet": "art-15-tiles-water",
       "x": 96,
       "y": 96,
       "w": 32,

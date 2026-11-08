@@ -274,13 +274,37 @@
     },
     "art-14-tiles-canyon": {
       "id": "art-14-tiles-canyon",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1721453422,
+          "promptHash": "b53e5e7a71d9a498",
+          "state": "generated",
+          "claimedAt": "2026-11-08T13:42:29.398Z",
+          "requestId": "01a1bb65-ab61-7d50-9099-e10e7cd18b2a",
+          "url": "https://v3b.fal.media/files/b/0ab1a608/DBM76xnomPJ0Fng6rpwRY_mjGSlxXp.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-15-tiles-water": {
       "id": "art-15-tiles-water",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 55036654,
+          "promptHash": "ee46cebf5a32568c",
+          "state": "generated",
+          "claimedAt": "2026-11-08T13:48:10.788Z",
+          "requestId": "01a1bb6a-dea3-72f2-a90e-4c8ef6253b6e",
+          "url": "https://v3b.fal.media/files/b/0ab1a62a/Dswcpq0_6eJwbnB3MPl1X_rciSNDeN.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-16-tiles-city": {
       "id": "art-16-tiles-city",

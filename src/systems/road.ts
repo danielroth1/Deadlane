@@ -1,18 +1,23 @@
 import Phaser from 'phaser';
 import type { Art, SpriteRef } from '@/art';
-import { HIGHWAY_TILE_ART, type HighwayTileKind } from '@/art/ids';
+import type { TileArtByKind, TileKind } from '@/art/ids';
 import { GAME } from '@/config';
 import { PALETTE } from '@/palette';
 import type { LevelType, RoadProfile } from '@/levels/types';
-import { planHighwayTiles, type HighwayTileBandPlan } from './road-tiles';
+import {
+  ROAD_TILE_SPECS,
+  planRoadTiles,
+  type RoadTileTheme,
+  type TileBandPlan,
+} from './road-tiles';
 
 /**
  * Procedural road renderer with an optional tiled surface.
  *
  * The road is drawn from the locked palette as the baseline: the game must look correct
  * before any AI tiles exist, and a drawn road scrolls at any speed without texture seams.
- * When `art-13-tiles-highway` is approved, a tile layer is inserted between the fills and
- * the markings. The profile geometry (`left`, `width`, `lanes`, `laneWidth`) stays
+ * When a level type's tile sheet is approved, a tile layer is inserted between the fills
+ * and the markings. The profile geometry (`left`, `width`, `lanes`, `laneWidth`) stays
  * authoritative in both modes — the tile planner only chooses where frames sit, never
  * where the road is.
  */
@@ -72,11 +77,11 @@ const THEMES: Readonly<Record<LevelType, RoadTheme>> = {
 const DASH_LENGTH = 22;
 const DASH_GAP = 42;
 
-type HighwayTileFrames = Readonly<Record<HighwayTileKind, SpriteRef>>;
+type TileFrames = Readonly<Record<TileKind, SpriteRef>>;
 
 /** First generated frame for a role, or null when the sheet has none. */
-function firstTileFrame(art: Art, kind: HighwayTileKind): SpriteRef | null {
-  for (const id of HIGHWAY_TILE_ART[kind]) {
+function firstTileFrame(art: Art, table: TileArtByKind, kind: TileKind): SpriteRef | null {
+  for (const id of table[kind]) {
     const ref = art.frameFor(id);
     if (ref) return ref;
   }
@@ -89,11 +94,11 @@ function firstTileFrame(art: Art, kind: HighwayTileKind): SpriteRef | null {
  * All-or-nothing is deliberate: a partly tiled road would show one band of generated art
  * against three drawn bands. A sheet missing one role steps back to the drawn theme.
  */
-function highwayTileFrames(art: Art): HighwayTileFrames | null {
-  const surface = firstTileFrame(art, 'surface');
-  const dash = firstTileFrame(art, 'dash');
-  const shoulder = firstTileFrame(art, 'shoulder');
-  const terrain = firstTileFrame(art, 'terrain');
+function tileFrames(art: Art, table: TileArtByKind): TileFrames | null {
+  const surface = firstTileFrame(art, table, 'surface');
+  const dash = firstTileFrame(art, table, 'dash');
+  const shoulder = firstTileFrame(art, table, 'shoulder');
+  const terrain = firstTileFrame(art, table, 'terrain');
 
   if (!surface || !dash || !shoulder || !terrain) return null;
   return { surface, dash, shoulder, terrain };
@@ -103,15 +108,16 @@ function highwayTileFrames(art: Art): HighwayTileFrames | null {
  * Register (once) and return the frame that shows a band's 1:1 window of its cell.
  *
  * A `TileSprite` repeats its whole frame, so repeating a 32 px cell across a wide band
- * replays every border column of the cell as a vertical line. Registering a sub-frame of
- * the window makes the repeat the window itself, at its own pixel size — no scaling. The
- * frame lives on the shared sheet texture and is named after its rect, so a restarted run
- * reuses it instead of leaking one frame per band per scene.
+ * replays every border column of the cell as a vertical line, and every border row as a
+ * horizontal one. Registering a sub-frame of the window makes the repeat the window itself,
+ * at its own pixel size — no scaling. The frame lives on the shared sheet texture and is
+ * named after its rect, so a restarted run reuses it instead of leaking one frame per band
+ * per scene.
  */
 function windowFrame(
   scene: Phaser.Scene,
   frame: SpriteRef,
-  band: HighwayTileBandPlan,
+  band: TileBandPlan,
 ): string | number {
   const index = frame.frame ?? 0;
   const texture = scene.textures.get(frame.key);
@@ -119,9 +125,11 @@ function windowFrame(
   // branch, which resolves `firstFrame` instead of the frame asked for.
   const base = texture.get(String(index));
 
-  if (band.sourceX === 0 && band.sourceWidth >= base.cutWidth) return index;
+  const fullWidth = band.sourceX === 0 && band.sourceWidth >= base.cutWidth;
+  const fullHeight = band.sourceY === 0 && band.sourceHeight >= base.cutHeight;
+  if (fullWidth && fullHeight) return index;
 
-  const name = `${index}:${band.sourceX}+${band.sourceWidth}`;
+  const name = `${index}:${band.sourceX}+${band.sourceWidth}:${band.sourceY}+${band.sourceHeight}`;
   if (texture.has(name)) return name;
 
   // `cutX/cutY/cutWidth/cutHeight` are the source rectangle. `x/y` are render offsets and
@@ -131,28 +139,35 @@ function windowFrame(
     name,
     base.sourceIndex,
     base.cutX + band.sourceX,
-    base.cutY,
+    base.cutY + band.sourceY,
     band.sourceWidth,
-    base.cutHeight,
+    band.sourceHeight,
   );
   return added ? name : index;
 }
 
-/** The tiled highway surface, scrolled by the same distance the drawn road uses. */
-class HighwayTileLayer {
+/** The tiled road surface, scrolled by the same distance the drawn road uses. */
+class RoadTileLayer {
   private readonly road: RoadProfile;
+  private readonly windows: RoadTileTheme;
   private readonly sprites: Phaser.GameObjects.TileSprite[];
 
-  constructor(scene: Phaser.Scene, road: RoadProfile, frames: HighwayTileFrames) {
+  constructor(
+    scene: Phaser.Scene,
+    road: RoadProfile,
+    frames: TileFrames,
+    windows: RoadTileTheme,
+  ) {
     this.road = road;
-    this.sprites = planHighwayTiles(road, 0).map((band) =>
+    this.windows = windows;
+    this.sprites = planRoadTiles(road, 0, windows).map((band) =>
       this.createSprite(scene, band, frames[band.kind]),
     );
   }
 
   private createSprite(
     scene: Phaser.Scene,
-    band: HighwayTileBandPlan,
+    band: TileBandPlan,
     frame: SpriteRef,
   ): Phaser.GameObjects.TileSprite {
     const sprite = scene.add.tileSprite(
@@ -171,7 +186,7 @@ class HighwayTileLayer {
   }
 
   render(distance: number): void {
-    const bands = planHighwayTiles(this.road, distance);
+    const bands = planRoadTiles(this.road, distance, this.windows);
     bands.forEach((band, index) => {
       const sprite = this.sprites[index];
       if (sprite) sprite.tilePositionY = band.offset;
@@ -190,9 +205,18 @@ class HighwayTileLayer {
 export class RoadSystem {
   private readonly base: Phaser.GameObjects.Graphics;
   private readonly markings: Phaser.GameObjects.Graphics;
-  private readonly tiles: HighwayTileLayer | null;
+  private readonly tiles: RoadTileLayer | null;
   private readonly theme: RoadTheme;
   private readonly road: RoadProfile;
+  /**
+   * Whether the drawn markings are painted over the tiles.
+   *
+   * Every road except tiled water keeps them: edge lines and guardrail ticks are road
+   * furniture. A river has no paint and no rails — the channel edge is the pier shoulder
+   * in the water sheet — so the tiled water theme drops them. Without tiles the drawn
+   * theme is all there is, so the fallback keeps them and still reads as a road.
+   */
+  private readonly painted: boolean;
 
   constructor(
     scene: Phaser.Scene,
@@ -207,8 +231,10 @@ export class RoadSystem {
     // fills stay underneath so the road still reads when a sheet is missing or rejected,
     // and so a band that has no frame for one lane divider cannot leave a hole.
     this.base = scene.add.graphics().setDepth(0);
-    const frames = type === 'highway' ? highwayTileFrames(art) : null;
-    this.tiles = frames ? new HighwayTileLayer(scene, road, frames) : null;
+    const spec = ROAD_TILE_SPECS[type];
+    const frames = spec ? tileFrames(art, spec.art) : null;
+    this.tiles = spec && frames ? new RoadTileLayer(scene, road, frames, spec.windows) : null;
+    this.painted = !(type === 'river' && this.tiles !== null);
     this.markings = scene.add.graphics().setDepth(2);
   }
 
@@ -246,8 +272,9 @@ export class RoadSystem {
   /**
    * Edge lines, lane dashes and guardrail ticks.
    *
-   * Edge lines and the rail always come from the profile. The lane dashes are skipped
-   * when tiles are drawing them, so the marking is not painted twice at two phases.
+   * Edge lines and the rail always come from the profile, except on tiled water where the
+   * channel is marked by the sheet's shoulders. The lane dashes are skipped when tiles are
+   * drawing them, so the marking is not painted twice at two phases.
    */
   private drawMarkings(distance: number): void {
     const g = this.markings;
@@ -256,10 +283,12 @@ export class RoadSystem {
 
     g.clear();
 
-    // Solid edge lines.
-    g.fillStyle(theme.edgeLine, 1);
-    g.fillRect(road.left + 3, 0, 3, GAME.height);
-    g.fillRect(right - 6, 0, 3, GAME.height);
+    if (this.painted) {
+      // Solid edge lines.
+      g.fillStyle(theme.edgeLine, 1);
+      g.fillRect(road.left + 3, 0, 3, GAME.height);
+      g.fillRect(right - 6, 0, 3, GAME.height);
+    }
 
     // Dashed lane dividers, scrolled.
     if (!this.tiles) {
@@ -274,6 +303,8 @@ export class RoadSystem {
         }
       }
     }
+
+    if (!this.painted) return;
 
     // Guardrail ticks on the shoulder, scrolling at the same rate: cheap speed cue.
     g.fillStyle(theme.edgeLine, 0.35);

@@ -3,7 +3,15 @@ import { resolve } from 'node:path';
 import { REPO_ROOT } from '../lib/ledger.js';
 import { loadAssetsManifest } from '../steps/build-atlas.js';
 import { SLOTS } from '../registry/slots.js';
-import { alphaBounds, crop, decode, hexToRgb, loadPalette, seamError } from '../lib/image.js';
+import {
+  MAX_TILE_SEAM_ERROR,
+  alphaBounds,
+  crop,
+  decode,
+  hexToRgb,
+  loadPalette,
+  seamError,
+} from '../lib/image.js';
 import { bad, banner, ok, info, run } from './util.js';
 
 /**
@@ -83,8 +91,10 @@ run(async () => {
       // its frames as surface tiles cannot be gated at all, so it is a failure, not a pass.
       if (spec?.target === 'tile' && sheet.tiles?.includes(id)) {
         const err = seamError(cell);
-        if (err > 72) {
-          failures.push(`${id}: tiles do not wrap (seam error ${err.toFixed(1)} > 72)`);
+        if (err > MAX_TILE_SEAM_ERROR) {
+          failures.push(
+            `${id}: tiles do not wrap (seam error ${err.toFixed(1)} > ${MAX_TILE_SEAM_ERROR})`,
+          );
         }
       }
     }
