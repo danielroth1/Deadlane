@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
 import { PLAYER, ROAD } from '@/config';
 import { PALETTE } from '@/palette';
-import type { Art } from '@/art';
+import type { Art, VehicleOptions } from '@/art';
 
 /**
  * The player Interceptor.
@@ -11,11 +11,29 @@ import type { Art } from '@/art';
  * and how to look like it is moving.
  */
 
-const ART_CANDIDATES = [
-  'player-vehicle/interceptor-clean',
-  'player-vehicle/interceptor',
-  'player-vehicle/clean',
-];
+/** The visual states the player car can show. */
+export type PlayerArtState = 'clean' | 'damaged' | 'wrecked';
+
+/** Sprite ids per visual state, most specific first. */
+const ART_IDS_BY_STATE: Record<PlayerArtState, readonly string[]> = {
+  // The clean list keeps the historical aliases so a renamed cell degrades to the next
+  // best sprite rather than a placeholder.
+  clean: ['player-vehicle/interceptor-clean', 'player-vehicle/interceptor', 'player-vehicle/clean'],
+  damaged: ['player-vehicle/interceptor-damaged'],
+  wrecked: ['player-vehicle/interceptor-wrecked'],
+};
+
+/**
+ * Pick the player's visual state from remaining armour.
+ *
+ * Wrecked at zero armour; damaged once any armour below the starting loadout has been
+ * lost; clean at or above the starting loadout. Pure, so the tier boundaries are testable.
+ */
+export function playerArtState(armor: number): PlayerArtState {
+  if (armor <= 0) return 'wrecked';
+  if (armor < PLAYER.startArmor) return 'damaged';
+  return 'clean';
+}
 
 /** The three weapons the car carries; cadence and lifetimes live in `weapons.json`. */
 export type WeaponId = 'gun' | 'oil' | 'smoke';
@@ -52,13 +70,26 @@ export class PlayerVehicle {
   };
   private baseY = PLAYER.y;
   private readonly baseX: number;
+  private artState: PlayerArtState = 'clean';
 
   constructor(
     private readonly scene: Phaser.Scene,
-    art: Art,
+    private readonly art: Art,
   ) {
     this.baseX = ROAD.left + ROAD.width / 2;
-    this.sprite = art.imageAny(ART_CANDIDATES, this.baseX, this.baseY, () => ({
+    this.sprite = this.art.imageAny(ART_IDS_BY_STATE.clean, this.baseX, this.baseY, () =>
+      this.placeholder(),
+    );
+    // Draw at a fixed on-screen footprint regardless of the source frame size: the art
+    // sheet is 128 px per cell, the procedural placeholder is 64 px, and both must read
+    // as one lane wide.
+    this.sprite.setScale(this.footprintScale());
+    this.sprite.setDepth(50);
+  }
+
+  /** Options for the procedural stand-in used when no player sheet is available. */
+  private placeholder(): VehicleOptions {
+    return {
       shape: 'wedge',
       // Steel rather than matte black: at 64px on an asphalt road, a black car reads as a
       // hole. Real art can go darker because it will have a proper outline and highlights.
@@ -66,13 +97,31 @@ export class PlayerVehicle {
       accentColor: 'hotPink',
       faction: 'player',
       size: 64,
-    }));
-    // Draw at a fixed on-screen footprint regardless of the source frame size: the art
-    // sheet is 128 px per cell, the procedural placeholder is 64 px, and both must read
-    // as one lane wide.
-    const nativeSize = Math.max(this.sprite.width, this.sprite.height);
-    this.sprite.setScale(displayScale(nativeSize));
-    this.sprite.setDepth(50);
+    };
+  }
+
+  /** Scale that puts the current frame at the on-screen footprint. */
+  private footprintScale(): number {
+    return displayScale(Math.max(this.sprite.width, this.sprite.height));
+  }
+
+  /** Swap to the frame for `state`, keeping the sheet and placeholder paths equivalent. */
+  private setArtState(state: PlayerArtState): void {
+    if (state === this.artState) return;
+    this.artState = state;
+    const ref = this.art.refAny(ART_IDS_BY_STATE[state], () => this.placeholder());
+    this.sprite.setTexture(ref.key, ref.frame);
+    this.sprite.setScale(this.footprintScale());
+  }
+
+  /** Re-pick the frame after armour changes. */
+  private refreshArt(): void {
+    this.setArtState(playerArtState(this.armor));
+  }
+
+  /** Show the wrecked frame; the scene calls this as the run ends. */
+  showWrecked(): void {
+    this.setArtState('wrecked');
   }
 
   get x(): number {
@@ -104,7 +153,10 @@ export class PlayerVehicle {
 
     this.sprite.x = Math.max(minX, Math.min(maxX, this.sprite.x + dx));
 
-    const lean = Math.abs(steer) > 0.1 ? Math.sign(steer) * 2.5 : 0;
+    // Lean once the lateral velocity clears the shared threshold, not at an arbitrary
+    // fraction of full tilt.
+    const lateralVelocity = Math.abs(steer) * PLAYER.lateralSpeed;
+    const lean = lateralVelocity > PLAYER.leanThreshold ? Math.sign(steer) * 2.5 : 0;
     this.sprite.setRotation((lean * Math.PI) / 180);
 
     // 1px engine vibration at a fixed rate, so it reads as mechanical, not random.
@@ -154,6 +206,7 @@ export class PlayerVehicle {
 
   addArmor(n = 1): void {
     this.armor = Math.min(PLAYER.maxArmor, this.armor + n);
+    this.refreshArt();
   }
 
   /**
@@ -166,6 +219,7 @@ export class PlayerVehicle {
     if (this.isInvulnerable) return false;
     this.armor -= 1;
     this.invulnerableUntil = time + PLAYER.iFrames;
+    this.refreshArt();
     this.flash();
     return true;
   }

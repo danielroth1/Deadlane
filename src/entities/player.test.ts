@@ -6,6 +6,7 @@ import {
   displayScale,
   HALF_HEIGHT_RATIO,
   HALF_WIDTH_RATIO,
+  playerArtState,
   PlayerVehicle,
 } from './player';
 
@@ -23,6 +24,10 @@ class StubImage {
   scaleX = 1;
   scaleY = 1;
   depth = 0;
+  rotation = 0;
+  alpha = 1;
+  textureKey = '';
+  frame = -1;
 
   constructor(
     readonly width: number,
@@ -45,6 +50,30 @@ class StubImage {
 
   setDepth(depth: number): this {
     this.depth = depth;
+    return this;
+  }
+
+  setRotation(rotation: number): this {
+    this.rotation = rotation;
+    return this;
+  }
+
+  setAlpha(alpha: number): this {
+    this.alpha = alpha;
+    return this;
+  }
+
+  setTexture(key: string, frame?: number): this {
+    this.textureKey = key;
+    if (frame !== undefined) this.frame = frame;
+    return this;
+  }
+
+  setTint(): this {
+    return this;
+  }
+
+  clearTint(): this {
     return this;
   }
 }
@@ -146,6 +175,139 @@ describe('PlayerVehicle footprint', () => {
 
     expect(player.sprite.displayWidth).toBe(PLAYER.spriteSize);
     expect(player.sprite.displayHeight).toBe(96 * displayScale(128));
+  });
+});
+
+describe('playerArtState', () => {
+  it('is clean at or above the starting armour', () => {
+    expect(playerArtState(PLAYER.startArmor)).toBe('clean');
+    expect(playerArtState(PLAYER.maxArmor)).toBe('clean');
+  });
+
+  it('is damaged after losing armour but before it runs out', () => {
+    expect(playerArtState(PLAYER.startArmor - 1)).toBe('damaged');
+    expect(playerArtState(1)).toBe('damaged');
+  });
+
+  it('is wrecked at zero or below', () => {
+    expect(playerArtState(0)).toBe('wrecked');
+    expect(playerArtState(-2)).toBe('wrecked');
+  });
+
+  it('walks the tiers from full armour down to wrecked', () => {
+    // 5, 4, 3 are at or above the starting loadout; 2 and 1 are damaged; 0 is wrecked.
+    expect([
+      playerArtState(5),
+      playerArtState(4),
+      playerArtState(3),
+      playerArtState(2),
+      playerArtState(1),
+      playerArtState(0),
+    ]).toEqual(['clean', 'clean', 'clean', 'damaged', 'damaged', 'wrecked']);
+  });
+});
+
+describe('lean', () => {
+  function sceneAt(now: number): Phaser.Scene {
+    return { time: { now } } as unknown as Phaser.Scene;
+  }
+
+  function playerAt(now = 0): { player: PlayerVehicle; image: StubImage } {
+    const image = new StubImage(64, 64);
+    const art = { imageAny: () => image } as unknown as Art;
+    return { player: new PlayerVehicle(sceneAt(now), art), image };
+  }
+
+  const thresholdSteer = PLAYER.leanThreshold / PLAYER.lateralSpeed;
+
+  it('does not lean below PLAYER.leanThreshold', () => {
+    const { player, image } = playerAt();
+
+    player.update(0, thresholdSteer * 0.99, 0);
+
+    expect(image.rotation).toBe(0);
+  });
+
+  it('leans above PLAYER.leanThreshold', () => {
+    const { player, image } = playerAt();
+
+    player.update(0, thresholdSteer * 1.01, 0);
+
+    expect(image.rotation).toBeCloseTo((2.5 * Math.PI) / 180);
+  });
+
+  it('leans the other way for negative steer', () => {
+    const { player, image } = playerAt();
+
+    player.update(0, -1, 0);
+
+    expect(image.rotation).toBeCloseTo((-2.5 * Math.PI) / 180);
+  });
+});
+
+describe('player art states', () => {
+  interface ArtCall {
+    readonly ids: readonly string[];
+  }
+
+  function makeScene(): Phaser.Scene {
+    return {
+      time: {
+        now: 0,
+        delayedCall: (_ms: number, callback: () => void) => callback(),
+      },
+    } as unknown as Phaser.Scene;
+  }
+
+  function makeFixture(): { player: PlayerVehicle; image: StubImage; calls: ArtCall[] } {
+    const image = new StubImage(128, 128);
+    const calls: ArtCall[] = [];
+    const art = {
+      imageAny: () => image,
+      refAny: (ids: readonly string[]) => {
+        calls.push({ ids });
+        return { key: `sheet:${ids[0]}`, frame: calls.length };
+      },
+    } as unknown as Art;
+    return { player: new PlayerVehicle(makeScene(), art), image, calls };
+  }
+
+  it('starts on the clean frame', () => {
+    const { player } = makeFixture();
+
+    expect(player.armor).toBe(PLAYER.startArmor);
+    expect(playerArtState(player.armor)).toBe('clean');
+  });
+
+  it('switches to the damaged frame after a hit and back when repaired', () => {
+    const { player, image, calls } = makeFixture();
+
+    expect(player.takeHit(0)).toBe(true);
+    expect(calls.at(-1)?.ids[0]).toBe('player-vehicle/interceptor-damaged');
+    expect(image.textureKey).toBe('sheet:player-vehicle/interceptor-damaged');
+
+    player.addArmor(PLAYER.maxArmor);
+    expect(calls.at(-1)?.ids[0]).toBe('player-vehicle/interceptor-clean');
+    expect(image.textureKey).toBe('sheet:player-vehicle/interceptor-clean');
+  });
+
+  it('shows the wrecked frame when the run ends', () => {
+    const { player, image, calls } = makeFixture();
+
+    player.showWrecked();
+
+    expect(calls.at(-1)?.ids[0]).toBe('player-vehicle/interceptor-wrecked');
+    expect(image.textureKey).toBe('sheet:player-vehicle/interceptor-wrecked');
+  });
+
+  it('keeps the footprint at PLAYER.spriteSize across state changes', () => {
+    const { player } = makeFixture();
+    const before = player.sprite.displayWidth;
+
+    player.showWrecked();
+
+    expect(before).toBe(PLAYER.spriteSize);
+    expect(player.sprite.displayWidth).toBe(PLAYER.spriteSize);
   });
 });
 

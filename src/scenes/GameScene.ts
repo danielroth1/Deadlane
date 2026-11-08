@@ -944,6 +944,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private endRun(): void {
+    this.player.showWrecked();
     this.audio.play('engineFail');
     this.cameras.main.shake(400, 0.02);
     this.scene.stop('Hud');

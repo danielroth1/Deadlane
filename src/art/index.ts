@@ -85,17 +85,25 @@ export class Art {
   }
 
   /**
-   * Try several ids in order.
+   * Try several ids in order and return the first that resolves.
    *
    * Generated frame ids are derived from the sheet's cell labels, which are human-written
    * and may drift. Trying a short list of candidates means a renamed cell degrades to the
    * next best sprite instead of silently showing a placeholder.
    */
-  imageAny(ids: readonly string[], x: number, y: number, fallback: () => VehicleOptions): Phaser.GameObjects.Image {
+  refAny(ids: readonly string[], fallback: () => VehicleOptions): SpriteRef {
     for (const id of ids) {
-      if (this.has(id)) return this.image(id, x, y, fallback);
+      if (this.has(id)) return this.resolve(id, fallback);
     }
-    return this.image(ids[0] ?? 'fallback', x, y, fallback);
+    return this.resolve(ids[0] ?? 'fallback', fallback);
+  }
+
+  /** Create an image from the first id that resolves. */
+  imageAny(ids: readonly string[], x: number, y: number, fallback: () => VehicleOptions): Phaser.GameObjects.Image {
+    const ref = this.refAny(ids, fallback);
+    return ref.frame === undefined
+      ? this.scene.add.image(x, y, ref.key)
+      : this.scene.add.image(x, y, ref.key, ref.frame);
   }
 }
 

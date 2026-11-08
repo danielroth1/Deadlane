@@ -431,8 +431,10 @@
       "title": "Player shows its damage and wreck states",
       "file": "gauntlet/work-orders/WO-38-player-damage.md",
       "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "fail",
+      "note": "wrecked frame not sticky: armour pickup during the 600ms delay swaps it back to damaged"
     },
     {
       "id": "WO-39",
