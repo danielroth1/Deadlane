@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { BEHAVIORS, CHALLENGE_TEMPLATES, CIVILIANS, ENEMIES, WEAPONS } from './index';
 import { PALETTE } from '@/palette';
 
@@ -10,6 +12,10 @@ import { PALETTE } from '@/palette';
  */
 
 const PALETTE_KEYS = new Set(Object.keys(PALETTE));
+
+interface SpriteManifest {
+  sprites: Record<string, { sheet: string; x: number; y: number; w: number; h: number }>;
+}
 
 describe('enemy content', () => {
   it('has unique ids', () => {
@@ -51,6 +57,44 @@ describe('enemy content', () => {
         expect(enemy.fireRate, `${enemy.id} needs fireRate`).toBeDefined();
       }
     }
+  });
+});
+
+/**
+ * The seam between content data and the shipped atlas.
+ *
+ * `EnemyDef.art` is only a lookup key into `public/assets/assets.json` → `.sprites`. Rename
+ * a sheet cell without updating the content table (or vice versa) and the enemy silently
+ * falls back to its procedural placeholder with nothing failing. These tests make the
+ * WO-28 invariant part of `npm run test`.
+ */
+describe('enemy art ids', () => {
+  const manifest = JSON.parse(
+    readFileSync(resolve(process.cwd(), 'public/assets/assets.json'), 'utf8'),
+  ) as SpriteManifest;
+
+  const sprites = new Set(Object.keys(manifest.sprites));
+
+  /** Enemies with a declared art id, narrowed to `{ id, art: string }` without assertions. */
+  const declared = ENEMIES.flatMap((enemy) => {
+    const art = enemy.art;
+    return art === undefined ? [] : [{ id: enemy.id, art }];
+  });
+
+  it('resolves every declared art id in the shipped manifest', () => {
+    expect(declared.length).toBeGreaterThan(0);
+    for (const { id, art } of declared) {
+      expect(
+        sprites.has(art),
+        `${id}.art=${art} is not a key of .sprites in public/assets/assets.json`,
+      ).toBe(true);
+    }
+  });
+
+  it('declares art for exactly the five shipped enemies', () => {
+    const ids = declared.map(({ id }) => id).sort();
+    expect(ids).toHaveLength(5);
+    expect(ids).toEqual(['gunboat', 'hauler', 'roadlord', 'switchblade', 'turret']);
   });
 });
 

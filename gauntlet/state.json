@@ -356,11 +356,13 @@
       "id": "WO-31",
       "title": "Content test: every art id resolves in the manifest",
       "file": "gauntlet/work-orders/WO-31-art-id-test.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-28"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "content test pins 5 enemy art ids to real manifest frames, negative control verified"
     }
   ]
 }
