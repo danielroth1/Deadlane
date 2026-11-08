@@ -1,10 +1,17 @@
 import { loadState, nextOrder, summarise } from './lib';
 
-/** Compact queue view: what is done, what is next, what needs a human. */
+/**
+ * Compact queue view: what is done, what is next, what needs a human.
+ *
+ * `--notes` appends the last verdict note for every order that has one. That is the whole
+ * history a planner needs — 52 lines instead of opening 60 files in `gauntlet/verdicts/`.
+ * A planner that still needs the reason a specific order failed reads that one verdict file.
+ */
 async function main(): Promise<void> {
   const state = await loadState();
   const counts = summarise(state);
   const next = await nextOrder(state);
+  const withNotes = process.argv.includes('--notes');
 
   console.log('\n\x1b[1mDEADLANE · gauntlet queue\x1b[0m\n');
   console.log('  id      status       rounds  title');
@@ -39,6 +46,18 @@ async function main(): Promise<void> {
       console.log(`    ${order.id}  ${order.title}  — ${order.note ?? 'no note'}`);
     }
   }
+
+  if (withNotes) {
+    const noted = state.orders.filter((o) => o.note !== undefined && o.note !== '');
+    console.log(`\n  \x1b[1mHistory\x1b[0m — last verdict note per order (${noted.length}/${state.orders.length})`);
+    for (const order of noted) {
+      console.log(
+        `    ${order.id}  ${colour[order.status] ?? ''}${order.status.padEnd(9)}\x1b[0m` +
+          ` ${order.round}/${state.maxRounds}  ${order.note}`,
+      );
+    }
+  }
+
   console.log('');
 }
 

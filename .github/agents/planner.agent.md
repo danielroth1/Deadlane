@@ -10,15 +10,27 @@ orders that close it. You are read-only: no edits, no commands, no `gauntlet/sta
 
 ## What to read
 
-- `AGENTS.md` — conventions and hard rules.
-- `gauntlet/state.json` and `gauntlet/verdicts/` — what is done, what failed, what is
-  blocked, and why. Do not re-propose work a verdict already rejected unless you can say
-  what is different this time.
-- `README.md` and `docs/ART_BIBLE.md` — the game's promise and visual contract.
-- The game itself: `src/main.ts`, `src/scenes/`, `src/entities/`, `src/systems/`,
-  `src/content/`, `src/levels/`, `src/art/`, `e2e/`.
-- `public/assets/assets.json` and `pipeline/registry/slots.ts` — which sprite ids are real
-  atlas frames and which still fall back to placeholders.
+Start with the digest, not the tree. Two commands answer most of the questions this agent
+exists to answer:
+
+```bash
+npm run repo:map                     # scenes, systems, content ids, art resolved vs missing
+npm run gauntlet:status -- --notes   # every order: status, rounds, last verdict note
+```
+
+Then go targeted, and stop as soon as the gap is identified:
+
+- `AGENTS.md` for conventions, `README.md` for the promise, `docs/ART_BIBLE.md` for the
+  visual contract. Those three, once, not per gap.
+- `search` and `usages` to locate a behaviour. Read a **file**, never a directory, and read
+  the region the gap points at rather than the file around it.
+- `gauntlet/verdicts/<ID>.round-<n>.md` only for an order whose digest note does not explain
+  the outcome. Never read the whole directory.
+- "Which sprite ids still fall back to placeholders" is answered by `repo:map`. Do not open
+  `public/assets/assets.json` (53 KB) or `pipeline/registry/slots.ts` (27 KB) to find out.
+
+Do not re-propose work a verdict already rejected unless you can say what is different this
+time — the notes from `gauntlet:status -- --notes` carry that.
 
 ## What "fully functioning" means here
 

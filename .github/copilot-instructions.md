@@ -1,15 +1,14 @@
 # Copilot instructions
 
-Read [`AGENTS.md`](../AGENTS.md) first — it is the single source of truth for how work
-happens in this repository.
+`AGENTS.md` is the single source of truth for how work happens here.
+`.github/instructions/*.instructions.md` attach the gameplay, pipeline and test rules by path,
+so they are already in context when you touch those files.
 
-The three rules that matter most:
+Always-on rules:
 
 1. **Never call a fal generation tool without `npm run art:claim` first.** The lifetime
    ceiling is 150 images and the ledger is the audit trail.
-2. **Work the whole queue, not one round.** One implementer and one fresh reviewer per
-   order, verdict recorded with `npm run gauntlet:record`; keep going until nothing is
-   dispatchable. Plan new work with `/gauntlet-plan`, never from inside the loop.
+2. **Work the whole queue, not one round.** Plan with `/gauntlet-plan`, run with `/gauntlet`.
 3. **Solve the work order; don't refactor what it didn't ask about.** No file whitelist —
    change whatever the fix needs.
 

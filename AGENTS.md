@@ -84,16 +84,36 @@ codebase, so the loop survives a project of this size.
 Commands:
 
 ```bash
-npm run gauntlet:next              # print the next dispatchable order + context bundle
+npm run gauntlet:next              # print the next dispatchable order and its text
 npm run gauntlet:record -- --id 07 --verdict pass --note "shipped"
 npm run gauntlet:status            # queue, rounds used, escalations
+npm run gauntlet:status -- --notes # + the last verdict note for every order
+npm run repo:map                   # compact map of the game, content and art state
 ```
+
+## Context budget
+
+Every agent context is a budget, and the loop re-spends it every round. These are rules:
+
+- **The orchestrator never holds a diff.** `git diff > /tmp/<ID>.round-<r>.diff`, then hand
+  the reviewer the path. A diff pasted through two contexts is paid for twice per round and
+  again on every later turn of the run.
+- **Nothing is pasted that can be a path.** Diffs, verification logs and art evidence live in
+  `/tmp`; an agent reads them when it needs them.
+- **Read the digest before the tree.** `npm run repo:map` and
+  `npm run gauntlet:status -- --notes` answer "what exists" and "what happened" in about
+  eighty lines. Answering the same question by reading `src/`, `public/assets/assets.json`
+  (53 KB) and `pipeline/registry/slots.ts` (27 KB) costs six figures.
+- **Rules attach, they are not fetched.** `.github/instructions/*.instructions.md` carry the
+  gameplay, pipeline and test rules and load by path. `AGENTS.md` is documentation — do not
+  spend a read on it to find a rule.
+- **One copy of a procedure.** An agent file owns the procedure; a prompt file is a trigger
+  and a pointer. Two copies drift, and both get paid for.
 
 ## Commits
 
 `main` is the trunk and history is linear — no long-lived branches per work order. Commit
 as work lands; do not batch a day of work into one drop.
-
 - **One commit per gauntlet round**, made immediately after the verdict is recorded. It
   contains the round's diff, `gauntlet/state.json`, and the new
   `gauntlet/verdicts/<ID>.round-<n>.md`.
@@ -130,10 +150,11 @@ pipeline/               asset factory (Node, never bundled)
   BUDGET.md             how the budget works and why
 
 gauntlet/               work order queue + verdicts + state
-scripts/gauntlet/       state machine enforcement
-docs/                   ART_BIBLE, LEVEL_DESIGN
-.github/agents/         orchestrator, implementer, reviewer definitions
+scripts/gauntlet/       state machine enforcement + repo:map digest
+docs/                   ART_BIBLE, MCP_SETUP
+.github/agents/         orchestrator, implementer, reviewer, planner definitions
 .github/prompts/        reusable agent procedures
+.github/instructions/   path-scoped rules (gameplay, pipeline, tests) loaded automatically
 e2e/                    Playwright smoke tests
 ```
 
@@ -147,9 +168,10 @@ e2e/                    Playwright smoke tests
 - **Level generation returns data, not objects.** Generators return a `LevelBlueprint`;
   the scene turns blueprints into sprites. This keeps generation unit-testable and keeps
   Phaser out of the generators.
-- **Content is data.** Enemies, civilians, weapons and challenges are JSON tables validated
-  against schemas in `src/content/schema.ts`. Adding an enemy should not require a code
-  change unless it needs a new behaviour.
+- **Content is data.** Enemies, bosses, civilians, weapons and challenges are JSON tables
+  checked by the hand-written schema in `src/content/content.test.ts` — a runtime validator
+  would cost bundle bytes to catch what CI catches free. Adding an enemy should not require a
+  code change unless it needs a new behaviour.
 - **Art is data too.** Every sprite the game draws is looked up by id in
   `public/assets/assets.json`. If an id is missing, `src/art/placeholder.ts` draws a
   deterministic stand-in. A failed image slot must never block gameplay.

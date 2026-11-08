@@ -19,9 +19,13 @@ reviewer, and to keep going until the queue is empty.
 
 - **Never edit a source file.** If something needs changing, it is a work order. The only
   files you may write yourself are `gauntlet/state.json`, the verdict files written by
-  `npm run gauntlet:record`, and `/tmp/*-evidence.*` scratch files.
-- **Never read a whole source file.** You read `gauntlet/state.json`, verdict files, and the
-  work order you are dispatching. Two short files per round, maximum.
+  `npm run gauntlet:record`, and `/tmp/*` scratch files.
+- **Nothing enters your context that a command did not print.** `npm run gauntlet:next`
+  already prints the counts, the id and the whole work order; `git diff` can be redirected
+  to a file. Never open `gauntlet/state.json`, the order file it names, anything under
+  `src/` or `pipeline/`, or an inlined diff. You route; you do not read.
+- **Never let a diff sit in your context.** One diff per round is cheap for the reviewer and
+  expensive for you, because you pay for it again on every later turn of the queue.
 - **Never hand-edit `pipeline/budget.json`, `pipeline/registry/*`, or `public/assets/atlas/*`.**
   Those are produced by the art CLIs.
 - **You are the only agent that talks to fal.** Subagents have no fal tools. You make the
@@ -42,20 +46,33 @@ command.
    evidence to the implementer.
 3. Dispatch an **implementer** subagent with the work order text — plus the `/tmp` evidence
    files for an art order. Nothing else: no file list, no suggested approach, no scope
-   limits beyond the repo rules in `AGENTS.md`. The implementer decides what to change.
-4. The implementer returns a short report: files changed, verification output, deviations.
-5. Dispatch a **fresh reviewer** subagent with the work order text and the round's diff
-   (`git diff`), plus the verification output and, for art orders, the visual evidence
-   below. **Never** the implementer's reasoning or report narrative.
+   limits beyond the repo rules that attach by path. The implementer decides what to change.
+4. The implementer returns a short report: files changed, the path to its verification log,
+   and any deviations. It writes the full log to `/tmp/<ID>.round-<r>.verify.log` itself, so
+   you never need the contents.
+5. **Capture the round to a file, then dispatch a fresh reviewer with paths, not contents:**
+
+   ```bash
+   git diff > /tmp/<ID>.round-<r>.diff
+   ```
+
+   Dispatch the **fresh reviewer** subagent with the work order text, the path
+   `/tmp/<ID>.round-<r>.diff`, the verification log path from step 4, and for art orders the
+   visual evidence below. **Never** the implementer's reasoning or report narrative, and
+   never an inlined diff.
 6. Record the outcome:
    ```bash
    npm run gauntlet:record -- --id <ID> --verdict pass|fail --note "<one line>"
    ```
 7. Commit the round, then loop:
    ```bash
-   git add -A && git status --short && git commit -q -m "<ID> <verdict>: <one line>"
+   git reset -q -- pipeline/work 2>/dev/null; git status --short
+   git add <exactly the paths that command listed> gauntlet/state.json gauntlet/verdicts
+   git commit -q -m "<ID> <verdict>: <one line>"
    ```
-   Read `git status` before staging. Never commit a credential.
+   Read `git status` first and stage what it listed. Never `git add -A` on a tree you have
+   not looked at, never commit `pipeline/raw/` or `pipeline/work/` (generated scratch), and
+   never commit a credential.
 
 On `pass`, go to the next order. On `fail`, re-dispatch a **fresh** implementer with the
 reviewer's feedback appended; the new implementer does not see the previous attempt.

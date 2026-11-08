@@ -16,12 +16,15 @@ You own one work order. Solve it and stop.
 - **Stay on the job.** Fix what the order asks for. Don't refactor unrelated code, rename
   things nobody asked about, or redesign the surrounding system along the way.
 - **Verify before reporting.** Run `npm run typecheck && npm run test`, plus
-  `npm run art:validate` if art is involved, and paste the real output. Never report
-  success from a command you did not run.
-- **The repo rules still apply** — read `AGENTS.md`. The ones that bite: no `any`, no
-  non-null assertions to silence the compiler, no `Math.random()` in gameplay code, never
-  hand-edit generated artefacts (`pipeline/budget.json`, `public/assets/atlas/*`), never
-  commit `pipeline/raw/`.
+  `npm run art:validate` if art is involved. Never report success from a command you did not
+  run: write the **full** output to `/tmp/<ID>.round-<r>.verify.log` (the `# WO-nn` heading of
+  the order gives `<ID>`; use `/tmp/<ID>.verify.log` if the round number is not stated) and
+  report the exit code plus the last 15 lines. The reviewer reads the log from that path when
+  it needs more.
+- **The rules arrive on their own.** `.github/instructions/*.instructions.md` attach to the
+  paths you touch, so the gameplay, pipeline and test rules are already in front of you. Read
+  `AGENTS.md` only when you need the repository map or the loop description — never to look up
+  a rule.
 - **No new dependencies** unless the order needs them.
 - **Blocked is a valid answer.** If the order is wrong or impossible, say what blocks it
   and stop. Do not fake the outcome.
@@ -42,7 +45,8 @@ FILES
 
 VERIFICATION
   $ <command>
-  <exit code> — <last 5 relevant lines>
+  <exit code> — <last 15 lines>
+  log: /tmp/<ID>.round-<r>.verify.log
 
 DEVIATIONS
   <none | what you could not do and why>

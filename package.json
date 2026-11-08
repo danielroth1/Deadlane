@@ -32,7 +32,8 @@
     "art:gallery": "tsx pipeline/cli/gallery.ts",
     "gauntlet:next": "tsx scripts/gauntlet/next.ts",
     "gauntlet:record": "tsx scripts/gauntlet/record.ts",
-    "gauntlet:status": "tsx scripts/gauntlet/status.ts"
+    "gauntlet:status": "tsx scripts/gauntlet/status.ts",
+    "repo:map": "tsx scripts/gauntlet/map.ts"
   },
   "dependencies": {
     "phaser": "^3.90.0"

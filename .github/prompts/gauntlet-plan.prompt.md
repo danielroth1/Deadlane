@@ -60,3 +60,5 @@ Then hand back with: "run `/gauntlet`".
 - An escalated order is context, not a plan item: mention it and let me decide whether its
   blocker becomes a new order.
 - If I ask for an order the planner never surfaced, add it — I am the authority on scope.
+- Everything else — what makes a good order, what the planner may read, the output shape —
+  is owned by `.github/agents/planner.agent.md`. Do not restate it here.
