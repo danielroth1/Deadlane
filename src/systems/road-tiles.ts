@@ -95,16 +95,24 @@ export const HIGHWAY_TILE_WINDOWS: RoadTileTheme = {
  *   asphalt — it carries a solid edge line at column 2 and a painted white dash at column
  *   16, and a dark model border on row 0. Sampling left of the dash and below the border
  *   keeps only cracked asphalt and leaves the marking to the lane bands, where it lines up
- *   with the lane geometry instead of repeating every window width.
- * - terrain (cell 1): the whole sand plain, which is uniform edge to edge.
+ *   with the lane geometry instead of repeating every window width. Measured on the
+ *   shipped sheet: columns 3–15 hold 84 % `steel`, 7 % `asphalt-light`, 4.6 % `void` and
+ *   3.6 % `asphalt`, and not one `bone` or `white` pixel; the step across the wrap (0.0
+ *   luma on rows, 2.8 on columns) is below the largest step inside the window.
+ * - terrain (cell 1): columns 1–30, the whole sand plain. Column 31 is a darker sand edge
+ *   (mean luma 188 against 194) and keeping it puts the sharpest step in the band on the
+ *   wrap — 5.5 luma against 1.5 luma between neighbouring columns — so the window starts at
+ *   column 1 and its wrap measures 1.8.
  * - shoulder (cell 6): cracked stone, uniform across its columns; each strip takes its
- *   own outer eight columns so the verge does not repeat a road edge.
- * - dash (cell 0): columns 8–23 put the painted dash at local column 8, the centre of the
- *   16 px band, with asphalt either side of it; rows 1–30 drop the same dark border row.
+ *   own outer eight columns so the verge does not repeat a road edge. The band is exactly
+ *   one window wide, so only the 32-row wrap is ever repeated.
+ * - dash (cell 0): columns 8–23 put the painted dash at column 16 — local column 8, the
+ *   centre of the 16 px band to within half a pixel — with asphalt either side of it and
+ *   none of the edge line at column 2; rows 1–30 drop the same dark border row.
  */
 export const CANYON_TILE_WINDOWS: RoadTileTheme = {
   surface: { sourceX: 3, sourceWidth: 13, sourceY: 1, sourceHeight: 30 },
-  terrain: { sourceX: 0, sourceWidth: 32, sourceY: 0, sourceHeight: TILE_SIZE },
+  terrain: { sourceX: 1, sourceWidth: 30, sourceY: 0, sourceHeight: TILE_SIZE },
   shoulderLeft: { sourceX: 0, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
   shoulderRight: { sourceX: 24, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
   dash: { sourceX: 8, sourceWidth: DASH_WIDTH, sourceY: 1, sourceHeight: 30 },
@@ -114,26 +122,35 @@ export const CANYON_TILE_WINDOWS: RoadTileTheme = {
  * Windows measured on the shipped `art-15-tiles-water` cells (`cell-N.png`).
  *
  * On water the road *is* water, so every band is sampled from the sheet's water cells and
- * no band is ever asphalt.
+ * no band is ever asphalt. Every rectangle below was measured on the committed PNG; the
+ * numbers are pinned by `road-tiles.sheet.test.ts`, which decodes the sheet and fails if the
+ * art moves under the window.
  *
- * - surface (cell 0, open water): columns 1–30, rows 1–30. Column 0 is the dark border
- *   the model draws down the left of every cell and row 0 the same border across its top;
- *   repeating either would be a line every tile.
- * - terrain (cell 9, deep water): the same trim on the water outside the channel. The
- *   channel is marked by its shoulders, not by a different material.
- * - shoulder (cell 12, the wooden pier the sheet labels `stone bank edge`): columns 10–18
- *   are the plank deck, which repeats as mooring posts along the channel edge. One window
+ * - surface (cell 10, the sheet's `current streak`): columns 2–31, rows 0–25. `open water`
+ *   (cell 0) is the obvious choice and is deliberately **not** used: it ramps from a mean
+ *   row luma of 115 at the top to 66 at the bottom, so a 30-row window of it steps 49.7
+ *   luma at the wrap against a 6.9 median step inside — a bright band every 30 px on the
+ *   road. The current streak's own rows are noise around one level and its wrap is 4.3.
+ * - terrain (cell 9, deep water): columns 1–30, rows 6–27, the calm water outside the
+ *   channel. Rows 1–30 wrap a 113-luma row onto an 89-luma one; rows 6–27 wrap at 2.3,
+ *   which is smaller than any step inside the window.
+ * - shoulder (cell 12, the deck this sheet labels `stone bank edge`): columns 12–19, rows
+ *   8–31, the warm plank deck that reads as mooring posts along the channel edge. Rows 0–7
+ *   are grey stone and the columns to either side are stone and water; the deck window
+ *   itself is 1.6 % teal — i.e. not water — against 28 % in the surface window. One window
  *   serves both sides because planks have no inside or outside.
- * - dash (cell 2, foam): columns 8–23 cut through the white patch, so repeating the band
- *   draws a dashed wake down each lane boundary. The 32 px cell has transparent rows above
- *   and below the patch; they are gaps in the dash, and the surface water shows through.
+ * - dash (cell 2, foam): columns 8–23 cut through the white patch, whose brightness
+ *   centroid sits at column 16 — local column 8, the centre of the band to within half a
+ *   pixel — so repeating the band draws a dashed wake down each lane boundary. The 32 px
+ *   cell has transparent rows above and below the patch; they are gaps in the dash, and the
+ *   surface water shows through.
  */
 export const WATER_TILE_WINDOWS: RoadTileTheme = {
-  surface: { sourceX: 1, sourceWidth: 30, sourceY: 1, sourceHeight: 30 },
-  terrain: { sourceX: 1, sourceWidth: 30, sourceY: 1, sourceHeight: 30 },
-  shoulderLeft: { sourceX: 10, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
-  shoulderRight: { sourceX: 10, sourceWidth: SHOULDER_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
-  dash: { sourceX: 8, sourceWidth: DASH_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
+  surface: { sourceX: 2, sourceWidth: 30, sourceY: 0, sourceHeight: 26 },
+  terrain: { sourceX: 1, sourceWidth: 30, sourceY: 6, sourceHeight: 22 },
+  shoulderLeft: { sourceX: 12, sourceWidth: SHOULDER_WIDTH, sourceY: 8, sourceHeight: 24 },
+  shoulderRight: { sourceX: 12, sourceWidth: SHOULDER_WIDTH, sourceY: 8, sourceHeight: 24 },
+  dash: { sourceX: DASH_SAMPLE_X, sourceWidth: DASH_WIDTH, sourceY: 0, sourceHeight: TILE_SIZE },
 };
 
 /**

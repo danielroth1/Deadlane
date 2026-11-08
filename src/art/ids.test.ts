@@ -147,7 +147,8 @@ describe('canyon and water tile art ids', () => {
     [
       'art-15-tiles-water',
       WATER_TILE_ART,
-      { surface: 0, dash: 2, shoulder: 12, terrain: 9 },
+      // The surface is the current streak (10), not open water (0): see WATER_TILE_ART.
+      { surface: 10, dash: 2, shoulder: 12, terrain: 9 },
     ],
   ];
 

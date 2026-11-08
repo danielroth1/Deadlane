@@ -227,13 +227,18 @@ export const CANYON_TILE_ART: TileArtByKind = {
  * The channel is water: the surface and the terrain outside it are both water cells, and
  * the shoulders are the pier deck, whose posts read as the channel edge. Nothing here is
  * asphalt — a city road painted on water would be the wrong material.
+ *
+ * The surface is the **current streak**, not `open water`: measured on the shipped PNG,
+ * `open water` ramps from a mean row luma of 115 at its top to 66 at its bottom, so any
+ * window tall enough to scroll steps ~50 luma at the wrap and paints a bright band every
+ * tile. The current streak's rows are noise around one level, and its wrap is 4 luma.
  */
 export const WATER_TILE_ART: TileArtByKind = {
-  // Cell 0 — open water.
-  surface: ['tiles-water/open-water'],
+  // Cell 10 — current streak: the full-bleed water cell with the flattest rows.
+  surface: ['tiles-water/current-streak'],
   // Cell 2 — the foam patch, repeated as a dashed wake along each lane boundary. The
-  // current streak (cell 10) is the alternate: it is the cleaner water tile, but its
-  // diagonal crest disappears against the surface at this size.
+  // current streak (cell 10) is the alternate: a sheet without the foam then draws plain
+  // water down the lane divider rather than nothing at all.
   dash: ['tiles-water/foam', 'tiles-water/current-streak'],
   // Cell 12 — plank deck, the sheet's `stone bank edge`.
   shoulder: ['tiles-water/stone-bank-edge'],

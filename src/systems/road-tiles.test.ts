@@ -271,21 +271,11 @@ describe('road tile specs', () => {
     }
   });
 
-  it('drops the model border row from the canyon and water surfaces', () => {
-    // Both cells carry a dark 1 px border along their top edge; repeating it paints a line
-    // across the road every tile, which reads as a grid rather than asphalt or water.
-    for (const theme of [CANYON_TILE_WINDOWS, WATER_TILE_WINDOWS]) {
-      expect(theme.surface.sourceY).toBeGreaterThan(0);
-      expect(theme.surface.sourceY + theme.surface.sourceHeight).toBeLessThanOrEqual(TILE_SIZE);
-    }
-  });
-
-  it('keeps the canyon surface off the painted dash column', () => {
-    // art-14 cell 0 carries a white dash at column 16. Sampling it into the surface would
-    // paint a lane marking every window width instead of one per lane boundary.
-    const { sourceX, sourceWidth } = CANYON_TILE_WINDOWS.surface;
-    expect(sourceX > 16 || sourceX + sourceWidth <= 16).toBe(true);
-  });
+  // Window and art claims are deliberately *not* restated here. "The canyon surface holds
+  // no painted dash", "the water shoulder is deck and not water", "this window wraps
+  // smoothly" are all statements about the shipped PNGs, and `road-tiles.sheet.test.ts`
+  // measures them there. An assertion in this file could only compare the window with the
+  // comment that describes it.
 
   it('draws the water channel from water cells, never from asphalt', () => {
     for (const ids of Object.values(WATER_TILE_ART)) {
