@@ -189,13 +189,37 @@
     },
     "art-09-weapons-pickups": {
       "id": "art-09-weapons-pickups",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 374229747,
+          "promptHash": "77add3be3ba54d47",
+          "state": "generated",
+          "claimedAt": "2026-11-08T11:54:50.685Z",
+          "requestId": "01a1bb03-1a61-70b0-8f6f-77c44b2e2536",
+          "url": "https://v3b.fal.media/files/b/0ab1a382/1jb1Kt2WxIFE1Enlak8zM_cCX29e68.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-10-fx": {
       "id": "art-10-fx",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1217978134,
+          "promptHash": "e02ce6d555aabf78",
+          "state": "generated",
+          "claimedAt": "2026-11-08T11:59:25.882Z",
+          "requestId": "01a1bb07-46fd-73f0-8b28-5ce8ea4a55fa",
+          "url": "https://v3b.fal.media/files/b/0ab1a39e/HQ0d-mNF0C66gZUDz5VP9_SbINOzUf.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-11-props-a": {
       "id": "art-11-props-a",

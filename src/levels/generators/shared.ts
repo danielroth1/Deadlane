@@ -29,6 +29,14 @@ export interface GenerateOptions {
   readonly index: number;
 }
 
+/**
+ * Every pickup kind the generator can place.
+ *
+ * Exported so the art seam can prove that each one has a sprite id: a kind placed here but
+ * missing from `src/art/ids.ts` would spend a run drawing the procedural diamond.
+ */
+export const PICKUP_POOL: readonly string[] = ['oil', 'smoke', 'armour', 'shield', 'nitro'];
+
 export function generateLevel({ type, seed, index }: GenerateOptions): LevelBlueprint {
   const profile = LEVEL_PROFILES[type];
   const road = roadProfileFor(type);
@@ -181,7 +189,7 @@ function placePickups(
   density: number,
 ): LevelEvent[] {
   const out: LevelEvent[] = [];
-  const pool = ['oil', 'smoke', 'armour', 'shield', 'nitro'];
+  const pool = PICKUP_POOL;
   const spacing = Math.max(500, Math.round(1400 / Math.max(0.2, density)));
   let at = SPAWN.safeStartPixels + 1500;
 

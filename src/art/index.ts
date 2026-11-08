@@ -55,6 +55,17 @@ export class Art {
     return Object.keys(this.manifest?.sheets ?? {}).length;
   }
 
+  /** The sprite-sheet frame behind an id, or null when the manifest has nothing for it. */
+  private generated(id: string): SpriteRef | null {
+    const entry = this.manifest?.sprites[id];
+    if (!entry) return null;
+    const sheet = this.manifest?.sheets[entry.sheet];
+    if (!sheet || !this.scene.textures.exists(entry.sheet)) return null;
+    const col = Math.round(entry.x / sheet.cellSize);
+    const row = Math.round(entry.y / sheet.cellSize);
+    return { key: entry.sheet, frame: row * sheet.cols + col };
+  }
+
   /**
    * Resolve an id, falling back to a placeholder vehicle when no art exists.
    *
@@ -62,16 +73,7 @@ export class Art {
    * created lazily rather than at boot.
    */
   resolve(id: string, fallback: () => VehicleOptions): SpriteRef {
-    const entry = this.manifest?.sprites[id];
-    if (entry) {
-      const sheet = this.manifest?.sheets[entry.sheet];
-      if (sheet && this.scene.textures.exists(entry.sheet)) {
-        const col = Math.round(entry.x / sheet.cellSize);
-        const row = Math.round(entry.y / sheet.cellSize);
-        return { key: entry.sheet, frame: row * sheet.cols + col };
-      }
-    }
-    return { key: ensureVehicleTexture(this.scene, id, fallback()) };
+    return this.generated(id) ?? { key: ensureVehicleTexture(this.scene, id, fallback()) };
   }
 
   /** Create an image, sized to the asset's native pixel size. */
@@ -104,6 +106,27 @@ export class Art {
     return ref.frame === undefined
       ? this.scene.add.image(x, y, ref.key)
       : this.scene.add.image(x, y, ref.key, ref.frame);
+  }
+
+  /**
+   * Create an image from the first id that has generated art, else from a procedural
+   * texture the caller builds.
+   *
+   * Pickups and effects are not vehicles, so their stand-in is a texture key rather than
+   * `VehicleOptions`. `fallbackKey` only runs when no candidate id is in the manifest,
+   * which keeps placeholder textures off the boot path.
+   */
+  imageFrom(
+    ids: readonly string[],
+    x: number,
+    y: number,
+    fallbackKey: () => string,
+  ): Phaser.GameObjects.Image {
+    for (const id of ids) {
+      const ref = this.generated(id);
+      if (ref) return this.scene.add.image(x, y, ref.key, ref.frame);
+    }
+    return this.scene.add.image(x, y, fallbackKey());
   }
 }
 

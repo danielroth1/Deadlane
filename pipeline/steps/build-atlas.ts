@@ -185,8 +185,40 @@ export async function buildSheet({ slot, attempt }: BuildSheetInput): Promise<Sh
   return manifest;
 }
 
+/**
+ * Merge the sheets rebuilt this run with sheets that have already shipped.
+ *
+ * A slot can be approved, packed into `public/assets`, and later reopened to claim a
+ * retry — `art-08-civilians` was reopened exactly that way after WO-40. A rebuild only
+ * packs approved slots, so without this merge the reopen would silently delete frames the
+ * game is already drawing. A freshly built sheet always replaces the shipped one, and a
+ * shipped sheet whose image is gone from disk is not carried over.
+ */
+export function mergeShippedSheets(
+  built: readonly SheetManifest[],
+  shipped: Record<string, SheetManifest>,
+  imageExists: (sheet: SheetManifest) => boolean,
+): Record<string, SheetManifest> {
+  const merged: Record<string, SheetManifest> = {};
+
+  for (const [slotId, sheet] of Object.entries(shipped)) {
+    if (imageExists(sheet)) merged[slotId] = sheet;
+  }
+  for (const sheet of built) {
+    merged[sheet.slot] = sheet;
+  }
+
+  return merged;
+}
+
+export interface BuildAtlasOptions {
+  /** Sheets from the previous manifest, kept for slots this run does not rebuild. */
+  readonly carryOver?: Record<string, SheetManifest>;
+}
+
 export async function buildAtlas(
   entries: readonly { slot: SlotSpec; attempt: number }[],
+  options: BuildAtlasOptions = {},
 ): Promise<AssetsManifest> {
   const manifest: AssetsManifest = {
     generatedAt: new Date().toISOString(),
@@ -194,16 +226,22 @@ export async function buildAtlas(
     sprites: {},
   };
 
-  const sheets: Record<string, SheetManifest> = {};
-  const sprites: AssetsManifest['sprites'] = {};
+  const built: SheetManifest[] = [];
 
   for (const entry of entries) {
     const sheet = await buildSheet(entry);
     if (!sheet) continue;
+    built.push(sheet);
+  }
 
-    sheets[sheet.slot] = sheet;
+  const sheets = mergeShippedSheets(built, options.carryOver ?? {}, (sheet) =>
+    existsSync(resolve(REPO_ROOT, 'public', sheet.image)),
+  );
+
+  const sprites: AssetsManifest['sprites'] = {};
+  for (const [slotId, sheet] of Object.entries(sheets)) {
     for (const [id, rect] of Object.entries(sheet.frames)) {
-      sprites[id] = { sheet: sheet.slot, ...rect };
+      sprites[id] = { sheet: slotId, ...rect };
     }
   }
 

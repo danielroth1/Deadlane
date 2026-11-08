@@ -1,0 +1,106 @@
+{
+  "slot": "art-10-fx",
+  "code": "fx",
+  "cellSize": 32,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-10-fx.png",
+  "frames": {
+    "fx/explosion-small": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fx/explosion-medium": {
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fx/explosion-large": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fx/fireball": {
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fx/smoke-puff": {
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "fx/thick-smoke": {
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "fx/tyre-skid": {
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "fx/sparks": {
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "fx/debris": {
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "fx/muzzle-flash": {
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "fx/water-splash": {
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "fx/dust-cloud": {
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "fx/electric-arc": {
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "fx/shockwave-ring": {
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "fx/oil-splatter": {
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "fx/headlight-cone": {
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    }
+  }
+}

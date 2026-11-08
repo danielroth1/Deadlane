@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T11:42:41.508Z",
+  "generatedAt": "2026-11-08T12:03:45.167Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -220,6 +220,218 @@
           "h": 64
         }
       }
+    },
+    "art-09-weapons-pickups": {
+      "slot": "art-09-weapons-pickups",
+      "code": "weapons-pickups",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-09-weapons-pickups.png",
+      "frames": {
+        "weapons-pickups/oil-slick": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/smoke-canister": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/oil-drum": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/mine": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/crate": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/ammo-box": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/shield-cell": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/armour-plate": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/nitro-canister": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/toolbox": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/weapons-van-ramp": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/turret-pickup": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/health-kit": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/score-token": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/jammer-device": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "weapons-pickups/flare": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      }
+    },
+    "art-10-fx": {
+      "slot": "art-10-fx",
+      "code": "fx",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-10-fx.png",
+      "frames": {
+        "fx/explosion-small": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "fx/explosion-medium": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "fx/explosion-large": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "fx/fireball": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "fx/smoke-puff": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "fx/thick-smoke": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "fx/tyre-skid": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "fx/sparks": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "fx/debris": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "fx/muzzle-flash": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "fx/water-splash": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "fx/dust-cloud": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "fx/electric-arc": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "fx/shockwave-ring": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "fx/oil-splatter": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "fx/headlight-cone": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      }
     }
   },
   "sprites": {
@@ -397,6 +609,230 @@
       "y": 192,
       "w": 64,
       "h": 64
+    },
+    "weapons-pickups/oil-slick": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/smoke-canister": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/oil-drum": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/mine": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/crate": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/ammo-box": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/shield-cell": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/armour-plate": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/nitro-canister": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/toolbox": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/weapons-van-ramp": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/turret-pickup": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/health-kit": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/score-token": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/jammer-device": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/flare": {
+      "sheet": "art-09-weapons-pickups",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "fx/explosion-small": {
+      "sheet": "art-10-fx",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fx/explosion-medium": {
+      "sheet": "art-10-fx",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fx/explosion-large": {
+      "sheet": "art-10-fx",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fx/fireball": {
+      "sheet": "art-10-fx",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "fx/smoke-puff": {
+      "sheet": "art-10-fx",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "fx/thick-smoke": {
+      "sheet": "art-10-fx",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "fx/tyre-skid": {
+      "sheet": "art-10-fx",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "fx/sparks": {
+      "sheet": "art-10-fx",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "fx/debris": {
+      "sheet": "art-10-fx",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "fx/muzzle-flash": {
+      "sheet": "art-10-fx",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "fx/water-splash": {
+      "sheet": "art-10-fx",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "fx/dust-cloud": {
+      "sheet": "art-10-fx",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "fx/electric-arc": {
+      "sheet": "art-10-fx",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "fx/shockwave-ring": {
+      "sheet": "art-10-fx",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "fx/oil-splatter": {
+      "sheet": "art-10-fx",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "fx/headlight-cone": {
+      "sheet": "art-10-fx",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
     }
   }
 }

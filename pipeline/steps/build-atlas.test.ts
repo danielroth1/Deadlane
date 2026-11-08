@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { droppedCellsForAttempt, includedCellIndexes } from './build-atlas';
+import { droppedCellsForAttempt, includedCellIndexes, mergeShippedSheets } from './build-atlas';
+import type { SheetManifest } from './build-atlas';
 import { SLOTS } from '../registry/slots';
 
 /**
@@ -109,5 +110,55 @@ describe('droppedCellsForAttempt', () => {
     expect(slot.droppedCells ?? []).toEqual([]);
     expect(droppedCellsForAttempt(slot, 1)).toHaveLength(10);
     expect(droppedCellsForAttempt(slot, 2)).toEqual([]);
+  });
+});
+
+/**
+ * Rebuilding the atlas must not delete art the game is already drawing.
+ *
+ * `art-08-civilians` shipped six frames, then the slot was reopened so a retry could be
+ * claimed. The reopen hides the slot from `art:atlas`, and before this merge that also
+ * erased its frames from `assets.json`.
+ */
+describe('mergeShippedSheets', () => {
+  const sheet = (slot: string, frame: string): SheetManifest => ({
+    slot,
+    code: slot.replace(/^art-\d+-/, ''),
+    cellSize: 32,
+    cols: 4,
+    rows: 4,
+    image: `assets/sheets/${slot}.png`,
+    frames: { [frame]: { x: 0, y: 0, w: 32, h: 32 } },
+  });
+
+  it('carries a shipped sheet forward when its slot is not rebuilt', () => {
+    const shipped = { 'art-08-civilians': sheet('art-08-civilians', 'civilians/sedan') };
+    const merged = mergeShippedSheets(
+      [sheet('art-09-weapons-pickups', 'weapons-pickups/crate')],
+      shipped,
+      () => true,
+    );
+
+    expect(Object.keys(merged)).toEqual(['art-08-civilians', 'art-09-weapons-pickups']);
+  });
+
+  it('lets a rebuilt sheet replace the shipped one', () => {
+    const merged = mergeShippedSheets(
+      [sheet('art-08-civilians', 'civilians/sedan')],
+      { 'art-08-civilians': sheet('art-08-civilians', 'civilians/taxi') },
+      () => true,
+    );
+
+    expect(Object.keys(merged['art-08-civilians']?.frames ?? {})).toEqual(['civilians/sedan']);
+  });
+
+  it('drops a shipped sheet whose image is gone', () => {
+    const merged = mergeShippedSheets(
+      [],
+      { 'art-08-civilians': sheet('art-08-civilians', 'civilians/sedan') },
+      () => false,
+    );
+
+    expect(merged).toEqual({});
   });
 });

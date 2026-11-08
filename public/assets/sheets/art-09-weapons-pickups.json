@@ -1,0 +1,106 @@
+{
+  "slot": "art-09-weapons-pickups",
+  "code": "weapons-pickups",
+  "cellSize": 32,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-09-weapons-pickups.png",
+  "frames": {
+    "weapons-pickups/oil-slick": {
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/smoke-canister": {
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/oil-drum": {
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/mine": {
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/crate": {
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/ammo-box": {
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/shield-cell": {
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/armour-plate": {
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/nitro-canister": {
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/toolbox": {
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/weapons-van-ramp": {
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/turret-pickup": {
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/health-kit": {
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/score-token": {
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/jammer-device": {
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "weapons-pickups/flare": {
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    }
+  }
+}

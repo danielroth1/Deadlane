@@ -2,8 +2,9 @@ import Phaser from 'phaser';
 import { DIFFICULTY, GAME, LEVEL, PLAYER, SCORE, SPAWN, SPEED, WEAPON_FX } from '@/config';
 import { PALETTE } from '@/palette';
 import { Art } from '@/art';
+import { EFFECT_ART, pickupArtIds } from '@/art/ids';
 import { flatTexture, pickupTexture, propTexture } from '@/art/placeholders';
-import { PlayerVehicle } from '@/entities/player';
+import { PlayerVehicle, displayScale } from '@/entities/player';
 import { EnemyVehicle } from '@/entities/enemy';
 import { CivilianVehicle } from '@/entities/civilian';
 import { getCivilian, getEnemy, getWeapon } from '@/content';
@@ -453,8 +454,13 @@ export class GameScene extends Phaser.Scene {
         break;
       }
       case 'pickup': {
-        const key = pickupTexture(this, event.pickup, pickupColor(event.pickup));
-        const sprite = this.add.image(laneCenter(road, event.lane), -60, key).setDepth(25);
+        // The generated cell wins; the diamond is only drawn when the sheet has no frame
+        // for this kind, so a failed art slot never blocks a run.
+        const sprite = this.art
+          .imageFrom(pickupArtIds(event.pickup), laneCenter(road, event.lane), -60, () =>
+            pickupTexture(this, event.pickup, pickupColor(event.pickup)),
+          )
+          .setDepth(25);
         this.pickups.push({ sprite, at: event.at, x: sprite.x, kind: event.pickup });
         break;
       }
@@ -579,6 +585,8 @@ export class GameScene extends Phaser.Scene {
     const key = flatTexture(this, 'bullet', 'white', 6);
     const speed = this.gun.projectileSpeed ?? WEAPON_FX.gunProjectileSpeed;
 
+    this.showMuzzleFlash(this.player.x, this.player.y - 26);
+
     for (const offset of [-10, 10]) {
       const sprite = this.add
         .image(this.player.x + offset, this.player.y - 26, key)
@@ -616,13 +624,54 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Draw an effect frame at the on-screen footprint its flat-block stand-in occupied.
+   *
+   * Generated cells are 32 px while the stand-ins were 56 px (smoke) and 40 px (oil). The
+   * nearest whole multiple keeps the pixels square, per the "no fractional scaling" rule.
+   */
+  private fitEffect(
+    sprite: Phaser.GameObjects.Image,
+    footprint: number,
+  ): Phaser.GameObjects.Image {
+    const native = Math.max(sprite.width, sprite.height);
+    return sprite.setScale(Math.max(1, Math.ceil(displayScale(native, footprint))));
+  }
+
+  /**
+   * A short, purely cosmetic bloom at the nose.
+   *
+   * art-10 has no dedicated muzzle flash, so the bright radial burst in cell 0 stands in.
+   * It never collides with anything; the shells themselves start where they always did.
+   */
+  private showMuzzleFlash(x: number, y: number): void {
+    const flash = this.fitEffect(
+      this.art.imageFrom(EFFECT_ART.muzzle, x, y, () =>
+        flatTexture(this, 'muzzle-flash', 'white', 12),
+      ),
+      24,
+    ).setDepth(55);
+    this.tweens.add({
+      targets: flash,
+      alpha: { from: 1, to: 0 },
+      duration: 80,
+      onComplete: () => flash.destroy(),
+    });
+  }
+
   /** Release the smoke cloud. Public so a touch pad drives the same path as Shift. */
   dropSmoke(time = this.time.now): void {
     if (!this.player.useSmoke(time, this.smokeWeapon.cooldown)) return;
 
-    const key = flatTexture(this, 'smoke', 'steelLight', 56);
     const y = this.player.y + WEAPON_FX.smokeOffset;
-    const sprite = this.add.image(this.player.x, y, key).setDepth(35).setAlpha(0.6);
+    const sprite = this.fitEffect(
+      this.art.imageFrom(EFFECT_ART.smoke, this.player.x, y, () =>
+        flatTexture(this, 'smoke', 'steelLight', 56),
+      ),
+      56,
+    )
+      .setDepth(35)
+      .setAlpha(0.6);
     this.hazards.push({
       sprite,
       at: worldAtFromScreenY(y, this.distance),
@@ -636,9 +685,15 @@ export class GameScene extends Phaser.Scene {
   dropOil(time = this.time.now): void {
     if (!this.player.useOil(time, this.oilWeapon.cooldown)) return;
 
-    const key = flatTexture(this, 'oil', 'void', 40);
     const y = this.player.y + WEAPON_FX.oilOffset;
-    const sprite = this.add.image(this.player.x, y, key).setDepth(15).setAlpha(0.85);
+    const sprite = this.fitEffect(
+      this.art.imageFrom(EFFECT_ART.oil, this.player.x, y, () =>
+        flatTexture(this, 'oil', 'void', 40),
+      ),
+      40,
+    )
+      .setDepth(15)
+      .setAlpha(0.85);
     this.hazards.push({
       sprite,
       at: worldAtFromScreenY(y, this.distance),
@@ -800,8 +855,11 @@ export class GameScene extends Phaser.Scene {
     this.audio.play('explosion');
     this.cameras.main.shake(90, 0.004);
 
-    const key = flatTexture(this, 'explosion', 'amber', 34, 'white');
-    const boom = this.add.image(enemy.sprite.x, enemy.sprite.y, key).setDepth(60);
+    const boom = this.art
+      .imageFrom(EFFECT_ART.explosion, enemy.sprite.x, enemy.sprite.y, () =>
+        flatTexture(this, 'explosion', 'amber', 34, 'white'),
+      )
+      .setDepth(60);
     this.tweens.add({
       targets: boom,
       scale: { from: 0.6, to: 1.6 },

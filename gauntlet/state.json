@@ -460,11 +460,13 @@
       "id": "WO-41",
       "title": "art-09 pickups and art-10 effects",
       "file": "gauntlet/work-orders/WO-41-art-pickups-fx.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-34"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "art-09+art-10 atlased, pickups/explosion/smoke/oil from real frames, manifest-coverage test, art:atlas carry-over keeps art-08"
     },
     {
       "id": "WO-42",
