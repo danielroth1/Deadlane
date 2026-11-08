@@ -66,9 +66,11 @@ orchestrator  →  implementer (fresh)  →  reviewer (fresh, read-only)  →  v
   queue drains. One failed order never stops the run.
 - The loop stops early only for an **environment** problem (no fal tool, blocked fal
   account, broken build/test baseline) or when nothing is dispatchable.
-- **New work is planned, not invented.** Run `/gauntlet-plan`: a read-only planner produces
-  a gap list, you discuss it, and the accepted orders are written to `gauntlet/work-orders/`
-  and `gauntlet/state.json`. The loop itself never authors orders.
+- **New work is planned, not invented.** Run `/gauntlet-plan`: the planner produces a gap
+  list, you discuss it, and once you approve it the planner writes the accepted orders to
+  `gauntlet/work-orders/` and `gauntlet/state.json` and commits them. The loop never authors
+  orders — only the planner does, and only after your approval. Authoring is its entire write
+  surface: no game, pipeline, content or doc file is ever changed by planning.
 - The **orchestrator** never reads source files. It reads `gauntlet/state.json` and
   verdict summaries only.
 - **The orchestrator is the only agent with fal tools.** Subagents do not have them. For an

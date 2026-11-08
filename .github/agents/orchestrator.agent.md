@@ -96,7 +96,8 @@ verdict parks it; the human reads it from `npm run gauntlet:status` and decides 
 ## Planning
 
 You never author work. If the queue drains and the goal is not met, say so and point the
-human at `/gauntlet-plan`. Planning is a conversation, not a round.
+human at `/gauntlet-plan`. The planner writes the orders and commits the plan; you dispatch
+them on the next run. Planning is a conversation, not a round.
 
 ## Art orders
 

@@ -1,5 +1,5 @@
 ---
-description: 'Plan the next stretch of DEADLANE work: run a read-only gap analysis toward a fully functioning game, discuss the candidate work orders with me, and write the accepted ones into gauntlet/ as pending orders. Use when the queue is drained, when planning a new phase, or when asked what to build next.'
+description: 'Plan the next stretch of DEADLANE work: run a gap analysis toward a fully functioning game, discuss the candidate work orders with me, then have the planner write the accepted ones into gauntlet/ as pending orders the orchestrator can dispatch. Use when the queue is drained, when planning a new phase, or when asked what to build next.'
 ---
 
 # Plan the next work orders
@@ -15,9 +15,10 @@ game (boots, plays, progresses, ends, looks finished, ships, feels complete) and
 
 ## 2. Get the gap analysis
 
-Dispatch the **planner** subagent with the goal and the definition of done. It returns
-`GOAL GAPS`, `CANDIDATE ORDERS` and `NOT DOING`. Keep its evidence — quote the gaps, do not
-rewrite them from memory, and do not plan from your own recollection of the codebase.
+Dispatch the **planner** subagent with the goal and the definition of done, and say this is the
+analysis turn. It returns `GOAL GAPS`, `CANDIDATE ORDERS` and `NOT DOING`, and writes nothing.
+Keep its evidence — quote the gaps, do not rewrite them from memory, and do not plan from your
+own recollection of the codebase.
 
 ## 3. Discuss
 
@@ -38,27 +39,27 @@ write files yet. Do not start work.
 
 ## 4. Write the accepted plan
 
-Only after I approve, in however many words:
+Only after I approve, in however many words: dispatch the **planner** again with the approved
+list — the keep/drop/merge decisions and the final ordering — and say this is the write turn.
+It creates the work-order files, appends the state entries, proves the queue dispatches with
+`npm run gauntlet:status` and `npm run gauntlet:next`, and commits
+`chore: plan WO-<first>..WO-<last>`.
 
-- Create one brief per accepted order in `gauntlet/work-orders/`, named
-  `WO-<nn>-<slug>.md`, with: `# WO-<nn> — <title>`, `## Goal`, `## Steps` (hints, not
-  limits), `## Verification` (the commands, one per block), `## Out of scope`.
-- Append `{ "id", "title", "file", "status": "pending", "round": 0, "dependsOn": [...] }`
-  to `gauntlet/state.json`, continuing from the highest existing id. Never renumber, edit or
-  resurrect an existing order.
-- Run `npm run gauntlet:status` and show the resulting queue.
-- Commit as `chore: plan WO-<first>..WO-<last>` (read `git status` first).
+Do not write those files yourself. The planner owns the file shape, the id allocation and the
+commit; you relay the decisions and check the result.
 
-Then hand back with: "run `/gauntlet`".
+When it returns, show me its `QUEUE` line and commit, then hand back with: "run `/gauntlet`".
 
 ## Rules
 
 - Planning writes only `gauntlet/` — never game code, pipeline code, content data or docs.
+  The planner is the only writer; you dispatch it and report.
 - Never raise the image ceiling or the attempt cap. Art work names its slot id and fits the
   existing budget.
 - Never reopen a `done` order. Plan a new one that supersedes it.
 - An escalated order is context, not a plan item: mention it and let me decide whether its
   blocker becomes a new order.
-- If I ask for an order the planner never surfaced, add it — I am the authority on scope.
+- If I ask for an order the planner never surfaced, put it in the write-turn dispatch — I am
+  the authority on scope.
 - Everything else — what makes a good order, what the planner may read, the output shape —
   is owned by `.github/agents/planner.agent.md`. Do not restate it here.
