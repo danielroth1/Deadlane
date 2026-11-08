@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { CHALLENGE_TEMPLATES } from '@/content';
-import { DECOR, SPAWN, WORLD } from '@/config';
+import { DECOR, JUMP, SPAWN, WORLD } from '@/config';
 import { LEVEL_TYPES, generateLevel, levelForSeed } from './index';
 import {
   LEVEL_PROFILES,
   decorX,
   roadAt,
   roadProfileFor,
+  roadShapeFor,
   roadWidthAt,
+  type LevelBlueprint,
+  type LevelEvent,
   type RoadShape,
 } from './types';
 import { validateBlueprint } from './validate';
@@ -108,6 +111,87 @@ describe('level generation', () => {
         expect(challenge.reward).toBe(template?.reward);
       }
     }
+  });
+});
+
+/**
+ * Ramps and solid obstacles.
+ *
+ * A ramp is only useful if the car can reach it and the jump corridor is clear, so these
+ * tests pin both directions: every generated sector fields ramps that the validator accepts,
+ * and a hand-built ramp in front of a wall is rejected with the code that names the fault.
+ */
+describe('ramps and solid obstacles', () => {
+  /** A minimal valid blueprint with `events` replacing the generated stream. */
+  function blueprintWith(events: LevelEvent[]): LevelBlueprint {
+    return {
+      seed: 1,
+      type: 'highway',
+      index: 1,
+      length: 6000,
+      road: roadShapeFor('highway'),
+      events,
+      challenges: [
+        { id: 'c0', kind: 'reach', from: 0, to: 3000, target: 0, label: 'REACH', reward: 100 },
+      ],
+      scrollMultiplier: 1,
+      visibility: 1,
+    };
+  }
+
+  it('places ramps on every level type that has a ramp budget', () => {
+    for (const type of LEVEL_TYPES) {
+      if (LEVEL_PROFILES[type].rampDensity <= 0) continue;
+
+      const ramps = generateLevel({ type, seed: 8080, index: 1 }).events.filter(
+        (event) => event.kind === 'ramp',
+      );
+      expect(ramps.length, `${type} fields no ramp`).toBeGreaterThan(0);
+    }
+  });
+
+  it('rejects a ramp with a solid obstacle standing on the approach', () => {
+    const events: LevelEvent[] = [
+      { kind: 'prop', at: 2000, lane: 0, prop: 'barrier' },
+      { kind: 'ramp', at: 2060, lane: 0 },
+    ];
+
+    const codes = validateBlueprint(blueprintWith(events)).map((issue) => issue.code);
+    expect(codes).toContain('ramp-crowded');
+  });
+
+  it('rejects a ramp that launches into a row blocking every lane', () => {
+    const lanes = LEVEL_PROFILES.highway.lanes;
+    const wall: LevelEvent[] = Array.from({ length: lanes }, (_, lane) => ({
+      kind: 'prop' as const,
+      at: 2200,
+      lane,
+      prop: 'barrier',
+    }));
+    const events: LevelEvent[] = [{ kind: 'ramp', at: 1900, lane: 0 }, ...wall];
+    events.sort((a, b) => a.at - b.at);
+
+    const codes = validateBlueprint(blueprintWith(events)).map((issue) => issue.code);
+    expect(codes).toContain('ramp-wall');
+  });
+
+  it('accepts a ramp whose jump corridor holds only passable or partial rows', () => {
+    const events: LevelEvent[] = [
+      { kind: 'ramp', at: 1900, lane: 1 },
+      { kind: 'prop', at: 1990, lane: 2, prop: 'cone' },
+      { kind: 'prop', at: 2100, lane: 1, prop: 'barrier' },
+      { kind: 'prop', at: 2100, lane: 2, prop: 'barrier' },
+    ];
+    events.sort((a, b) => a.at - b.at);
+
+    expect(validateBlueprint(blueprintWith(events))).toEqual([]);
+  });
+
+  it('keeps the jump window wide enough for the configured clearance', () => {
+    // The validator and the generator both trust this constant; the scene's jump test pins
+    // that the arc actually covers it. Cross-check the two numbers here.
+    expect(JUMP.clearancePixels).toBeGreaterThan(0);
+    expect(JUMP.gapAhead).toBeLessThan(JUMP.clearancePixels);
   });
 });
 

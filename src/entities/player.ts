@@ -1,9 +1,10 @@
 import type Phaser from 'phaser';
-import { COLLISION, OFFROAD, PLAYER, WORLD } from '@/config';
+import { COLLISION, JUMP, OFFROAD, PLAYER, WORLD } from '@/config';
 import { PALETTE } from '@/palette';
 import type { RoadProfile } from '@/levels/types';
 import type { Art, VehicleOptions } from '@/art';
 import { clamp, easeTowards } from '@/systems/motion';
+import { advanceJump, createJump, isAirborne, jumpHeight, type JumpState } from '@/systems/jump';
 
 /**
  * The player Interceptor.
@@ -64,6 +65,13 @@ export class PlayerVehicle {
   smoke: number = PLAYER.startSmoke;
 
   private invulnerableUntil = 0;
+  /**
+   * The ramp jump in progress, or null on the ground.
+   *
+   * The arc itself lives in `systems/jump.ts`: this car only remembers when it took off.
+   * Airborne is read by the scene, which skips ground contact and draws the shadow.
+   */
+  private jumpState: JumpState | null = null;
   /** Lateral speed the steering asked for this frame, px/s. Recorded for the contact pass. */
   private steerVelocity = 0;
   /** Lateral speed a contact gave the car, px/s. Bleeds off at `COLLISION.impulseDrag`. */
@@ -152,8 +160,34 @@ export class PlayerVehicle {
     return this.sprite.y;
   }
 
+  /**
+   * The car's road station, independent of jump height.
+   *
+   * Collision still happens here while the car is airborne, which is what keeps a jump from
+   * becoming immunity: shells are aimed at the road, and the road is where the car's box
+   * stays for them.
+   */
+  get groundY(): number {
+    return PLAYER.y;
+  }
+
   get isInvulnerable(): boolean {
     return this.scene.time.now < this.invulnerableUntil;
+  }
+
+  /** Take off from a ramp. */
+  jump(durationMs: number = JUMP.durationMs): void {
+    this.jumpState = createJump(durationMs);
+  }
+
+  /** True while the car is off the ground. The scene skips ground contact on this. */
+  get isAirborne(): boolean {
+    return isAirborne(this.jumpState);
+  }
+
+  /** Height above the road, px: what the sprite and the shadow are drawn from. */
+  get airHeight(): number {
+    return jumpHeight(this.jumpState, JUMP.apexHeight);
   }
 
   /** Half-extents used for collision against other vehicles. */
@@ -239,8 +273,18 @@ export class PlayerVehicle {
    * `OFFROAD.apron` px of rough ground past each edge — and the scene decides what that
    * costs. The clamp is still here so a steering mistake cannot leave the world, and it is
    * the only thing that limits how far out the car can get.
+   *
+   * Returns true on the frame the ramp jump ends, which is where the scene fires its landing
+   * effect. The car is lifted by `airHeight` while airborne and back on `PLAYER.y` when it
+   * lands.
    */
-  update(dt: number, steer: number, time: number, road: RoadProfile): void {
+  update(dt: number, steer: number, time: number, road: RoadProfile): boolean {
+    // Advance the jump before reading its height, so the sprite is drawn at this frame's
+    // altitude and a landing frame is exactly on the road.
+    const step = this.jumpState ? advanceJump(this.jumpState, dt * 1000) : null;
+    if (step) this.jumpState = step.state;
+    const landed = step?.landed ?? false;
+
     // A hard hit takes the wheel for a moment: the wobble is added to whatever the player
     // asked for, and the sum stays inside one full lock so the car cannot outrun its own
     // lateral speed.
@@ -259,13 +303,15 @@ export class PlayerVehicle {
     const lateralVelocity = Math.abs(steering) * PLAYER.lateralSpeed;
     const lean = lateralVelocity > PLAYER.leanThreshold ? Math.sign(steering) * 2.5 : 0;
     this.sprite.setRotation((lean * Math.PI) / 180);
-    this.sprite.y = PLAYER.y;
+    this.sprite.y = PLAYER.y - this.airHeight;
 
     if (this.isInvulnerable) {
       this.sprite.setAlpha(0.55 + 0.45 * Math.abs(Math.sin(time * 0.02)));
     } else {
       this.sprite.setAlpha(1);
     }
+
+    return landed;
   }
 
   /** True when the car's centre is outside the drivable surface at `road`. */
@@ -348,6 +394,8 @@ export class PlayerVehicle {
     this.impulseX = 0;
     this.steerVelocity = 0;
     this.wobbleUntil = 0;
+    // Nor does a jump: the replacement car is on the road, not in the air.
+    this.jumpState = null;
     if (road) this.sprite.x = road.left + road.width / 2;
     this.refreshArt();
   }

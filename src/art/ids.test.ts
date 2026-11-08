@@ -9,6 +9,7 @@ import {
   PICKUP_ART,
   PROP_ART,
   PROP_PLACEHOLDER,
+  RAMP_ART,
   SCENERY_ART,
   TRANSITION_PLACEHOLDER,
   TRANSITION_TILE_ART,
@@ -67,7 +68,7 @@ describe('pickup art ids', () => {
 
 describe('effect art ids', () => {
   it('has a candidate for every effect the scene draws', () => {
-    const kinds: EffectKind[] = ['explosion', 'muzzle', 'smoke', 'oil'];
+    const kinds: EffectKind[] = ['explosion', 'muzzle', 'smoke', 'oil', 'dust', 'splash'];
     expect(Object.keys(EFFECT_ART).sort()).toEqual([...kinds].sort());
   });
 });
@@ -106,6 +107,19 @@ describe('prop art ids', () => {
   it('keeps a declared placeholder on the procedural sprite', () => {
     for (const id of PROP_PLACEHOLDER) {
       expect(propArtIds(id), `${id} must resolve to the placeholder`).toEqual([]);
+    }
+  });
+});
+
+describe('ramp art ids', () => {
+  it('resolves every ramp candidate in the shipped manifest', () => {
+    expect(RAMP_ART.length, 'a ramp has no candidate ids').toBeGreaterThan(0);
+
+    for (const id of RAMP_ART) {
+      expect(
+        sprites.has(id),
+        `ramp → ${id} is not a key of .sprites in public/assets/assets.json`,
+      ).toBe(true);
     }
   });
 });

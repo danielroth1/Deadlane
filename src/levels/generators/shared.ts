@@ -1,5 +1,6 @@
-import { DECOR, LEVEL, MOTION, ROAD, SPAWN, WORLD } from '@/config';
+import { DECOR, JUMP, LEVEL, MOTION, ROAD, SPAWN, WORLD } from '@/config';
 import { CHALLENGE_TEMPLATES, type ChallengeDef } from '@/content';
+import { blockingEvents, blocksEveryLane } from '../blocking';
 import { createRng, type Rng } from '@/rng';
 import {
   LEVEL_PROFILES,
@@ -22,7 +23,7 @@ import {
  * staged pass with a data table keeps the invariants — sorted events, lanes in range,
  * nothing near the spawn point — enforced once, in one place.
  *
- * Stages: layout → traffic → encounters → props → pickups → challenges → sort.
+ * Stages: layout → traffic → encounters → props → ramps → pickups → challenges → sort.
  */
 export interface GenerateOptions {
   readonly type: LevelType;
@@ -63,7 +64,11 @@ export function generateLevel({ type, seed, index }: GenerateOptions): LevelBlue
 
   events.push(...placeTraffic(trafficRng, road, length, profile.trafficDensity * difficulty, profile.vehiclePool));
   events.push(...placeEnemies(enemyRng, road, length, profile.enemyDensity * difficulty, profile.enemyWeights));
-  events.push(...placeProps(propRng, road, length, profile.propDensity, profile.propPool));
+  const props = placeProps(propRng, road, length, profile.propDensity, profile.propPool);
+  events.push(...props);
+  // Ramps are placed last of the ground stages: they need to see the obstacles already on
+  // the road so a ramp is never dropped in front of a wall it cannot clear.
+  events.push(...placeRamps(propRng, road, length, profile.rampDensity, [...events]));
   events.push(...placePickups(pickupRng, road, length, profile.pickupDensity));
   events.push(...placeDecor(decorRng, length, profile.scenerySurface, profile.sceneryPool));
 
@@ -262,6 +267,68 @@ function placeProps(
   }
 
   return out;
+}
+
+/**
+ * Ramps, dropped onto road the car can actually reach.
+ *
+ * A ramp is not a prop: it has no collision class, it starts a jump. Placement therefore
+ * asks two questions of the ground stages that ran before it — can the car reach this ramp
+ * in its own lane, and does the jump corridor contain a row that blocks every lane? A ramp
+ * in front of an all-lane wall would launch the car into it, so those candidates are
+ * skipped rather than emitted for the validator to reject.
+ */
+function placeRamps(
+  rng: Rng,
+  road: RoadShape,
+  length: number,
+  density: number,
+  placed: readonly LevelEvent[],
+): LevelEvent[] {
+  const out: LevelEvent[] = [];
+  if (density <= 0) return out;
+
+  const blockers = blockingEvents(placed);
+  const spacing = Math.max(JUMP.minSpacing, Math.round(3600 / Math.max(0.2, density)));
+  let at = SPAWN.safeStartPixels + rng.int(600, 1400);
+
+  while (at < length - JUMP.clearancePixels) {
+    const station = Math.round(at);
+    const lane = laneRange(rng, road);
+    // Check the rounded station, not the raw one: the emitted `at` is what the validator
+    // measures, and a half-pixel of rounding must not slip a ramp inside its own guard.
+    if (rampClear(blockers, station, lane, road.lanes)) {
+      out.push({ kind: 'ramp', at: station, lane });
+    }
+    at += spacing * rng.range(0.85, 1.35);
+  }
+
+  return out;
+}
+
+/** Whether a ramp at `at` in `lane` has reachable road and a clear jump corridor. */
+function rampClear(
+  blockers: readonly { readonly at: number; readonly lane: number }[],
+  at: number,
+  lane: number,
+  lanes: number,
+): boolean {
+  // Something solid standing on the approach, or right on top of the ramp, is a wall the
+  // car would hit before the jump starts.
+  const crowded = blockers.some(
+    (blocker) =>
+      blocker.lane === lane &&
+      blocker.at >= at - JUMP.guardBehind &&
+      blocker.at <= at + JUMP.gapAhead,
+  );
+  if (crowded) return false;
+
+  return !blocksEveryLane(
+    blockers,
+    lanes,
+    at - JUMP.guardBehind,
+    at + JUMP.clearancePixels,
+  );
 }
 
 function placePickups(

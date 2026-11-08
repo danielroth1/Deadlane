@@ -3,6 +3,7 @@ import civiliansRaw from './civilians.json';
 import weaponsRaw from './weapons.json';
 import challengesRaw from './challenges.json';
 import bossesRaw from './bosses.json';
+import propsRaw from './props.json';
 import type { PaletteKey } from '@/palette';
 import { PALETTE } from '@/palette';
 import type { VehicleShape } from '@/art/placeholders';
@@ -78,6 +79,32 @@ export interface ChallengeDef {
   description: string;
   reward: number;
 }
+
+/**
+ * What a road prop does when the car reaches it.
+ *
+ * - `solid` stops the car: it parts the car, spends armour through the ordinary damage
+ *   path and knocks the prop out of the road;
+ * - `soft` is knocked aside: a cone or reed bed costs nothing but is visibly displaced;
+ * - `hazard` slows the car without spending armour: a crater or an open manhole.
+ *
+ * The class is data, so a prop added to a level pool gets its behaviour from this table
+ * rather than from a branch in the scene.
+ */
+export type PropCollision = 'solid' | 'soft' | 'hazard';
+
+/** One row of `props.json`: a road prop and the box it collides with. */
+export interface PropDef {
+  id: string;
+  label: string;
+  collision: PropCollision;
+  /** Collision half-width, px, about the prop's lane centre. */
+  halfWidth: number;
+  /** Collision half-height, px, about the prop's own world station. */
+  halfHeight: number;
+}
+
+export const PROP_COLLISIONS: readonly PropCollision[] = ['solid', 'soft', 'hazard'];
 
 /**
  * What an act boss is: a closed set of machines, not a class per boss.
@@ -161,6 +188,7 @@ export const CHALLENGE_TEMPLATES: readonly ChallengeDef[] = challengesRaw.challe
 export const BOSSES: readonly BossDef[] = (bossesRaw.bosses as unknown as BossDef[]).map(
   normalizeBoss,
 );
+export const PROPS: readonly PropDef[] = propsRaw.props as PropDef[];
 
 /**
  * Content JSON uses kebab-case colour names (`signal-red`) because they read better in a
@@ -194,6 +222,7 @@ function normalizeBoss(raw: BossDef): BossDef {
 const enemyById = new Map(ENEMIES.map((e) => [e.id, e]));
 const civilianById = new Map(CIVILIANS.map((c) => [c.id, c]));
 const bossById = new Map(BOSSES.map((b) => [b.id, b]));
+const propById = new Map(PROPS.map((p) => [p.id, p]));
 
 export function getEnemy(id: string): EnemyDef {
   const enemy = enemyById.get(id);
@@ -231,4 +260,20 @@ export function getWeapon(id: WeaponDef['id']): WeaponDef {
   const weapon = WEAPONS.find((w) => w.id === id);
   if (!weapon) throw new Error(`Unknown weapon "${id}"`);
   return weapon;
+}
+
+/**
+ * The prop row for `id`, or undefined.
+ *
+ * Deliberately non-throwing: a validator and a generator both have to answer "is this id
+ * solid?" for data they did not author, and an unknown id must not crash a run.
+ */
+export function findProp(id: string): PropDef | undefined {
+  return propById.get(id);
+}
+
+export function getProp(id: string): PropDef {
+  const prop = propById.get(id);
+  if (!prop) throw new Error(`Unknown prop "${id}"`);
+  return prop;
 }

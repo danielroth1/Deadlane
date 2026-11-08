@@ -1,0 +1,130 @@
+{
+  "props": [
+    {
+      "id": "cone",
+      "label": "Traffic cone",
+      "collision": "soft",
+      "halfWidth": 6,
+      "halfHeight": 6
+    },
+    {
+      "id": "barrier",
+      "label": "Jersey barrier",
+      "collision": "solid",
+      "halfWidth": 15,
+      "halfHeight": 7
+    },
+    {
+      "id": "tyre-stack",
+      "label": "Tyre stack",
+      "collision": "solid",
+      "halfWidth": 12,
+      "halfHeight": 12
+    },
+    {
+      "id": "sign",
+      "label": "Warning sign",
+      "collision": "solid",
+      "halfWidth": 6,
+      "halfHeight": 9
+    },
+    {
+      "id": "boulder",
+      "label": "Boulder",
+      "collision": "solid",
+      "halfWidth": 13,
+      "halfHeight": 12
+    },
+    {
+      "id": "rock-pile",
+      "label": "Rock pile",
+      "collision": "solid",
+      "halfWidth": 15,
+      "halfHeight": 11
+    },
+    {
+      "id": "cactus",
+      "label": "Cactus",
+      "collision": "solid",
+      "halfWidth": 8,
+      "halfHeight": 13
+    },
+    {
+      "id": "dry-bush",
+      "label": "Dry bush",
+      "collision": "soft",
+      "halfWidth": 11,
+      "halfHeight": 9
+    },
+    {
+      "id": "crater",
+      "label": "Crater",
+      "collision": "hazard",
+      "halfWidth": 15,
+      "halfHeight": 12
+    },
+    {
+      "id": "buoy",
+      "label": "Channel buoy",
+      "collision": "solid",
+      "halfWidth": 10,
+      "halfHeight": 10
+    },
+    {
+      "id": "reed-bed",
+      "label": "Reed bed",
+      "collision": "soft",
+      "halfWidth": 13,
+      "halfHeight": 11
+    },
+    {
+      "id": "pier",
+      "label": "Pier structure",
+      "collision": "solid",
+      "halfWidth": 16,
+      "halfHeight": 16
+    },
+    {
+      "id": "roadblock",
+      "label": "Roadblock",
+      "collision": "solid",
+      "halfWidth": 16,
+      "halfHeight": 7
+    },
+    {
+      "id": "dumpster",
+      "label": "Dumpster",
+      "collision": "solid",
+      "halfWidth": 14,
+      "halfHeight": 11
+    },
+    {
+      "id": "manhole",
+      "label": "Open manhole",
+      "collision": "hazard",
+      "halfWidth": 12,
+      "halfHeight": 12
+    },
+    {
+      "id": "pillar",
+      "label": "Concrete pillar",
+      "collision": "solid",
+      "halfWidth": 13,
+      "halfHeight": 14
+    },
+    {
+      "id": "rubble",
+      "label": "Rubble pile",
+      "collision": "solid",
+      "halfWidth": 15,
+      "halfHeight": 11
+    },
+    {
+      "id": "hazard-stripe",
+      "label": "Hazard stripe board",
+      "collision": "solid",
+      "halfWidth": 16,
+      "halfHeight": 7
+    }
+  ]
+}

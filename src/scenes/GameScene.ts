@@ -5,10 +5,12 @@ import {
   COLLISION,
   DIFFICULTY,
   GAME,
+  JUMP,
   LEVEL,
   MOTION,
   OFFROAD,
   PLAYER,
+  PROP_IMPACT,
   SCORE,
   SPAWN,
   TOUCH,
@@ -22,6 +24,7 @@ import {
   pickSceneryVariant,
   pickupArtIds,
   propArtIds,
+  rampArtIds,
   sceneryArtIds,
 } from '@/art/ids';
 import { flatTexture, pickupTexture, propTexture } from '@/art/placeholders';
@@ -29,7 +32,7 @@ import { PlayerVehicle, displayScale } from '@/entities/player';
 import { EnemyVehicle } from '@/entities/enemy';
 import { CivilianVehicle } from '@/entities/civilian';
 import { BossVehicle } from '@/entities/boss';
-import { getCivilian, getEnemy, getWeapon } from '@/content';
+import { findProp, getCivilian, getEnemy, getWeapon, type PropCollision } from '@/content';
 import { bossForLevel, type BossAttackPattern } from '@/systems/boss';
 import {
   forwardShot,
@@ -40,12 +43,18 @@ import {
   worldAtFromScreenY,
 } from '@/systems/weapons';
 import { levelForSeed, levelLabelFor, type LevelBlueprint } from '@/levels';
-import { decorX, laneCenter, roadAt, type LevelEvent, type RoadProfile } from '@/levels/types';
+import { decorX, laneCenter, laneCenterAt, roadAt, type LevelEvent, type RoadProfile } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
 import type { AudioSystem } from '@/systems/audio';
 import { speedRatio, stepSpeed } from '@/systems/motion';
-import { contactCost, resolveContact } from '@/systems/collision';
+import {
+  contactBetween,
+  contactCost,
+  resolveContact,
+  type CollisionBox,
+} from '@/systems/collision';
+import { propContactOutcome } from '@/systems/props';
 import { ChallengeSystem } from '@/systems/challenges';
 import { scoreDelta, type ScoreEventKind } from '@/systems/scoring';
 import { TouchInput, buttonAt } from '@/systems/touch-input';
@@ -97,6 +106,27 @@ interface Pickup {
   readonly x: number;
   readonly kind: string;
 }
+
+/** One ground prop on the road, with the box and class its content row declares. */
+interface PropInstance {
+  readonly sprite: Phaser.GameObjects.Image;
+  at: number;
+  readonly lane: number;
+  readonly kind: string;
+  readonly collision: PropCollision;
+  readonly halfWidth: number;
+  readonly halfHeight: number;
+}
+
+/** One ramp on the road. Crossing it starts a jump; it is not a prop and never collides. */
+interface RampInstance {
+  readonly sprite: Phaser.GameObjects.Image;
+  readonly at: number;
+  readonly lane: number;
+}
+
+/** What the car landed on: dust on a road, a splash on the river. */
+export type LandingKind = 'dust' | 'splash';
 
 export interface HudState {
   score: number;
@@ -177,6 +207,8 @@ export interface VehicleDebugState {
   /** Velocity down-screen, world px/s. Zero for the car, which holds its station. */
   readonly vy: number;
   readonly wrecked: boolean;
+  /** True while the car is off the ground after a ramp. Always false for other cars. */
+  readonly airborne: boolean;
 }
 
 /** One contact the resolver finished this run, as the debug surface reports it. */
@@ -196,6 +228,15 @@ export interface ContactDebugState {
   readonly playerVx: number;
   /** Lateral velocity it gave the other car, world px/s. Opposite in sign. */
   readonly otherVx: number;
+}
+
+/** One ground-prop contact the run resolved, as the debug surface reports it. */
+export interface PropContactDebugState {
+  readonly index: number;
+  readonly kind: string;
+  readonly collision: PropCollision;
+  /** True when the contact spent armour through the ordinary damage path. */
+  readonly damage: boolean;
 }
 
 /** Read-only run view served to Playwright through `window.__deadlane` at `?debug=1`. */
@@ -232,6 +273,10 @@ export interface RunDebugState {
   readonly vehicles: readonly VehicleDebugState[];
   /** The most recent resolved contact this run, or null before the first. */
   readonly lastContact: ContactDebugState | null;
+  /** The most recent ground-prop contact this run, or null before the first. */
+  readonly lastPropContact: PropContactDebugState | null;
+  /** What the last landing kicked up, or null before the first jump has ended. */
+  readonly lastLanding: LandingKind | null;
   /**
    * The road cross-section at the car's own `at`, in world pixels.
    *
@@ -311,7 +356,16 @@ export class GameScene extends Phaser.Scene {
   private bullets: Bullet[] = [];
   private hazards: Hazard[] = [];
   private pickups: Pickup[] = [];
-  private props: { readonly sprite: Phaser.GameObjects.Image; readonly at: number }[] = [];
+  private props: PropInstance[] = [];
+  /** Ramps. Kept apart from `props`: a ramp starts a jump rather than a contact. */
+  private ramps: RampInstance[] = [];
+  /** The ellipse under an airborne car. Hidden on the ground. */
+  private shadow!: Phaser.GameObjects.Ellipse;
+  /** What the most recent landing kicked up. Observation for the debug surface. */
+  private lastLanding: LandingKind | null = null;
+  /** How many ground-prop contacts the run has resolved, and the most recent one. */
+  private propContactCount = 0;
+  private lastPropContact: PropContactDebugState | null = null;
   /**
    * Scenery outside the shoulder.
    *
@@ -389,6 +443,7 @@ export class GameScene extends Phaser.Scene {
     this.hazards = [];
     this.pickups = [];
     this.props = [];
+    this.ramps = [];
     this.decor = [];
     this.offRoad = false;
     this.offRoadSince = null;
@@ -407,6 +462,9 @@ export class GameScene extends Phaser.Scene {
     this.lastBanner = null;
     this.contactCount = 0;
     this.lastContact = null;
+    this.lastLanding = null;
+    this.propContactCount = 0;
+    this.lastPropContact = null;
     this.shakeFrom = 0;
     this.shakeUntil = 0;
     this.cameraHome = null;
@@ -420,6 +478,19 @@ export class GameScene extends Phaser.Scene {
 
     this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type, this.art);
     this.player = new PlayerVehicle(this, this.art);
+    // The height cue: a flat ellipse on the road under an airborne car. Owned by the scene
+    // rather than the vehicle, so the car entity never has to build Phaser objects.
+    this.shadow = this.add
+      .ellipse(
+        WORLD.width / 2,
+        PLAYER.y + JUMP.shadowOffsetY,
+        JUMP.shadowWidth,
+        JUMP.shadowHeight,
+        PALETTE.void,
+        0.4,
+      )
+      .setDepth(40)
+      .setVisible(false);
 
     this.challenges = this.createChallengeSystem();
 
@@ -529,6 +600,7 @@ export class GameScene extends Phaser.Scene {
         vx: this.player.vx,
         vy: this.player.vy,
         wrecked: this.player.isDestroyed,
+        airborne: this.player.isAirborne,
       },
       vehicles: [
         ...this.enemies.map((enemy) => ({
@@ -541,6 +613,7 @@ export class GameScene extends Phaser.Scene {
           vx: enemy.vx,
           vy: enemy.vy,
           wrecked: false,
+          airborne: false,
         })),
         ...this.civilians.map((civilian) => ({
           kind: 'civilian' as const,
@@ -552,9 +625,12 @@ export class GameScene extends Phaser.Scene {
           vx: civilian.vx,
           vy: civilian.vy,
           wrecked: civilian.wrecked,
+          airborne: false,
         })),
       ],
       lastContact: this.lastContact,
+      lastPropContact: this.lastPropContact,
+      lastLanding: this.lastLanding,
       road: this.roadDebugState(),
       hud: this.hudState,
     };
@@ -668,6 +744,86 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Debug-only: stage one solid barrier in the car's lane, just ahead of it.
+   *
+   * Proves the solid prop path on the real collision code: the barrier must part the car
+   * and spend armour, not be driven through. Playwright reaches this through
+   * `window.__deadlaneControl` at `?debug=1`; nothing in the run calls it.
+   */
+  debugStageBarrier(): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+    this.clearStagedGround();
+    this.stageGroundProp('barrier', this.distance + 80);
+  }
+
+  /**
+   * Debug-only: stage a ramp with a solid barrier beyond it, both in the car's lane.
+   *
+   * The car takes the ramp, goes airborne, clears the barrier and lands with a dust puff —
+   * the jump contract end to end. Playwright reaches this through `window.__deadlaneControl`
+   * at `?debug=1`; nothing in the run calls it.
+   */
+  debugStageRampBarrier(): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+    this.clearStagedGround();
+
+    // Ramp first, barrier far enough past it that take-off has happened, close enough that
+    // a cruise-speed jump is still airborne when the barrier arrives.
+    this.stageGroundRamp(this.distance + 140);
+    this.stageGroundProp('barrier', this.distance + 260);
+  }
+
+  /** Clear everything that could touch the car, then drop the staged ground props. */
+  private clearStagedGround(): void {
+    for (const enemy of this.enemies) enemy.destroy();
+    this.enemies = [];
+    for (const civilian of this.civilians) civilian.destroy();
+    this.civilians = [];
+    for (const bullet of this.bullets) {
+      if (bullet.from !== 'enemy') continue;
+      bullet.sprite.destroy();
+      bullet.at = Number.NEGATIVE_INFINITY;
+    }
+    this.bullets = this.bullets.filter((bullet) => Number.isFinite(bullet.at));
+    for (const prop of this.props) prop.sprite.destroy();
+    this.props = [];
+    for (const ramp of this.ramps) ramp.sprite.destroy();
+    this.ramps = [];
+  }
+
+  /** The lane index the car is standing in right now. */
+  private laneUnderCar(): number {
+    const road = roadAt(this.blueprint.road, this.distance);
+    const lane = Math.floor((this.player.x - road.left) / road.laneWidth);
+    return Math.max(0, Math.min(road.lanes - 1, lane));
+  }
+
+  private stageGroundProp(kind: string, at: number): void {
+    const def = safeProp(kind);
+    this.props.push({
+      sprite: this.art
+        .imageFrom(propArtIds(kind), 0, -60, () => propTexture(this, kind, 'rust'))
+        .setDepth(20),
+      at,
+      lane: this.laneUnderCar(),
+      kind,
+      collision: def.collision,
+      halfWidth: def.halfWidth,
+      halfHeight: def.halfHeight,
+    });
+  }
+
+  private stageGroundRamp(at: number): void {
+    this.ramps.push({
+      sprite: this.art
+        .imageFrom(rampArtIds(), 0, -60, () => propTexture(this, 'ramp', 'amber'))
+        .setDepth(19),
+      at,
+      lane: this.laneUnderCar(),
+    });
+  }
+
+  /**
    * Debug-only: spend one life through the real wreck path.
    *
    * The car is put on its last armour point with the i-frame window dropped, then
@@ -775,8 +931,11 @@ export class GameScene extends Phaser.Scene {
     this.distance += speed * dt;
 
     const road = roadAt(this.blueprint.road, this.distance);
-    this.player.update(dt, this.steer, time, road);
-    this.updateOffRoad(time, road);
+    const landed = this.player.update(dt, this.steer, time, road);
+    if (landed) this.handleLanding();
+    this.updateShadow();
+    // Rough ground is a ground rule: an airborne car is not on it.
+    if (!this.player.isAirborne) this.updateOffRoad(time, road);
     this.road.render(this.distance);
     this.audio.updateEngine(speedRatio(this.speed));
 
@@ -946,12 +1105,32 @@ export class GameScene extends Phaser.Scene {
       case 'prop': {
         // The generated cell wins; the cone is only drawn when neither prop sheet has a
         // frame for this id, so a failed art slot never blocks a run.
+        const def = safeProp(event.prop);
         const sprite = this.art
           .imageFrom(propArtIds(event.prop), laneCenter(road, event.lane), -60, () =>
             propTexture(this, event.prop, 'rust'),
           )
           .setDepth(20);
-        this.props.push({ sprite, at: event.at });
+        this.props.push({
+          sprite,
+          at: event.at,
+          lane: event.lane,
+          kind: event.prop,
+          collision: def.collision,
+          halfWidth: def.halfWidth,
+          halfHeight: def.halfHeight,
+        });
+        break;
+      }
+      case 'ramp': {
+        // The shipped art-09 ramp cell; the procedural triangle is the fallback, so a
+        // missing frame still draws something the player can read as a ramp.
+        const sprite = this.art
+          .imageFrom(rampArtIds(), laneCenter(road, event.lane), -60, () =>
+            propTexture(this, 'ramp', 'amber'),
+          )
+          .setDepth(19);
+        this.ramps.push({ sprite, at: event.at, lane: event.lane });
         break;
       }
       case 'decor': {
@@ -1185,13 +1364,35 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
+  /**
+   * Scroll the ground props and the ramps.
+   *
+   * Their x is re-derived every frame rather than pinned at spawn: the road widens and
+   * narrows under a prop while it scrolls, and a prop whose artwork wanders off its lane
+   * while its collision box stays put is the exact mismatch this pass prevents.
+   */
   private updateProps(): void {
+    const shape = this.blueprint.road;
+
     for (const prop of this.props) {
+      prop.sprite.x = laneCenterAt(shape, prop.at, prop.lane);
       prop.sprite.y = PLAYER.y + this.distance - prop.at;
     }
     this.props = this.props.filter((prop) => {
       if (prop.sprite.y > WORLD.height + 60) {
         prop.sprite.destroy();
+        return false;
+      }
+      return true;
+    });
+
+    for (const ramp of this.ramps) {
+      ramp.sprite.x = laneCenterAt(shape, ramp.at, ramp.lane);
+      ramp.sprite.y = PLAYER.y + this.distance - ramp.at;
+    }
+    this.ramps = this.ramps.filter((ramp) => {
+      if (ramp.sprite.y > WORLD.height + 60) {
+        ramp.sprite.destroy();
         return false;
       }
       return true;
@@ -1214,6 +1415,56 @@ export class GameScene extends Phaser.Scene {
         return false;
       }
       return true;
+    });
+  }
+
+  /**
+   * Keep the ground shadow under the car while it is airborne.
+   *
+   * The car itself is drawn at `PLAYER.y - airHeight` by the vehicle; the shadow stays on
+   * the road and shrinks with height, which is the only cue that says "off the ground"
+   * rather than "the sprite moved".
+   */
+  private updateShadow(): void {
+    const airborne = this.player.isAirborne;
+    this.shadow.setVisible(airborne);
+    if (!airborne) return;
+
+    const height = this.player.airHeight;
+    const shrink = 1 - Math.min(0.6, height / (JUMP.apexHeight * 2));
+    this.shadow.setPosition(this.player.x, PLAYER.y + JUMP.shadowOffsetY);
+    this.shadow.setScale(shrink);
+    this.shadow.setAlpha(0.35 * shrink + 0.15);
+  }
+
+  /**
+   * The landing beat: dust on a road, a splash on the river.
+   *
+   * Purely cosmetic, but it is the event the order asks for, and it is reported on the
+   * debug surface so a spec can prove the arc ended rather than infer it from height.
+   */
+  private handleLanding(): void {
+    const splash = this.blueprint.type === 'river';
+    this.lastLanding = splash ? 'splash' : 'dust';
+
+    const cloud = this.fitEffect(
+      this.art.imageFrom(
+        splash ? EFFECT_ART.splash : EFFECT_ART.dust,
+        this.player.x,
+        PLAYER.y + JUMP.shadowOffsetY,
+        () => flatTexture(this, splash ? 'land-splash' : 'land-dust', splash ? 'teal' : 'bone', 20),
+      ),
+      40,
+    )
+      .setDepth(30)
+      .setAlpha(0.85);
+
+    this.tweens.add({
+      targets: cloud,
+      scale: { from: 0.7, to: 1.5 },
+      alpha: { from: 0.85, to: 0 },
+      duration: 320,
+      onComplete: () => cloud.destroy(),
     });
   }
 
@@ -1356,6 +1607,10 @@ export class GameScene extends Phaser.Scene {
   /* ------------------------------ collisions ------------------------------- */
 
   private resolveCollisions(time: number): void {
+    // Ramps first: a ramp crossed this frame must start the jump before the prop pass
+    // decides whether the obstacle just past it is still on the ground.
+    this.resolveRampContacts();
+
     // Player bullets vs enemies.
     for (const bullet of this.bullets) {
       if (bullet.from !== 'player') continue;
@@ -1432,16 +1687,24 @@ export class GameScene extends Phaser.Scene {
     // contact then costs is a separate question. A respawn clears the threats around the
     // car, which replaces the array this loop holds, so iterate a copy and skip whatever
     // the sweep already destroyed.
-    for (const enemy of [...this.enemies]) {
-      if (!enemy.sprite.active) continue;
-      this.resolveVehicleContact(time, enemy);
-    }
+    //
+    // Ground contact only: a jump carries the car over vehicles. Shells and the act boss
+    // are deliberately outside this gate — an airborne car is above the road, not out of
+    // the fight.
+    if (!this.player.isAirborne) {
+      for (const enemy of [...this.enemies]) {
+        if (!enemy.sprite.active) continue;
+        this.resolveVehicleContact(time, enemy);
+      }
 
-    // Traffic never costs armour: the road is dense, and losing armour to unseen neutral
-    // cars reads as unfair rather than hard.
-    for (const civilian of [...this.civilians]) {
-      if (civilian.wrecked || !civilian.sprite.active) continue;
-      this.resolveVehicleContact(time, civilian);
+      // Traffic never costs armour: the road is dense, and losing armour to unseen neutral
+      // cars reads as unfair rather than hard.
+      for (const civilian of [...this.civilians]) {
+        if (civilian.wrecked || !civilian.sprite.active) continue;
+        this.resolveVehicleContact(time, civilian);
+      }
+
+      this.resolvePropContacts(time);
     }
 
     // Player vs pickups.
@@ -1475,10 +1738,113 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Cross a ramp.
+   *
+   * The trigger is the car's collision box against the ramp's box in its own lane. A ramp
+   * never damages, never blocks and never produces a contact: it starts the jump and that
+   * is all.
+   */
+  private resolveRampContacts(): void {
+    if (this.player.isAirborne) return;
+
+    const shape = this.blueprint.road;
+
+    for (const ramp of this.ramps) {
+      const box = {
+        x: laneCenterAt(shape, ramp.at, ramp.lane),
+        y: PLAYER.y + this.distance - ramp.at,
+        halfWidth: JUMP.rampHalfWidth,
+        halfHeight: JUMP.rampHalfHeight,
+      };
+      if (!contactBetween(this.playerBox(), box)) continue;
+
+      this.player.jump(JUMP.durationMs);
+      this.audio.play('pickup');
+      return;
+    }
+  }
+
+  /**
+   * Ground props against the car.
+   *
+   * The class in `content/props.json` decides the cost (`systems/props.ts`): solid spends
+   * armour through the ordinary damage path and shoves the prop aside, soft only shoves it,
+   * hazard only slows the car. A solid prop also parts the car sideways, so a barrier
+   * resolves instead of being driven through. The caller skips this whole pass while the
+   * car is airborne.
+   */
+  private resolvePropContacts(time: number): void {
+    for (const prop of [...this.props]) {
+      if (!prop.sprite.active) continue;
+
+      const box = {
+        x: prop.sprite.x,
+        y: prop.sprite.y,
+        halfWidth: prop.halfWidth,
+        halfHeight: prop.halfHeight,
+      };
+      const contact = contactBetween(this.playerBox(), box);
+      if (!contact) continue;
+
+      const outcome = propContactOutcome(prop.collision, this.player.isAirborne);
+      if (!outcome.contact) continue;
+
+      this.propContactCount += 1;
+      this.lastPropContact = {
+        index: this.propContactCount,
+        kind: prop.kind,
+        collision: prop.collision,
+        damage: outcome.damage,
+      };
+
+      if (outcome.shove) this.shoveProp(prop, this.player.x < prop.sprite.x ? -1 : 1);
+
+      if (outcome.speedFactor < 1) {
+        this.speed = Math.min(this.speed, this.cruiseSpeed * outcome.speedFactor);
+      }
+
+      // Along the road the car is pinned, so a solid prop is what moves (shoved above);
+      // sideways the car is the one that gives way.
+      if (prop.collision === 'solid' && contact.axis === 'x') {
+        this.player.shift(-contact.nx * (contact.depth + COLLISION.slop));
+      }
+
+      if (outcome.damage) this.damagePlayer(time);
+      if (this.runEnded) return;
+    }
+  }
+
+  /** Throw a prop off the road. Gameplay removes it at once; the tween is only the look. */
+  private shoveProp(prop: PropInstance, direction: 1 | -1): void {
+    const index = this.props.indexOf(prop);
+    if (index >= 0) this.props.splice(index, 1);
+
+    this.tweens.add({
+      targets: prop.sprite,
+      x: prop.sprite.x + direction * PROP_IMPACT.knockAside,
+      y: prop.sprite.y - 22,
+      alpha: 0,
+      duration: PROP_IMPACT.knockFadeMs,
+      onComplete: () => prop.sprite.destroy(),
+    });
+  }
+
+  private playerBox(): CollisionBox {
+    return {
+      x: this.player.x,
+      // The ground station, not the drawn altitude: bullets and boss fire are aimed there.
+      y: this.player.groundY,
+      halfWidth: this.player.halfWidth,
+      halfHeight: this.player.halfHeight,
+    };
+  }
+
   private overlapsPlayer(x: number, y: number, hw: number, hh: number): boolean {
     return (
       Math.abs(x - this.player.x) < hw + this.player.halfWidth &&
-      Math.abs(y - this.player.y) < hh + this.player.halfHeight
+      // Shells are checked against the road station, so a jump is never immunity.
+      Math.abs(y - this.player.groundY) < hh + this.player.halfHeight
     );
   }
 
@@ -1874,6 +2240,7 @@ export class GameScene extends Phaser.Scene {
     for (const hazard of this.hazards) hazard.sprite.destroy();
     for (const pickup of this.pickups) pickup.sprite.destroy();
     for (const prop of this.props) prop.sprite.destroy();
+    for (const ramp of this.ramps) ramp.sprite.destroy();
     for (const item of this.decor) item.sprite.destroy();
 
     this.enemies = [];
@@ -1882,7 +2249,10 @@ export class GameScene extends Phaser.Scene {
     this.hazards = [];
     this.pickups = [];
     this.props = [];
+    this.ramps = [];
     this.decor = [];
+    this.lastLanding = null;
+    this.lastPropContact = null;
   }
 
   /** Darken the world for the run. `visibility` 1 is clear; a tunnel is 0.45. */
@@ -1999,6 +2369,18 @@ function safeEnemy(id: string) {
   } catch {
     return null;
   }
+}
+
+/**
+ * The content row for a prop id, with a passable stand-in for an id the table forgot.
+ *
+ * A missing row must never crash a run or silently turn a barrier into a wall that cannot
+ * be resolved, so the fallback is the cheapest thing on the road: a soft, small box.
+ */
+function safeProp(id: string): { collision: PropCollision; halfWidth: number; halfHeight: number } {
+  const def = findProp(id);
+  if (def) return def;
+  return { collision: 'soft', halfWidth: 8, halfHeight: 8 };
 }
 
 function safeCivilianId(id: string): string {

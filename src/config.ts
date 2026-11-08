@@ -283,6 +283,60 @@ export const COLLISION = {
 } as const;
 
 /**
+ * Ramp jumps.
+ *
+ * A ramp is a ground event, not a prop: crossing it starts a jump arc that makes the car
+ * ignore ground obstacles and vehicles without making it immune to shells or the act boss.
+ * The arc is a pure function of the scene clock (`systems/jump.ts`), so a seeded run jumps
+ * identically every replay.
+ */
+export const JUMP = {
+  /** How long the car stays off the ground after a ramp, ms. */
+  durationMs: 1000,
+  /** Height of the arc's apex above the road, px. Only the drawing uses this. */
+  apexHeight: 34,
+  /** Ground footprint of the shadow under an airborne car, px. */
+  shadowWidth: 38,
+  shadowHeight: 13,
+  /** Screen offset of that shadow below the car's station, px. */
+  shadowOffsetY: 10,
+  /** Collision half-extents of a ramp's trigger box, px. */
+  rampHalfWidth: 20,
+  rampHalfHeight: 10,
+  /**
+   * How much road a jump has to cover, px.
+   *
+   * One duration at `MOTION.maxSpeed` is 420 px, so a blocking row placed inside this
+   * window after a ramp can be cleared at full throttle.
+   */
+  clearancePixels: 420,
+  /** A blocking prop this close behind a ramp makes the ramp unreachable, px. */
+  guardBehind: 90,
+  /** Clear road a ramp needs immediately ahead of its trigger, px. */
+  gapAhead: 120,
+  /** Floor on the gap between two ramps, px. */
+  minSpacing: 1800,
+} as const;
+
+/**
+ * What a ground prop costs when the car reaches it.
+ *
+ * The class comes from `content/props.json`; these numbers are the feel. Every damage tick
+ * goes through `damagePlayer()`, so a solid obstacle spends armour on the same path a shell
+ * does and a soft one spends nothing at all.
+ */
+export const PROP_IMPACT = {
+  /** Speed cap after clipping a solid obstacle, as a share of cruise. */
+  solidSpeedFactor: 0.35,
+  /** Speed cap after crossing a hazard prop, as a share of cruise. */
+  hazardSpeedFactor: 0.6,
+  /** How far a knocked prop is thrown aside, px. Visual only. */
+  knockAside: 30,
+  /** How long that knock-aside fade runs for, ms. Visual only. */
+  knockFadeMs: 220,
+} as const;
+
+/**
  * Touch pad geometry and feel.
  *
  * The pad is drawn inside the letterboxed 640×360 canvas, so its numbers are authored in

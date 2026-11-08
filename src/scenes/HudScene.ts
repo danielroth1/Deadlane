@@ -25,6 +25,10 @@ export interface DebugControl {
    * sideswipe, a number at or above `COLLISION.hardImpactSpeed` stages a hard hit.
    */
   stageCollision(approachSpeed?: number): void;
+  /** Put one solid barrier in the car's lane, just ahead of it. */
+  stageBarrier(): void;
+  /** Put a ramp in the car's lane with a solid barrier beyond it, to test the jump. */
+  stageRampBarrier(): void;
   /** Advance the run by `pixels` of world distance instead of waiting out the clock. */
   fastForward(pixels: number): void;
   /** Spend one life through the real wreck path, respawning or ending the run. */
@@ -410,6 +414,8 @@ export class HudScene extends Phaser.Scene {
       stageCivilianAhead: () => this.gameScene.debugStageCivilianAhead(),
       stageCollision: (approachSpeed?: number) =>
         this.gameScene.debugStageCollision(approachSpeed),
+      stageBarrier: () => this.gameScene.debugStageBarrier(),
+      stageRampBarrier: () => this.gameScene.debugStageRampBarrier(),
       fastForward: (pixels: number) => this.gameScene.debugFastForward(pixels),
       loseLife: () => this.gameScene.debugLoseLife(),
       destroyPlayer: () => this.gameScene.debugDestroyPlayer(),

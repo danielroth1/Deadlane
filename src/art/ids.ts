@@ -37,7 +37,7 @@ export const PICKUP_ART: Record<PickupKind, readonly string[]> = {
 };
 
 /** The effects the scene draws from the art-10 sheet. */
-export type EffectKind = 'explosion' | 'muzzle' | 'smoke' | 'oil';
+export type EffectKind = 'explosion' | 'muzzle' | 'smoke' | 'oil' | 'dust' | 'splash';
 
 /**
  * Effect → candidate frame ids, most specific first.
@@ -56,6 +56,10 @@ export const EFFECT_ART: Record<EffectKind, readonly string[]> = {
   smoke: ['fx/smoke-puff', 'fx/thick-smoke'],
   // Cell 14 — the black splat.
   oil: ['fx/oil-splatter'],
+  // Cell 12 — the dust cloud, used for a ramp landing on dry road.
+  dust: ['fx/dust-cloud'],
+  // Cell 9 — the water splash, used for a ramp landing on the delta.
+  splash: ['fx/water-splash'],
 };
 
 /** The prop ids the level `propPool` rows place. */
@@ -154,6 +158,15 @@ export const PROP_ART: Record<PropKind, readonly string[]> = {
  * "somebody added a pool id and forgot the art".
  */
 export const PROP_PLACEHOLDER: readonly PropKind[] = [];
+
+/**
+ * Candidate frames for a ramp.
+ *
+ * art-09 attempt 1 draws a vehicle ramp in the `weapons-van-ramp` cell (labelled by the
+ * generator as a van carrying a ramp, but the ramp itself fills the cell), and it is the
+ * only ramp-shaped frame in the shipped atlas. Reusing it costs no new image.
+ */
+export const RAMP_ART: readonly string[] = ['weapons-pickups/weapons-van-ramp'];
 
 /**
  * The scenery surface a decor prop is drawn from.
@@ -548,6 +561,11 @@ export function pickupArtIds(kind: string): readonly string[] {
 /** Frame ids for a prop id, or none when the id is unknown and the fallback wins. */
 export function propArtIds(id: string): readonly string[] {
   return isPropKind(id) ? PROP_ART[id] : [];
+}
+
+/** Frame ids for a ramp, most specific first. */
+export function rampArtIds(): readonly string[] {
+  return RAMP_ART;
 }
 
 function isPickupKind(kind: string): kind is PickupKind {

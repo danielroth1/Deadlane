@@ -1,4 +1,5 @@
-import { DECOR, ROAD, SPAWN, WORLD } from '@/config';
+import { DECOR, JUMP, ROAD, SPAWN, WORLD } from '@/config';
+import { blockingEvents, blocksEveryLane, BLOCK_WINDOW } from './blocking';
 import { LEVEL_PROFILES, decorX, laneCenterAt, roadAt, type LevelBlueprint } from './types';
 
 /**
@@ -120,24 +121,55 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
     }
   }
 
-  // A wave that blocks every lane simultaneously is an unavoidable death.
-  const window = 90;
+  // A wave that blocks every lane simultaneously is an unavoidable death. Only events the
+  // car cannot pass count: a cone is knocked aside and a crater only slows it, so neither
+  // closes a lane. The blocking rule lives in `blocking.ts`, shared with the generator.
   const sorted = [...events].sort((a, b) => a.at - b.at);
-  for (let i = 0; i < sorted.length; i += 1) {
-    const start = sorted[i]!.at;
-    const lanes = new Set<number>();
-    for (let j = i; j < sorted.length && sorted[j]!.at - start <= window; j += 1) {
-      const e = sorted[j]!;
-      if (e.kind === 'enemy' || e.kind === 'prop') lanes.add(e.lane);
-    }
-    // Every lane blocked leaves no line through.
-    if (lanes.size >= shape.lanes) {
+  const blockers = blockingEvents(sorted);
+  for (const anchor of blockers) {
+    if (blocksEveryLane(blockers, shape.lanes, anchor.at, anchor.at)) {
       issues.push({
         code: 'full-block',
-        message: `All ${shape.lanes} lanes blocked within ${window}px at ${start}`,
-        at: start,
+        message: `All ${shape.lanes} lanes blocked within ${BLOCK_WINDOW}px at ${anchor.at}`,
+        at: anchor.at,
       });
       break;
+    }
+  }
+
+  // Ramps: the car has to be able to reach one, and the jump has to land on road rather
+  // than in the middle of a wall. Both windows come from the same jump contract that the
+  // scene and `systems/jump.ts` use, so tuning the jump cannot silently invalidate a level.
+  for (const ramp of sorted) {
+    if (ramp.kind !== 'ramp') continue;
+
+    const crowding = blockers.find(
+      (blocker) =>
+        blocker.lane === ramp.lane &&
+        blocker.at >= ramp.at - JUMP.guardBehind &&
+        blocker.at <= ramp.at + JUMP.gapAhead,
+    );
+    if (crowding) {
+      issues.push({
+        code: 'ramp-crowded',
+        message: `Ramp in lane ${ramp.lane} at ${ramp.at} is blocked by a ${crowding.kind} at ${crowding.at}`,
+        at: ramp.at,
+      });
+    }
+
+    if (
+      blocksEveryLane(
+        blockers,
+        shape.lanes,
+        ramp.at - JUMP.guardBehind,
+        ramp.at + JUMP.clearancePixels,
+      )
+    ) {
+      issues.push({
+        code: 'ramp-wall',
+        message: `Ramp at ${ramp.at} launches into a row that blocks all ${shape.lanes} lanes`,
+        at: ramp.at,
+      });
     }
   }
 

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type Phaser from 'phaser';
 import type { Art } from '@/art';
-import { OFFROAD, PLAYER } from '@/config';
+import { OFFROAD, JUMP, PLAYER } from '@/config';
 import { roadProfileFor } from '@/levels/types';
 import {
   displayScale,
@@ -262,6 +262,50 @@ describe('lean', () => {
 
     expect(player.isOffRoad(ROAD)).toBe(true);
     expect(image.x).toBeCloseTo(ROAD.left - OFFROAD.apron);
+  });
+});
+
+describe('ramp jump', () => {
+  const ROAD = roadProfileFor('highway');
+
+  function jumpable(): { player: PlayerVehicle; image: StubImage } {
+    const image = new StubImage(64, 64);
+    const art = { imageAny: () => image } as unknown as Art;
+    const scene = { time: { now: 0 } } as unknown as Phaser.Scene;
+    return { player: new PlayerVehicle(scene, art), image };
+  }
+
+  it('starts on the ground', () => {
+    const { player } = jumpable();
+
+    expect(player.isAirborne).toBe(false);
+    expect(player.airHeight).toBe(0);
+  });
+
+  it('lifts the sprite by its height and puts it back on landing', () => {
+    const { player, image } = jumpable();
+
+    player.jump(400);
+    expect(player.isAirborne).toBe(true);
+
+    // Half the arc: the apex, so the sprite is above its station by the apex height.
+    player.update(0.2, 0, 0, ROAD);
+    expect(player.airHeight).toBeCloseTo(JUMP.apexHeight);
+    expect(image.y).toBeCloseTo(PLAYER.y - JUMP.apexHeight);
+
+    const landed = player.update(0.2, 0, 0, ROAD);
+    expect(landed).toBe(true);
+    expect(player.isAirborne).toBe(false);
+    expect(image.y).toBe(PLAYER.y);
+  });
+
+  it('reports the landing on exactly one frame', () => {
+    const { player } = jumpable();
+    player.jump(200);
+
+    expect(player.update(0.1, 0, 0, ROAD)).toBe(false);
+    expect(player.update(0.1, 0, 0, ROAD)).toBe(true);
+    expect(player.update(0.1, 0, 0, ROAD)).toBe(false);
   });
 });
 

@@ -61,6 +61,7 @@ export type LevelEvent =
   | { readonly kind: 'traffic'; readonly at: number; readonly lane: number; readonly vehicle: string; readonly speed: number }
   | { readonly kind: 'enemy'; readonly at: number; readonly lane: number; readonly enemy: string }
   | { readonly kind: 'prop'; readonly at: number; readonly lane: number; readonly prop: string }
+  | { readonly kind: 'ramp'; readonly at: number; readonly lane: number }
   | { readonly kind: 'pickup'; readonly at: number; readonly lane: number; readonly pickup: string }
   | {
       readonly kind: 'decor';
@@ -116,6 +117,13 @@ export interface LevelProfile {
   readonly enemyWeights: Readonly<Record<string, number>>;
   readonly vehiclePool: readonly string[];
   readonly propPool: readonly string[];
+  /**
+   * Ramp budget for this level type, per sector.
+   *
+   * Ramps are placed by their own stage rather than as a prop, because they start a jump
+   * rather than applying a collision class. Zero means the level type never fields one.
+   */
+  readonly rampDensity: number;
   /** Which scenery sheet this level type lines its road with. */
   readonly scenerySurface: ScenerySurface;
   /** Scenery prop ids placed outside the shoulder. Empty when there is nowhere to put them. */
@@ -143,6 +151,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     },
     vehiclePool: ['sedan', 'wagon', 'van', 'pickup', 'taxi', 'coupe', 'box-truck', 'bus'],
     propPool: ['cone', 'barrier', 'tyre-stack', 'sign'],
+    rampDensity: 1,
     scenerySurface: 'roadside',
     sceneryPool: [
       'tree',
@@ -170,6 +179,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     enemyWeights: { enforcer: 3, switchblade: 3, roadlord: 2, hauler: 0.6 },
     vehiclePool: ['pickup', 'wagon', 'lorry', 'sedan'],
     propPool: ['boulder', 'rock-pile', 'cactus', 'dry-bush', 'crater'],
+    rampDensity: 0.7,
     scenerySurface: 'roadside',
     sceneryPool: [
       'dead-tree',
@@ -197,6 +207,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     enemyWeights: { gunboat: 4, speedboat: 3, jetski: 2, dredger: 0.7 },
     vehiclePool: ['skiff', 'barge', 'boat'],
     propPool: ['buoy', 'reed-bed', 'pier', 'rock-pile'],
+    rampDensity: 0.5,
     scenerySurface: 'water',
     sceneryPool: [
       'reeds',
@@ -233,6 +244,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     },
     vehiclePool: ['taxi', 'sedan', 'bus', 'van', 'hatchback', 'limo'],
     propPool: ['barrier', 'cone', 'roadblock', 'dumpster', 'manhole'],
+    rampDensity: 0.8,
     scenerySurface: 'urban',
     sceneryPool: [
       'apartment-roof',
@@ -263,6 +275,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     enemyWeights: { enforcer: 4, switchblade: 4, turret: 1.6 },
     vehiclePool: ['sedan', 'van', 'box-truck'],
     propPool: ['pillar', 'rubble', 'hazard-stripe'],
+    rampDensity: 0.6,
     scenerySurface: 'roadside',
     // A tunnel is wall on both sides: there is no verge to stand a prop on.
     sceneryPool: [],

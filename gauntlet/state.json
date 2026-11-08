@@ -641,13 +641,15 @@
       "id": "WO-56",
       "title": "Road hazards: solid obstacles and ramps",
       "file": "gauntlet/work-orders/WO-56-road-hazards.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-52",
         "WO-54",
         "WO-55"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "prop collision classes, solid damage via WO-55, ramps with airborne state and landing FX"
     },
     {
       "id": "WO-57",

@@ -9,11 +9,14 @@ import {
   CHALLENGE_TEMPLATES,
   CIVILIANS,
   ENEMIES,
+  PROP_COLLISIONS,
+  PROPS,
+  getProp,
   getWeapon,
   WEAPONS,
 } from './index';
 import { PALETTE } from '@/palette';
-import { LEVEL_TYPES } from '@/levels/types';
+import { LEVEL_PROFILES, LEVEL_TYPES } from '@/levels/types';
 
 /**
  * Content schema.
@@ -257,6 +260,63 @@ describe('weapon content', () => {
 
   it('gives the gun a shell speed', () => {
     expect(getWeapon('gun').projectileSpeed ?? 0).toBeGreaterThan(0);
+  });
+});
+
+describe('prop content', () => {
+  /** Every prop id any level profile can place, deduplicated. */
+  const PROP_POOL = [
+    ...new Set(Object.values(LEVEL_PROFILES).flatMap((profile) => profile.propPool)),
+  ].sort();
+
+  it('covers exactly the ids the level prop pools place', () => {
+    expect(PROPS.map((prop) => prop.id).sort()).toEqual(PROP_POOL);
+  });
+
+  it('has unique ids', () => {
+    const ids = PROPS.map((prop) => prop.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('uses only the three collision classes', () => {
+    for (const prop of PROPS) {
+      expect(PROP_COLLISIONS, `${prop.id}.collision=${prop.collision}`).toContain(
+        prop.collision,
+      );
+    }
+  });
+
+  it('gives every prop a positive box that fits inside one 32 px cell', () => {
+    for (const prop of PROPS) {
+      expect(prop.halfWidth, `${prop.id}.halfWidth`).toBeGreaterThan(0);
+      expect(prop.halfHeight, `${prop.id}.halfHeight`).toBeGreaterThan(0);
+      // A prop is one 32 px cell drawn at 1:1, so its half-extent cannot exceed the cell.
+      expect(prop.halfWidth, `${prop.id}.halfWidth`).toBeLessThanOrEqual(16);
+      expect(prop.halfHeight, `${prop.id}.halfHeight`).toBeLessThanOrEqual(16);
+      expect(Number.isInteger(prop.halfWidth), `${prop.id}.halfWidth`).toBe(true);
+      expect(Number.isInteger(prop.halfHeight), `${prop.id}.halfHeight`).toBe(true);
+    }
+  });
+
+  it('keeps a mix of classes, with solids on every level type', () => {
+    expect(new Set(PROPS.map((prop) => prop.collision))).toEqual(
+      new Set(PROP_COLLISIONS),
+    );
+
+    for (const type of LEVEL_TYPES) {
+      const pool = LEVEL_PROFILES[type].propPool;
+      const solids = pool.filter((id) => getProp(id).collision === 'solid');
+      expect(solids.length, `${type} places no solid obstacle`).toBeGreaterThan(0);
+    }
+  });
+
+  it('keeps cones and reed beds soft, and craters and manholes hazards', () => {
+    expect(getProp('cone').collision).toBe('soft');
+    expect(getProp('reed-bed').collision).toBe('soft');
+    expect(getProp('crater').collision).toBe('hazard');
+    expect(getProp('manhole').collision).toBe('hazard');
+    expect(getProp('barrier').collision).toBe('solid');
+    expect(getProp('roadblock').collision).toBe('solid');
   });
 });
 
