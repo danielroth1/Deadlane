@@ -250,16 +250,25 @@ describe('player art states', () => {
     readonly ids: readonly string[];
   }
 
-  function makeScene(): Phaser.Scene {
-    return {
-      time: {
-        now: 0,
-        delayedCall: (_ms: number, callback: () => void) => callback(),
-      },
-    } as unknown as Phaser.Scene;
+  interface StubClock {
+    now: number;
+    delayedCall: (ms: number, callback: () => void) => void;
   }
 
-  function makeFixture(): { player: PlayerVehicle; image: StubImage; calls: ArtCall[] } {
+  function makeScene(): { scene: Phaser.Scene; clock: StubClock } {
+    const clock: StubClock = {
+      now: 0,
+      delayedCall: (_ms: number, callback: () => void) => callback(),
+    };
+    return { scene: { time: clock } as unknown as Phaser.Scene, clock };
+  }
+
+  function makeFixture(): {
+    player: PlayerVehicle;
+    image: StubImage;
+    calls: ArtCall[];
+    clock: StubClock;
+  } {
     const image = new StubImage(128, 128);
     const calls: ArtCall[] = [];
     const art = {
@@ -269,7 +278,16 @@ describe('player art states', () => {
         return { key: `sheet:${ids[0]}`, frame: calls.length };
       },
     } as unknown as Art;
-    return { player: new PlayerVehicle(makeScene(), art), image, calls };
+    const { scene, clock } = makeScene();
+    return { player: new PlayerVehicle(scene, art), image, calls, clock };
+  }
+
+  /** Spend every point of armour through the real hit path, stepping past i-frames. */
+  function wreck(player: PlayerVehicle, clock: StubClock): void {
+    for (let i = 0; i < PLAYER.startArmor; i += 1) {
+      clock.now += PLAYER.iFrames;
+      expect(player.takeHit(clock.now)).toBe(true);
+    }
   }
 
   it('starts on the clean frame', () => {
@@ -300,6 +318,28 @@ describe('player art states', () => {
     expect(image.textureKey).toBe('sheet:player-vehicle/interceptor-wrecked');
   });
 
+  it('shows the wrecked frame when the last point of armour goes', () => {
+    const { player, image, calls, clock } = makeFixture();
+
+    wreck(player, clock);
+
+    expect(player.isDestroyed).toBe(true);
+    expect(calls.at(-1)?.ids[0]).toBe('player-vehicle/interceptor-wrecked');
+    expect(image.textureKey).toBe('sheet:player-vehicle/interceptor-wrecked');
+  });
+
+  it('stays wrecked when a pickup lands during the game-over delay', () => {
+    const { player, image, clock } = makeFixture();
+    wreck(player, clock);
+
+    // The scene keeps ticking for 600 ms after `endRun()`, so an armour or shield
+    // pickup overlapping the player still reaches `applyPickup` → `addArmor`.
+    player.addArmor(1);
+
+    expect(player.armor).toBe(1);
+    expect(image.textureKey).toBe('sheet:player-vehicle/interceptor-wrecked');
+  });
+
   it('keeps the footprint at PLAYER.spriteSize across state changes', () => {
     const { player } = makeFixture();
     const before = player.sprite.displayWidth;
@@ -314,7 +354,11 @@ describe('player art states', () => {
 describe('weapon cooldowns', () => {
   /** The player never touches the clock here, so an empty scene is enough. */
   function makeBarePlayer(): PlayerVehicle {
-    const art = { imageAny: () => new StubImage(64, 64) } as unknown as Art;
+    const image = new StubImage(64, 64);
+    const art = {
+      imageAny: () => image,
+      refAny: (ids: readonly string[]) => ({ key: `sheet:${ids[0]}`, frame: 0 }),
+    } as unknown as Art;
     return new PlayerVehicle({} as unknown as Phaser.Scene, art);
   }
 

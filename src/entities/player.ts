@@ -71,6 +71,8 @@ export class PlayerVehicle {
   private baseY = PLAYER.y;
   private readonly baseX: number;
   private artState: PlayerArtState = 'clean';
+  /** Wrecked is terminal: the run is over, so no later repair may swap the frame back. */
+  private wrecked = false;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -107,6 +109,15 @@ export class PlayerVehicle {
 
   /** Swap to the frame for `state`, keeping the sheet and placeholder paths equivalent. */
   private setArtState(state: PlayerArtState): void {
+    if (state === 'wrecked') {
+      this.wrecked = true;
+    } else if (this.wrecked) {
+      // `endRun()` returns immediately and the scene keeps ticking through the 600 ms
+      // game-over delay, so a pickup overlapping the wreck calls `refreshArt()`. Without
+      // this guard the wreck would be repainted as a damaged car during the exact window
+      // it exists to fill.
+      return;
+    }
     if (state === this.artState) return;
     this.artState = state;
     const ref = this.art.refAny(ART_IDS_BY_STATE[state], () => this.placeholder());
