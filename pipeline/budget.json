@@ -168,7 +168,18 @@
     },
     "art-07-boss": {
       "id": "art-07-boss",
-      "attempts": [],
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1114590309,
+          "promptHash": "30758839606f0048",
+          "state": "generated",
+          "claimedAt": "2026-11-08T16:38:12.529Z",
+          "requestId": "01a1bc06-90e6-7193-9587-f7177a57cbad",
+          "url": "https://v3b.fal.media/files/b/0ab1aa27/LDb4LFZJXeLFA8pYmOfmj_jqMBYJu4.png",
+          "costUsd": 0.0084
+        }
+      ],
       "status": "open"
     },
     "art-08-civilians": {

@@ -220,6 +220,23 @@ export const SLOTS: readonly SlotSpec[] = [
     subject:
       'four oversized boss machines seen from directly above, one per cell: a hulking six-wheel command carrier with a dorsal turret, an armoured gunship helicopter twice the size of a normal one, a river dreadnought, and a tunnel-crawling boring machine',
     cells: padCells(['command carrier', 'gunship boss', 'river dreadnought', 'boring machine']),
+    // WO-49 read of attempt 1 (seed 1114590309), cell by cell, from the processed pixels:
+    //   0 command carrier — three-quarter front hero render: the cab face, grille, headlamps
+    //     and wheel sidewalls are drawn as vertical planes, the nose points at the viewer and
+    //     a soft cast shadow is baked under the wheels. Not square-on overhead, and it carries
+    //     a background shadow.
+    //   1 gunship boss — nose-down three-quarter view of a helicopter over a painted teal
+    //     rotor wash; the spray is scenery, and the rotor is neither a crisp cross nor flat
+    //     (orange-tipped blades with a second rotor disc).
+    //   2 river dreadnought — the hull is close to overhead, but it is ringed by a painted
+    //     white-and-teal wake with two green escort boats alongside: a baked background that
+    //     would draw a water oval over the road.
+    //   3 boring machine — three-quarter side view of the machine leaving a tunnel mouth, with
+    //     the tunnel arch, dirt floor and rubble drawn behind it. Not a top-down machine.
+    // All four fail the vehicle-sheet contract on pose, background or both, so this attempt
+    // ships no frames and every boss stays on its procedural placeholder. The drop is scoped
+    // to attempt 1: a retry draws four new cells and must be judged on those.
+    droppedCellsByAttempt: { 1: [0, 1, 2, 3] },
     emphasis: ['each boss fills its cell', 'clearly a scaled-up threat, same rendering rules'],
   },
   {

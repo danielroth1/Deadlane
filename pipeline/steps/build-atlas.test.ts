@@ -111,6 +111,21 @@ describe('droppedCellsForAttempt', () => {
     expect(droppedCellsForAttempt(slot, 1)).toHaveLength(10);
     expect(droppedCellsForAttempt(slot, 2)).toEqual([]);
   });
+
+  /**
+   * WO-49: art-07 attempt 1 drew four three-quarter hero renders with baked backgrounds, so
+   * no boss cell may reach the atlas — the act bosses stay on their procedural placeholders
+   * rather than being dressed in machines the sheet contract forbids.
+   */
+  it('drops every art-07 attempt-1 cell without banning a retry', () => {
+    const slot = SLOTS.find((s) => s.id === 'art-07-boss');
+    expect(slot, 'art-07-boss must be registered').toBeDefined();
+    if (!slot) return;
+
+    expect(slot.droppedCells ?? []).toEqual([]);
+    expect(droppedCellsForAttempt(slot, 1)).toEqual([0, 1, 2, 3]);
+    expect(droppedCellsForAttempt(slot, 2)).toEqual([]);
+  });
 });
 
 /**
