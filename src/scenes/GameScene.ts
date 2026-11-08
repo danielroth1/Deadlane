@@ -18,7 +18,8 @@ import {
 import { levelForSeed, levelLabelFor, type LevelBlueprint } from '@/levels';
 import { laneCenter, type LevelEvent } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
-import { AudioSystem } from '@/systems/audio';
+import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
+import type { AudioSystem } from '@/systems/audio';
 import { ChallengeSystem } from '@/systems/challenges';
 import { scoreDelta, type ScoreEventKind } from '@/systems/scoring';
 import {
@@ -75,6 +76,7 @@ export interface HudState {
   challenge: string;
   challengeProgress: number;
   challengeTarget: number;
+  muted: boolean;
 }
 
 /** What the sector card is currently saying. */
@@ -187,8 +189,7 @@ export class GameScene extends Phaser.Scene {
 
   create(): void {
     this.art = new Art(this);
-    this.audio = (this.registry.get('audio') as AudioSystem | undefined) ?? new AudioSystem();
-    this.registry.set('audio', this.audio);
+    this.audio = acquireAudio(this.registry);
 
     this.blueprint = levelForSeed(this.seed, this.levelIndex);
 
@@ -214,7 +215,14 @@ export class GameScene extends Phaser.Scene {
     this.events.on(SECTOR_INTRO_DONE_EVENT, onIntroDone);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.events.off(SECTOR_INTRO_DONE_EVENT, onIntroDone);
+      // Without this the engine oscillator holds its last gain through game over and the
+      // title screen, and the next run would stack a second voice on top of it.
+      disposeAudio(this.registry);
     });
+
+    // A context built outside a gesture starts suspended, so the first key press resumes
+    // it, the same way the first tap does.
+    this.input.keyboard?.once('keydown', () => this.audio.unlock());
 
     // Esc is owned by the HUD, which keeps running while this scene is paused.
     this.scene.launch('Hud', { game: this });
@@ -249,6 +257,7 @@ export class GameScene extends Phaser.Scene {
       challenge: this.challengeLabel,
       challengeProgress: this.challengeProgress,
       challengeTarget: this.challengeTarget,
+      muted: this.audio?.isMuted ?? false,
     };
   }
 

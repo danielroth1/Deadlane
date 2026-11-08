@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { GAME } from '@/config';
 import { PALETTE } from '@/palette';
+import { acquireAudio } from '@/systems/audio-registry';
 import { PixelText } from '@/ui/pixel-text';
 import { formatSeed } from '@/rng';
 
@@ -75,6 +76,9 @@ export class GameOverScene extends Phaser.Scene {
     });
 
     const redeploy = (): void => {
+      // The run's audio was disposed on shutdown; build it inside this gesture so the new
+      // context is not left suspended by the autoplay policy.
+      acquireAudio(this.registry).unlock();
       this.cameras.main.fadeOut(200, 0, 0, 0);
       this.cameras.main.once(Phaser.Cameras.Scene2D.Events.FADE_OUT_COMPLETE, () => {
         this.scene.start('Game', { levelIndex: 1 });

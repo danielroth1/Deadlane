@@ -440,9 +440,11 @@
       "id": "WO-39",
       "title": "Stoppable engine and a mute control",
       "file": "gauntlet/work-orders/WO-39-audio-mute.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "single-owner audio registry, dispose on shutdown, M mute persisted, injectable AudioContext + tests"
     },
     {
       "id": "WO-40",

@@ -30,6 +30,7 @@ npm run dev        # http://localhost:5173
 | `X` | Oil slick |
 | `Shift` | Smoke screen |
 | `Esc` | Pause |
+| `M` | Toggle mute (saved between runs) |
 
 Replay a specific run with `?seed=12345`.
 

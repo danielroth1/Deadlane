@@ -2,9 +2,10 @@ import Phaser from 'phaser';
 import { GAME } from '@/config';
 import { PALETTE } from '@/palette';
 import { Art } from '@/art';
-import { AudioSystem } from '@/systems/audio';
+import { acquireAudio, toggleAudioMute } from '@/systems/audio-registry';
 import { PixelText } from '@/ui/pixel-text';
 import { formatSeed } from '@/rng';
+import type { AudioSystem } from '@/systems/audio';
 
 /**
  * Title screen.
@@ -22,8 +23,9 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     this.art = new Art(this);
-    this.audio = new AudioSystem();
-    this.registry.set('audio', this.audio);
+    // Reuse the registry's system: a fresh one per title visit stacked voices, because the
+    // previous engine oscillator was never stopped.
+    this.audio = acquireAudio(this.registry);
 
     this.cameras.main.setBackgroundColor(GAME.background);
     this.drawBackdrop();
@@ -71,7 +73,7 @@ export class TitleScene extends Phaser.Scene {
       color: PALETTE.steel,
       scale: 1,
       align: 'center',
-    }).setText('ARROWS STEER   SPACE FIRE   SHIFT SMOKE');
+    }).setText('ARROWS STEER   SPACE FIRE   SHIFT SMOKE   M MUTE');
 
     new PixelText(this, {
       x: centerX,
@@ -100,6 +102,12 @@ export class TitleScene extends Phaser.Scene {
     this.input.keyboard!.once('keydown-SPACE', start);
     this.input.keyboard!.once('keydown-ENTER', start);
     this.input.once('pointerdown', start);
+
+    // Mute before starting a run, so a player can opt out without being shot at first.
+    this.input.keyboard!.on('keydown-M', (event: KeyboardEvent) => {
+      if (event.repeat) return;
+      toggleAudioMute(this.registry);
+    });
   }
 
   /** A scrolling road behind the menu: same geometry as the game, no entities. */

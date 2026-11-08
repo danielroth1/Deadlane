@@ -13,12 +13,29 @@ import { AUDIO } from '@/config';
 
 type Sound = 'gun' | 'explosion' | 'hit' | 'pickup' | 'engineFail';
 
+/** Supplies the `AudioContext`; injecting it is what makes the system unit-testable. */
+export type AudioContextFactory = () => AudioContext | null;
+
+/** The browser's own context, or null where Web Audio does not exist. */
+export function browserAudioContext(): AudioContext | null {
+  if (typeof window === 'undefined') return null;
+  const Ctor =
+    window.AudioContext ??
+    (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+  return Ctor ? new Ctor() : null;
+}
+
 export class AudioSystem {
+  private readonly createContext: AudioContextFactory;
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private engine: OscillatorNode | null = null;
   private engineGain: GainNode | null = null;
   private muted = false;
+
+  constructor(createContext: AudioContextFactory = browserAudioContext) {
+    this.createContext = createContext;
+  }
 
   unlock(): void {
     if (this.ctx) {
@@ -26,13 +43,13 @@ export class AudioSystem {
       return;
     }
 
-    const Ctor = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-    if (!Ctor) return;
+    const ctx = this.createContext();
+    if (!ctx) return;
 
-    this.ctx = new Ctor();
-    this.master = this.ctx.createGain();
-    this.master.gain.value = AUDIO.masterVolume;
-    this.master.connect(this.ctx.destination);
+    this.ctx = ctx;
+    this.master = ctx.createGain();
+    this.master.gain.value = this.muted ? 0 : AUDIO.masterVolume;
+    this.master.connect(ctx.destination);
     this.startEngine();
   }
 
@@ -157,11 +174,27 @@ export class AudioSystem {
     source.stop(at + duration + 0.02);
   }
 
+  /**
+   * Stops the engine and closes the context. Idempotent: shutdown may run after a failed
+   * unlock, and a second call must not touch a closed context.
+   */
   destroy(): void {
-    this.engine?.stop();
-    this.engine?.disconnect();
-    this.engineGain?.disconnect();
-    void this.ctx?.close();
+    const ctx = this.ctx;
+    const engine = this.engine;
+    const engineGain = this.engineGain;
+    const master = this.master;
+
     this.ctx = null;
+    this.master = null;
+    this.engine = null;
+    this.engineGain = null;
+
+    if (!ctx) return;
+
+    engine?.stop();
+    engine?.disconnect();
+    engineGain?.disconnect();
+    master?.disconnect();
+    if (ctx.state !== 'closed') void ctx.close();
   }
 }

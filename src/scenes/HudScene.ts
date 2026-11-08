@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME } from '@/config';
 import { PALETTE } from '@/palette';
 import { PixelText } from '@/ui/pixel-text';
+import { toggleAudioMute } from '@/systems/audio-registry';
 import { RUN_PAUSED_EVENT, type GameScene, type HudState, type RunDebugState } from './GameScene';
 
 export interface DebugSnapshot extends RunDebugState {
@@ -30,8 +31,8 @@ declare global {
  * Reads state from the game scene rather than subscribing to events: one pull per frame is
  * cheaper than a stream of updates, and it cannot desync from the simulation.
  *
- * It also owns Esc. A paused scene receives no keyboard input at all, so the pause key and
- * the pause card have to live in a scene that keeps running.
+ * It also owns Esc and M. A paused scene receives no keyboard input at all, so the pause
+ * key, the mute key and the pause card have to live in a scene that keeps running.
  */
 export class HudScene extends Phaser.Scene {
   private gameScene!: GameScene;
@@ -39,6 +40,7 @@ export class HudScene extends Phaser.Scene {
   private sectorText!: PixelText;
   private distanceText!: PixelText;
   private challengeText!: PixelText;
+  private muteText!: PixelText;
   private pips!: Phaser.GameObjects.Graphics;
   private speedBar!: Phaser.GameObjects.Graphics;
   private pauseCard?: Phaser.GameObjects.Container;
@@ -91,6 +93,15 @@ export class HudScene extends Phaser.Scene {
       align: 'center',
     });
 
+    // Quiet state marker, right-aligned against the speed bar's left edge.
+    this.muteText = new PixelText(this, {
+      x: GAME.width - 112,
+      y: GAME.height - 20,
+      color: PALETTE.steelLight,
+      scale: 1,
+      align: 'right',
+    });
+
     this.pips = this.add.graphics();
     this.speedBar = this.add.graphics();
 
@@ -101,6 +112,7 @@ export class HudScene extends Phaser.Scene {
 
     this.buildPauseCard();
     this.installPauseControl();
+    this.installMuteControl();
     this.installDebugSnapshot();
   }
 
@@ -122,6 +134,8 @@ export class HudScene extends Phaser.Scene {
     } else {
       this.challengeText.setText('');
     }
+
+    this.muteText.setText(state.muted ? 'MUTED' : '');
 
     this.drawPips(state);
     this.drawSpeed(state);
@@ -199,7 +213,7 @@ export class HudScene extends Phaser.Scene {
       color: PALETTE.bone,
       scale: 1,
       align: 'center',
-    }).setText('ESC TO RESUME');
+    }).setText('ESC RESUME   M MUTE');
 
     this.pauseCard = this.add.container(0, 0, [overlay, title, hint]).setDepth(200).setVisible(false);
   }
@@ -219,6 +233,14 @@ export class HudScene extends Phaser.Scene {
     this.gameScene.events.on(RUN_PAUSED_EVENT, onPaused);
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       this.gameScene?.events.off(RUN_PAUSED_EVENT, onPaused);
+    });
+  }
+
+  private installMuteControl(): void {
+    this.input.keyboard?.on('keydown-M', (event: KeyboardEvent) => {
+      // Held-key repeats would flip the preference every frame.
+      if (event.repeat) return;
+      toggleAudioMute(this.registry);
     });
   }
 
