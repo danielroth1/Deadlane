@@ -1,0 +1,62 @@
+{
+  "$comment": "Act bosses. One closes every sector (an act is a sector), themed by the level type. `bossForLevel` in src/systems/boss.ts is the only reader: rows that list the level type — or the `any` wildcard — and that have unlocked by the act are eligible, and the highest `minAct` wins with a tie going to table order. `variantEvery` fields a row every Nth act from its `minAct`, so the wildcard gunship is the act 2+ variant (acts 2, 4, 6) rather than a replacement for the type's own machine; it also carries a type with no machine of its own (canyon). Attack pattern ids are implemented in src/systems/boss.ts; adding a boss here needs no class. Asset ids are derived as `boss/<id>`, which matches the art-07-boss cell slugs.",
+  "bosses": [
+    {
+      "id": "command-carrier",
+      "label": "COMMAND CARRIER",
+      "kind": "carrier",
+      "levelTypes": ["highway", "city"],
+      "minAct": 1,
+      "hp": 60,
+      "speed": 0.9,
+      "attacks": ["turret-burst", "track-sweep"],
+      "reward": 1500,
+      "size": 120,
+      "color": "rust",
+      "accent": "signal-red"
+    },
+    {
+      "id": "river-dreadnought",
+      "label": "RIVER DREADNOUGHT",
+      "kind": "dreadnought",
+      "levelTypes": ["river"],
+      "minAct": 1,
+      "hp": 64,
+      "speed": 0.8,
+      "attacks": ["broadside", "depth-charge"],
+      "reward": 1800,
+      "size": 128,
+      "color": "olive",
+      "accent": "amber"
+    },
+    {
+      "id": "boring-machine",
+      "label": "BORING MACHINE",
+      "kind": "borer",
+      "levelTypes": ["tunnel"],
+      "minAct": 1,
+      "hp": 56,
+      "speed": 0.75,
+      "attacks": ["drill-punch", "rubble-burst"],
+      "reward": 1700,
+      "size": 116,
+      "color": "asphalt-light",
+      "accent": "amber"
+    },
+    {
+      "id": "gunship-boss",
+      "label": "GUNSHIP",
+      "kind": "gunship",
+      "levelTypes": ["any"],
+      "minAct": 2,
+      "variantEvery": 2,
+      "hp": 52,
+      "speed": 1.25,
+      "attacks": ["rocket-fan", "strafe-burst"],
+      "reward": 2000,
+      "size": 112,
+      "color": "steel",
+      "accent": "signal-red"
+    }
+  ]
+}

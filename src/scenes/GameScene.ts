@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { DIFFICULTY, GAME, LEVEL, PLAYER, SCORE, SPAWN, SPEED, WEAPON_FX } from '@/config';
+import { BOSS, DIFFICULTY, GAME, LEVEL, PLAYER, SCORE, SPAWN, SPEED, WEAPON_FX } from '@/config';
 import { PALETTE } from '@/palette';
 import { Art } from '@/art';
 import { EFFECT_ART, pickupArtIds, propArtIds } from '@/art/ids';
@@ -7,7 +7,9 @@ import { flatTexture, pickupTexture, propTexture } from '@/art/placeholders';
 import { PlayerVehicle, displayScale } from '@/entities/player';
 import { EnemyVehicle } from '@/entities/enemy';
 import { CivilianVehicle } from '@/entities/civilian';
+import { BossVehicle } from '@/entities/boss';
 import { getCivilian, getEnemy, getWeapon } from '@/content';
+import { bossForLevel, type BossAttackPattern } from '@/systems/boss';
 import {
   forwardShot,
   oilCatches,
@@ -78,6 +80,15 @@ export interface HudState {
   challengeProgress: number;
   challengeTarget: number;
   muted: boolean;
+  /** The live boss, while one is on the road. Drives the name plate and the health bar. */
+  boss: BossHudState | null;
+}
+
+/** What the HUD needs to draw the boss bar. */
+export interface BossHudState {
+  readonly label: string;
+  readonly hp: number;
+  readonly maxHp: number;
 }
 
 /** What the sector card is currently saying. */
@@ -86,9 +97,14 @@ export interface SectorCardState {
   readonly label: string;
 }
 
-/** One scoring event resolved this run, as the debug surface reports it. */
+/**
+ * One scoring event resolved this run, as the debug surface reports it.
+ *
+ * `bossDestroyed` is reported here but is deliberately not a `scoreDelta` rule: the reward
+ * is content, from `bosses.json`, so the delta cannot come from a fixed table.
+ */
 export interface ScoreEventRecord {
-  readonly kind: ScoreEventKind;
+  readonly kind: ScoreEventKind | 'bossDestroyed';
   readonly delta: number;
 }
 
@@ -114,6 +130,8 @@ export interface RunDebugState {
   readonly lastScoreEvent: ScoreEventRecord | null;
   /** Text of the most recent banner, or null before the first. */
   readonly lastBanner: string | null;
+  /** The live act boss, or null between encounters. */
+  readonly boss: { readonly id: string; readonly hp: number; readonly maxHp: number } | null;
   readonly hud: HudState;
 }
 
@@ -156,6 +174,15 @@ export class GameScene extends Phaser.Scene {
   private hazards: Hazard[] = [];
   private pickups: Pickup[] = [];
   private props: { readonly sprite: Phaser.GameObjects.Image; readonly at: number }[] = [];
+  /**
+   * The act boss, while one is on the road.
+   *
+   * Deliberately not part of `enemies`: a boss is an encounter, and `clearWorld()` must not
+   * sweep it away the way it sweeps chaff. It is destroyed only by losing the fight.
+   */
+  private boss: BossVehicle | null = null;
+  /** Scene-clock time the victory beat ends and the sector transition runs, or null. */
+  private victoryAt: number | null = null;
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
@@ -191,6 +218,8 @@ export class GameScene extends Phaser.Scene {
     this.hazards = [];
     this.pickups = [];
     this.props = [];
+    this.boss = null;
+    this.victoryAt = null;
     this.paused = false;
     this.lastScoreEvent = null;
     this.lastBanner = null;
@@ -267,6 +296,9 @@ export class GameScene extends Phaser.Scene {
       challengeProgress: this.challengeProgress,
       challengeTarget: this.challengeTarget,
       muted: this.audio?.isMuted ?? false,
+      boss: this.boss
+        ? { label: this.boss.def.label, hp: Math.max(0, this.boss.hp), maxHp: this.boss.maxHp }
+        : null,
     };
   }
 
@@ -286,6 +318,9 @@ export class GameScene extends Phaser.Scene {
       lastSectorCard: this.lastSectorCard,
       lastScoreEvent: this.lastScoreEvent,
       lastBanner: this.lastBanner,
+      boss: this.boss
+        ? { id: this.boss.def.id, hp: Math.max(0, this.boss.hp), maxHp: this.boss.maxHp }
+        : null,
       hud: this.hudState,
     };
   }
@@ -353,6 +388,19 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Debug-only: kill the live boss through the normal damage path.
+   *
+   * Playwright reaches this through `window.__deadlaneControl` at `?debug=1`, so the
+   * defeat, the reward and the victory beat all run for real instead of a spec spending
+   * sixty seconds shooting. Nothing in the run calls it.
+   */
+  debugDestroyBoss(): void {
+    const boss = this.boss;
+    if (!boss || this.paused || this.introActive) return;
+    if (boss.hit(boss.hp)) this.defeatBoss(this.time.now);
+  }
+
+  /**
    * Pause/resume the run.
    *
    * Phaser refuses keyboard input to a scene that is not RUNNING, so the pause key lives in
@@ -399,6 +447,7 @@ export class GameScene extends Phaser.Scene {
 
     this.spawnFromBlueprint();
     this.updateEnemies(dt, scroll, time);
+    this.updateBoss(dt, time);
     this.updateCivilians(dt, scroll);
     this.updateBullets(dt);
     this.updateHazards(time);
@@ -407,10 +456,9 @@ export class GameScene extends Phaser.Scene {
 
     this.resolveCollisions(time);
     this.updateChallenge();
-
-    if (this.distance > this.blueprint.length) {
-      this.advanceLevel();
-    }
+    // The sector transition is owned by the boss now: while one is alive the run holds,
+    // and only a destroyed boss releases the boundary.
+    this.updateActBoundary(time);
 
     this.score += dt * (this.currentScroll() / SCORE.distancePerPoint) * 0.15;
   }
@@ -542,6 +590,117 @@ export class GameScene extends Phaser.Scene {
       }
       return true;
     });
+  }
+
+  /* ---------------------------------- boss --------------------------------- */
+
+  private updateBoss(dt: number, time: number): void {
+    const boss = this.boss;
+    if (!boss) return;
+
+    const action = boss.update({
+      now: time,
+      dt,
+      distance: this.distance,
+      playerX: this.player.x,
+    });
+
+    if (action?.kind === 'fire') this.bossFire(boss, action.pattern);
+  }
+
+  /** Spawn the machine that closes this act. Called once, when the sector runs out. */
+  private spawnBoss(time: number): void {
+    // One sector is one act: the level type picks the machine and the sector number is the
+    // act index that unlocks the higher-act variants in the content table.
+    const act = this.levelIndex;
+    const def = bossForLevel(this.blueprint.type, act);
+    this.boss = new BossVehicle(this, this.art, def, this.distance, this.blueprint.road, time);
+    this.showBanner(`ACT ${act} · ${def.label}`);
+  }
+
+  private bossFire(boss: BossVehicle, pattern: BossAttackPattern): void {
+    // Boss shells reuse the hostile-shell path, so one `returnShot` still decides the lead
+    // and the existing enemy-bullet collision still does the damage.
+    const key = flatTexture(this, 'boss-bullet', 'amber', 9);
+    const half = (pattern.shots - 1) / 2;
+
+    for (let i = 0; i < pattern.shots; i += 1) {
+      const x = boss.sprite.x + (i - half) * pattern.spreadPx;
+      const sprite = this.add.image(x, boss.sprite.y, key).setDepth(45);
+      this.bullets.push({
+        sprite,
+        ...returnShot({
+          enemyX: x,
+          enemyY: boss.sprite.y,
+          playerX: this.player.x,
+          playerY: this.player.y,
+          distance: this.distance,
+          scroll: this.currentScroll(),
+          projectileSpeed: pattern.projectileSpeed,
+          maxDrift: WEAPON_FX.maxShotDrift,
+        }),
+        from: 'enemy',
+        damage: BOSS.shotDamage,
+      });
+    }
+
+    this.audio.play('gun');
+  }
+
+  private defeatBoss(time: number): void {
+    const boss = this.boss;
+    if (!boss) return;
+
+    const { x, y } = boss.sprite;
+    const reward = boss.def.reward;
+    boss.destroy();
+    this.boss = null;
+
+    this.score += reward;
+    this.lastScoreEvent = { kind: 'bossDestroyed', delta: reward };
+    this.challenges.notifyKill();
+    this.audio.play('explosion');
+    this.cameras.main.shake(320, 0.014);
+
+    const boom = this.art
+      .imageFrom(EFFECT_ART.explosion, x, y, () =>
+        flatTexture(this, 'explosion', 'amber', 34, 'white'),
+      )
+      .setDepth(60);
+    this.tweens.add({
+      targets: boom,
+      scale: { from: 1.2, to: 3 },
+      alpha: { from: 1, to: 0 },
+      duration: 520,
+      onComplete: () => boom.destroy(),
+    });
+
+    this.showBanner(`ACT ${this.levelIndex} CLEARED · +${reward}`);
+    // The victory beat: the road keeps running for a moment, then the next act's card.
+    this.victoryAt = time + LEVEL.bossVictoryMs;
+  }
+
+  /**
+   * The act boundary.
+   *
+   * Past the end of the blueprint the run does not advance — it spawns the boss. The
+   * transition waits until the boss is down, then the ordinary `advanceLevel()` runs
+   * unchanged. World distance keeps growing during the fight, and the boss holds station in
+   * screen space, so nothing it owns goes stale as the distance climbs.
+   */
+  private updateActBoundary(time: number): void {
+    if (this.player.isDestroyed) return;
+
+    if (this.victoryAt !== null) {
+      if (time < this.victoryAt) return;
+      this.victoryAt = null;
+      this.advanceLevel();
+      return;
+    }
+
+    if (this.distance <= this.blueprint.length) return;
+    if (this.boss) return;
+    this.spawnBoss(time);
   }
 
   private updateCivilians(dt: number, scroll: number): void {
@@ -775,6 +934,27 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Player bullets vs the act boss. A boss is the widest thing on the road, so its hit
+    // box tracks its real silhouette, and a defeat runs the same state machine the debug
+    // control drives.
+    const boss = this.boss;
+    if (boss) {
+      for (const bullet of this.bullets) {
+        if (bullet.from !== 'player' || !Number.isFinite(bullet.at)) continue;
+        if (
+          Math.abs(bullet.sprite.x - boss.sprite.x) < boss.sprite.displayWidth * 0.45 &&
+          Math.abs(bullet.sprite.y - boss.sprite.y) < boss.sprite.displayHeight * 0.45
+        ) {
+          bullet.sprite.destroy();
+          bullet.at = Number.NEGATIVE_INFINITY;
+          if (boss.hit(bullet.damage)) {
+            this.defeatBoss(time);
+            break;
+          }
+        }
+      }
+    }
+
     // Player bullets vs civilian traffic. Shooting a civilian is a deliberate act, so it
     // costs more than clipping one: the road punishes careless gunnery, not just
     // careless driving. A wrecked civilian hit again in the same frame is skipped.
@@ -982,6 +1162,9 @@ export class GameScene extends Phaser.Scene {
    * meaningless number in the thousands: it can never come back on screen, so it would sit
    * in the arena forever and eat a spawn slot. The world is therefore emptied first, and
    * the spawner cursor is reset so the new blueprint starts on its own first event.
+   *
+   * Reached only through `updateActBoundary`, which holds it back until the act boss is
+   * down, so the transition is unchanged from WO-33 and simply runs later.
    */
   private advanceLevel(): void {
     this.clearWorld();
@@ -1005,6 +1188,9 @@ export class GameScene extends Phaser.Scene {
 
   /** Destroy every live world object, on both edges of the play aperture. */
   private clearWorld(): void {
+    // A live boss is an encounter, not sector scenery, so it is deliberately not swept
+    // here: it lives in its own field rather than in `enemies`, and only losing the fight
+    // removes it. That is the invariant a sector reset must never break.
     for (const enemy of this.enemies) enemy.destroy();
     for (const civilian of this.civilians) civilian.destroy();
     for (const bullet of this.bullets) bullet.sprite.destroy();

@@ -1,8 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { BEHAVIORS, CHALLENGE_TEMPLATES, CIVILIANS, ENEMIES, getWeapon, WEAPONS } from './index';
+import {
+  BEHAVIORS,
+  BOSSES,
+  BOSS_ATTACK_PATTERN_IDS,
+  BOSS_KINDS,
+  CHALLENGE_TEMPLATES,
+  CIVILIANS,
+  ENEMIES,
+  getWeapon,
+  WEAPONS,
+} from './index';
 import { PALETTE } from '@/palette';
+import { LEVEL_TYPES } from '@/levels/types';
 
 /**
  * Content schema.
@@ -260,6 +271,85 @@ describe('challenge content', () => {
   it('rewards completion', () => {
     for (const template of CHALLENGE_TEMPLATES) {
       expect(template.reward).toBeGreaterThan(0);
+    }
+  });
+});
+
+/**
+ * The boss table is content like every other: one row per machine, and a new variant must
+ * not need a class. These are the rules the encounter code may rely on.
+ */
+describe('boss content', () => {
+  it('has unique ids and all four boss machines', () => {
+    const ids = BOSSES.map((boss) => boss.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(new Set(BOSSES.map((boss) => boss.kind))).toEqual(new Set(BOSS_KINDS));
+  });
+
+  it('names real level types, or the wildcard', () => {
+    for (const boss of BOSSES) {
+      expect(boss.levelTypes.length, `${boss.id} names no level type`).toBeGreaterThan(0);
+      for (const type of boss.levelTypes) {
+        expect(type === 'any' || LEVEL_TYPES.includes(type), `${boss.id}.levelTypes`).toBe(true);
+      }
+    }
+  });
+
+  it('has a wildcard row, so a level type without its own machine still gets a boss', () => {
+    expect(BOSSES.some((boss) => boss.levelTypes.includes('any'))).toBe(true);
+  });
+
+  it('is bigger and tougher than any chaff enemy', () => {
+    const toughestHp = Math.max(...ENEMIES.map((enemy) => enemy.hp));
+    const biggestSize = Math.max(...ENEMIES.map((enemy) => enemy.size));
+
+    for (const boss of BOSSES) {
+      expect(boss.hp, `${boss.id}.hp`).toBeGreaterThan(toughestHp);
+      expect(boss.size, `${boss.id}.size`).toBeGreaterThan(biggestSize);
+      expect(boss.speed).toBeGreaterThan(0);
+      expect(boss.minAct).toBeGreaterThanOrEqual(1);
+      expect(boss.reward).toBeGreaterThan(0);
+      if (boss.variantEvery !== undefined) {
+        expect(Number.isInteger(boss.variantEvery)).toBe(true);
+        expect(boss.variantEvery).toBeGreaterThanOrEqual(1);
+      }
+    }
+  });
+
+  it('names implemented attack patterns, at least two distinct per boss', () => {
+    for (const boss of BOSSES) {
+      expect(boss.attacks.length, `${boss.id} needs two attacks`).toBeGreaterThanOrEqual(2);
+      expect(new Set(boss.attacks).size, `${boss.id} repeats an attack`).toBe(boss.attacks.length);
+      for (const attack of boss.attacks) {
+        expect(BOSS_ATTACK_PATTERN_IDS, `${boss.id}.attacks`).toContain(attack);
+      }
+    }
+  });
+
+  it('uses palette colours', () => {
+    for (const boss of BOSSES) {
+      expect(PALETTE_KEYS.has(boss.color), `${boss.id}.color=${boss.color}`).toBe(true);
+      expect(PALETTE_KEYS.has(boss.accent), `${boss.id}.accent=${boss.accent}`).toBe(true);
+    }
+  });
+
+  /**
+   * Same seam as the enemy and civilian art tests: a declared id must resolve in the
+   * shipped manifest. Bosses declare none until art-07-boss (WO-49) lands, and the entity
+   * falls back to `boss/<id>` plus the procedural placeholder until then.
+   */
+  it('resolves every declared boss art id in the shipped manifest', () => {
+    const manifest = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'public/assets/assets.json'), 'utf8'),
+    ) as SpriteManifest;
+    const sprites = new Set(Object.keys(manifest.sprites));
+
+    for (const boss of BOSSES) {
+      if (boss.art === undefined) continue;
+      expect(
+        sprites.has(boss.art),
+        `${boss.id}.art=${boss.art} is not a key of .sprites in public/assets/assets.json`,
+      ).toBe(true);
     }
   });
 });

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { GAME } from '@/config';
+import { BOSS, GAME } from '@/config';
 import { PALETTE } from '@/palette';
 import { PixelText } from '@/ui/pixel-text';
 import { toggleAudioMute } from '@/systems/audio-registry';
@@ -18,6 +18,8 @@ export interface DebugControl {
   fastForward(pixels: number): void;
   /** Destroy the player through the normal damage path, ending the run. */
   destroyPlayer(): void;
+  /** Kill the live act boss through the normal damage path, paying its reward. */
+  destroyBoss(): void;
 }
 
 declare global {
@@ -45,6 +47,8 @@ export class HudScene extends Phaser.Scene {
   private distanceText!: PixelText;
   private challengeText!: PixelText;
   private muteText!: PixelText;
+  private bossText!: PixelText;
+  private bossBar!: Phaser.GameObjects.Graphics;
   private pips!: Phaser.GameObjects.Graphics;
   private speedBar!: Phaser.GameObjects.Graphics;
   private pauseCard?: Phaser.GameObjects.Container;
@@ -106,8 +110,19 @@ export class HudScene extends Phaser.Scene {
       align: 'right',
     });
 
+    // Boss name plate and health bar, directly under the top strip. Empty until an act
+    // boss is on the road.
+    this.bossText = new PixelText(this, {
+      x: GAME.width / 2,
+      y: 32,
+      color: PALETTE.signalRed,
+      scale: 1,
+      align: 'center',
+    });
+
     this.pips = this.add.graphics();
     this.speedBar = this.add.graphics();
+    this.bossBar = this.add.graphics();
 
     // Everything in the HUD must sit above the world.
     for (const child of this.children.list) {
@@ -143,6 +158,7 @@ export class HudScene extends Phaser.Scene {
 
     this.drawPips(state);
     this.drawSpeed(state);
+    this.drawBoss(state);
   }
 
   private drawPips(state: HudState): void {
@@ -182,6 +198,32 @@ export class HudScene extends Phaser.Scene {
       width * ratio,
       6,
     );
+  }
+
+  /** The encounter's own readout: who it is, and how much of it is left. */
+  private drawBoss(state: HudState): void {
+    const g = this.bossBar;
+    g.clear();
+
+    const boss = state.boss;
+    if (!boss) {
+      this.bossText.setText('');
+      return;
+    }
+
+    this.bossText.setText(`${boss.label}  ${Math.max(0, boss.hp)}/${boss.maxHp}`);
+
+    const width = BOSS.healthBarWidth;
+    const x = (GAME.width - width) / 2;
+    const y = 42;
+    const ratio = boss.maxHp > 0 ? Math.max(0, Math.min(1, boss.hp / boss.maxHp)) : 0;
+
+    g.fillStyle(PALETTE.void, 0.8);
+    g.fillRect(x - 1, y - 1, width + 2, BOSS.healthBarHeight + 2);
+    g.fillStyle(PALETTE.steel, 1);
+    g.fillRect(x, y, width, BOSS.healthBarHeight);
+    g.fillStyle(ratio > 0.3 ? PALETTE.signalRed : PALETTE.amber, 1);
+    g.fillRect(x, y, Math.round(width * ratio), BOSS.healthBarHeight);
   }
 
   /* --------------------------------- pause --------------------------------- */
@@ -267,6 +309,7 @@ export class HudScene extends Phaser.Scene {
       stageCivilianAhead: () => this.gameScene.debugStageCivilianAhead(),
       fastForward: (pixels: number) => this.gameScene.debugFastForward(pixels),
       destroyPlayer: () => this.gameScene.debugDestroyPlayer(),
+      destroyBoss: () => this.gameScene.debugDestroyBoss(),
     };
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {

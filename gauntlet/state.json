@@ -545,11 +545,13 @@
       "id": "WO-48",
       "title": "Act bosses",
       "file": "gauntlet/work-orders/WO-48-boss-encounters.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-33"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "data-driven act bosses gate the transition, pure selection + fight state machine, e2e proves the boss survives a sector reset"
     },
     {
       "id": "WO-49",

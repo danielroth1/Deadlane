@@ -79,6 +79,8 @@ interface DeadlaneSnapshot {
   lastSectorCard: { level: number; label: string } | null;
   /** Unrounded world scroll in pixels — the value the road renderer is given. */
   worldDistance: number;
+  /** The live act boss, or null between encounters. */
+  boss: { id: string; hp: number; maxHp: number } | null;
   hud: { distance: number; speed: number; level: number };
 }
 
@@ -327,9 +329,28 @@ async function fastForward(page: Page, pixels: number): Promise<void> {
  * A sector is 24 000–28 000 px at 220 px/s, so waiting it out in real time would make this
  * spec two minutes long. The jump moves only the same `distance` cursor the run moves, so
  * the boundary, the intro card and the new road all resolve on their own.
+ *
+ * An act now ends with its boss: crossing the end of a sector spawns one and holds the
+ * transition until it is destroyed. This spec only needs the next theme's road, so it kills
+ * the boss through the debug control as soon as it is on the road and lets the victory beat
+ * hand over to the card normally.
  */
 async function crossSector(page: Page, label: string): Promise<void> {
   await fastForward(page, 30_000);
+
+  await page.waitForFunction(
+    () => Boolean((window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane?.boss),
+    undefined,
+    { timeout: 30_000 },
+  );
+
+  await page.evaluate(() => {
+    const api = (window as unknown as { __deadlaneControl?: { destroyBoss(): void } })
+      .__deadlaneControl;
+    if (!api) throw new Error('window.__deadlaneControl missing — open the page with ?debug=1');
+    api.destroyBoss();
+  });
+
   await page.waitForFunction(
     (target) => {
       const snap = (window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane;

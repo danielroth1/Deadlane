@@ -111,6 +111,32 @@ export const DIFFICULTY = {
   smoothing: 0.0025,
 } as const;
 
+/**
+ * How the act boss holds the road.
+ *
+ * The boss's hp, speed, attacks and reward are content, in `bosses.json`; these numbers only
+ * decide where it sits and how it moves once it is on screen.
+ */
+export const BOSS = {
+  /** Delay between the boss arriving and its first telegraph, in ms. */
+  openingMs: 900,
+  /** How far ahead of the car the boss holds station, in px of screen. */
+  stationAhead: 132,
+  /** Descent onto station, px/s, scaled by the row's `speed`. */
+  approachSpeed: 260,
+  /** Lateral travel across the road, px/s, scaled by the row's `speed`. */
+  lateralSpeed: 150,
+  /** Half the widest weave from the road centre, px, clamped to the road. */
+  weaveAmplitude: 110,
+  /** Seconds for one full weave. */
+  weavePeriod: 5.6,
+  /** Damage one boss shell does to the car. */
+  shotDamage: 1,
+  /** HUD health bar, px. */
+  healthBarWidth: 220,
+  healthBarHeight: 6,
+} as const;
+
 export const LEVEL = {
   /** World pixels per level before the next type is chosen. */
   lengthPixels: 24_000,
@@ -120,6 +146,8 @@ export const LEVEL = {
   introMs: 1600,
   /** Fade-in for that card, in ms. */
   introFadeMs: 180,
+  /** The victory beat between a boss going down and the next sector's card, in ms. */
+  bossVictoryMs: 1200,
 } as const;
 
 export const AUDIO = {

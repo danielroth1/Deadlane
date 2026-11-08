@@ -21,6 +21,8 @@ interface DeadlaneSnapshot {
   sectorCard: { level: number; label: string } | null;
   lastSectorCard: { level: number; label: string } | null;
   enemies: number;
+  boss: { id: string; hp: number; maxHp: number } | null;
+  lastScoreEvent: { kind: string; delta: number } | null;
   hud: { score: number; distance: number; speed: number; level: number };
 }
 
@@ -38,6 +40,7 @@ interface RunResultSnapshot {
 interface DeadlaneControl {
   fastForward(pixels: number): void;
   destroyPlayer(): void;
+  destroyBoss(): void;
 }
 
 async function snapshot(page: Page): Promise<DeadlaneSnapshot | null> {
@@ -75,6 +78,16 @@ async function destroyPlayer(page: Page): Promise<void> {
       .__deadlaneControl;
     if (!api) throw new Error('window.__deadlaneControl missing — open the page with ?debug=1');
     api.destroyPlayer();
+  });
+}
+
+/** Kill the live act boss through the normal damage path, paying its reward. */
+async function destroyBoss(page: Page): Promise<void> {
+  await page.evaluate(() => {
+    const api = (window as unknown as { __deadlaneControl?: DeadlaneControl })
+      .__deadlaneControl;
+    if (!api) throw new Error('window.__deadlaneControl missing — open the page with ?debug=1');
+    api.destroyBoss();
   });
 }
 
@@ -174,7 +187,7 @@ test('a run reaches game over, redeploys on Space and keeps the best score acros
   expect(errors).toEqual([]);
 });
 
-test('a second sector still spawns enemies after the boundary and the intro card', async ({
+test('a boss gates the sector boundary, survives more world distance, and hands over to the next act', async ({
   page,
 }) => {
   const errors: string[] = [];
@@ -189,11 +202,35 @@ test('a second sector still spawns enemies after the boundary and the intro card
   const first = await readSnapshot(page);
   expect(first.hud.level).toBe(1);
   expect(first.lastSectorCard?.level).toBe(1);
+  expect(first.boss).toBeNull();
 
-  // A sector is 24 000–28 000 px; one jump crosses the boundary instead of eighty seconds
-  // of wall clock. Everything the boundary does — clearing the world, resetting the
-  // spawner, presenting the next card — then runs on the next frame.
+  // A sector is 24 000–28 000 px; one jump reaches its end instead of eighty seconds of
+  // wall clock. The boundary now spawns the act boss instead of the next sector, so the
+  // highway's command carrier is on the road with sector 1 still running.
   await fastForward(page, 30_000);
+  await expect
+    .poll(async () => (await snapshot(page))?.boss?.id ?? null, { timeout: 10_000 })
+    .toBe('command-carrier');
+
+  const fighting = await readSnapshot(page);
+  expect(fighting.hud.level).toBe(1);
+  expect(fighting.lastSectorCard?.level).toBe(1);
+  expect(fighting.sectorCard).toBeNull();
+  expect(fighting.boss?.hp).toBeGreaterThan(0);
+  expect(fighting.boss?.maxHp).toBeGreaterThan(0);
+
+  // A sector reset must never despawn a live boss: push another sector's worth of distance
+  // through the run and the encounter, and the sector, are both still there.
+  await fastForward(page, 30_000);
+  const stillFighting = await readSnapshot(page);
+  expect(stillFighting.boss?.id).toBe('command-carrier');
+  expect(stillFighting.boss?.hp).toBe(fighting.boss?.hp);
+  expect(stillFighting.hud.level).toBe(1);
+  expect(stillFighting.sectorCard).toBeNull();
+
+  // Killing it pays the content reward and releases the transition.
+  const scoreBefore = stillFighting.hud.score;
+  await destroyBoss(page);
   await expect
     .poll(async () => (await snapshot(page))?.lastSectorCard?.level ?? null, { timeout: 10_000 })
     .toBe(2);
@@ -202,6 +239,9 @@ test('a second sector still spawns enemies after the boundary and the intro card
   expect(crossed.hud.level).toBe(2);
   expect(crossed.sectorCard?.level).toBe(2);
   expect(crossed.sectorCard?.label).toBe('REDLINE CANYON');
+  expect(crossed.boss).toBeNull();
+  expect(crossed.hud.score).toBeGreaterThanOrEqual(scoreBefore + 1500);
+  expect(crossed.lastScoreEvent?.kind).toBe('bossDestroyed');
   // The boundary empties the arena: anything still alive belongs to the sector just left.
   expect(crossed.enemies).toBe(0);
 
