@@ -19,21 +19,7 @@ npm run gauntlet:next
 
 If it reports nothing dispatchable, report that and stop.
 
-### 2. Size guard
-
-Before dispatching, check the order against these limits:
-
-| Limit | Value |
-| --- | --- |
-| deliverables | 1 |
-| files touched | ≤ 3 |
-| changed lines | ≤ ~200 |
-
-If it exceeds any limit, **split it**: add narrower orders to `gauntlet/state.json`, mark
-the original `blocked` with a note, and continue with the next dispatchable order. Do not
-dispatch an oversized order.
-
-### 3. Art orders — the fal call is yours
+### 2. Art orders — the fal call is yours
 
 If the order's steps include `art:claim`, do steps 2–3 of the order yourself, because
 subagents have no fal tools:
@@ -55,28 +41,25 @@ Poll `check_job` if the result is `processing`. Never call `run_model` twice on 
 claim. On failure or a blocked account, `npm run art:release -- --slot <slot-id>
 --attempt <n>` and stop.
 
-### 4. Implementer
+### 3. Implementer
 
-Dispatch one subagent (`implementer` mode) with exactly:
+Dispatch one subagent (`implementer` mode) with the work order text, verbatim:
 
 ```
 WORK ORDER
 <the order text, verbatim>
 
-FILES IN SCOPE
-<the order's whitelist>
-
 REFERENCE
-<at most two file paths — for art orders, the two /tmp evidence files>
+<art orders only: the two /tmp evidence files>
 ```
 
-Nothing else. No repo tour, no history, no prior attempt. For art orders, tell it to
+Nothing else — the implementer works out what to change and how. For art orders, tell it to
 continue at `art:pull -- --slot <slot-id> --attempt <n> --request-id <id> --url <url>
 --cost <usd>`, then `art:process`, `art:select`, `art:atlas`.
 
-### 5. Reviewer
+### 4. Reviewer
 
-Dispatch a **new** subagent (`reviewer` mode) with exactly:
+Dispatch a **new** subagent (`reviewer` mode) with:
 
 ```
 WORK ORDER
@@ -94,7 +77,7 @@ generated URL, plus the `art:process` numbers (`usableCells`, `meanPaletteDistan
 `sizeVariance`, `seamError`). Never include the implementer's report or reasoning — the
 reviewer must judge the artefact, not the argument for it.
 
-### 6. Record
+### 5. Record
 
 ```bash
 npm run gauntlet:record -- --id <ID> --verdict pass --note "<one line>"
@@ -103,14 +86,14 @@ npm run gauntlet:record -- --id <ID> --verdict pass --note "<one line>"
 or
 
 ```bash
-npm run gauntlet:record -- --id <ID> --verdict fail --note "<criteria that failed>"
+npm run gauntlet:record -- --id <ID> --verdict fail --note "<what the review found>"
 ```
 
-On `fail`, run step 4 again with a **fresh** implementer and the reviewer's numbered
-issues appended to the work order block. Do not reuse the previous implementer's context.
-Three rounds and the order escalates automatically — stop there and report it.
+On `fail`, run step 3 again with a **fresh** implementer and the reviewer's feedback
+appended to the work order block. Do not reuse the previous implementer's context. Three
+rounds and the order escalates automatically — stop there and report it.
 
-### 7. Commit
+### 6. Commit
 
 One commit per round — the round's diff, `gauntlet/state.json`, and the new verdict file:
 
@@ -122,7 +105,7 @@ git commit -q -m "<ID> <verdict>: <one line>"
 Read `git status` before staging. Never commit a credential, never commit
 `pipeline/raw/`.
 
-### 8. Next round
+### 7. Next round
 
 Go back to step 1. Do not summarise in between.
 

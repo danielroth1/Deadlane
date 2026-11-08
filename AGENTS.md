@@ -33,8 +33,9 @@ works offline once loaded.
    work order is submitted for review.** A reviewer rejects a diff whose verification
    command fails.
 
-4. **Only touch files listed in the work order's `files:` whitelist.** Touching anything
-   else is an automatic review failure.
+4. **Solve the work order; do not refactor what it did not ask about.** There is no file
+   whitelist — the implementer changes whatever the fix actually needs — but unrelated
+   cleanup, renames and redesigns belong in a separate order.
 
 5. **Do not hand-edit generated artifacts.** `public/assets/atlas/*` and
    `pipeline/budget.json` are produced by scripts. Change the script, then re-run it.
@@ -52,13 +53,14 @@ implemented by one fresh agent and reviewed by a different fresh agent.
 ```
 orchestrator  →  implementer (fresh)  →  reviewer (fresh, read-only)  →  verdict
                        ↑                                                  │
-                       └──────────── FAIL + numbered issues ───────────────┘
+                       └────────────── FAIL + feedback ───────────────────┘
 ```
 
-- The **implementer** gets the work order, its file whitelist, and at most two reference
-  files. It writes code, runs the verification command, and returns a short report.
-- The **reviewer** gets only the work order, the unified diff, and the test output. It
-  never sees the implementer's reasoning.
+- The **implementer** gets the work order and nothing else. It decides what to change,
+  writes the code, runs the verification command, and returns a short report.
+- The **reviewer** gets only the work order, the diff, and the test output. It answers one
+  question — does this solve the order without breaking anything? — and never sees the
+  implementer's reasoning.
 - Maximum **3 rounds**. Then the order is escalated to the human.
 - The **orchestrator** never reads source files. It reads `gauntlet/state.json` and
   verdict summaries only.

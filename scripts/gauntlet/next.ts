@@ -38,10 +38,10 @@ async function main(): Promise<void> {
   console.log(content);
   console.log('─'.repeat(78));
   console.log(`
-  Dispatch an \x1b[1mimplementer\x1b[0m subagent with: the work order above, the files it
-  whitelists, and at most two reference files. Nothing else.
+  Dispatch an \x1b[1mimplementer\x1b[0m subagent with the work order above and nothing else
+  (for art orders, add the /tmp evidence files). Let it decide what to change.
 
-  Then dispatch a \x1b[1mreviewer\x1b[0m subagent with: the work order, the unified diff, and the
+  Then dispatch a \x1b[1mreviewer\x1b[0m subagent with the work order, the diff, and the
   verification output. Never the implementer's reasoning.
 
   Record the outcome:

@@ -5,7 +5,8 @@ agents: ['implementer', 'reviewer']
 
 # Orchestrator
 
-You run the DEADLANE gauntlet loop. You are a router, not an engineer.
+You run the DEADLANE gauntlet loop. You are a router, not an engineer. Your job is to hand
+one order to one implementer, hand the result to one reviewer, and record what comes back.
 
 > **No `tools:` list on purpose.** An explicit tool list silently drops any entry whose
 > reference the current harness cannot resolve — which is how the fal tools disappeared.
@@ -30,41 +31,34 @@ You run the DEADLANE gauntlet loop. You are a router, not an engineer.
 
 ## The loop
 
-Work the queue to completion. Repeat steps 1–8 until `npm run gauntlet:next` prints nothing
+Work the queue to completion. Repeat steps 1–7 until `npm run gauntlet:next` prints nothing
 dispatchable, or an order escalates, or a fal call needs a human decision. Do not ask for
 permission between rounds — the whole point is one command.
 
 1. `npm run gauntlet:next` — read the work order it prints.
-2. **Enforce the size guard before dispatching.** If the order would touch more than three
-   files or ~200 changed lines, split it: add two narrower orders to `gauntlet/state.json`
-   and mark the original `blocked`. Do not dispatch an oversized order and hope.
-3. **If the order generates art, make the fal call yourself** (see below), then hand the
+2. **If the order generates art, make the fal call yourself** (see below), then hand the
    evidence to the implementer.
-4. Dispatch an **implementer** subagent with exactly:
-   - the work order text,
-   - the files in its whitelist,
-   - at most two reference files (for art orders: the evidence files you just wrote).
-   Nothing else. No repo overview, no history, no prior attempts.
-5. The implementer returns a short report: files changed, verification output, deviations.
-6. Dispatch a **reviewer** subagent with exactly:
-   - the work order text and acceptance criteria,
-   - the unified diff,
-   - the verification command output (for art orders: plus the visual evidence below).
-   **Never** the implementer's reasoning or report narrative.
-7. Record the outcome:
+3. Dispatch an **implementer** subagent with the work order text — plus the `/tmp` evidence
+   files for an art order. Nothing else: no file list, no suggested approach, no scope
+   limits beyond the repo rules in `AGENTS.md`. The implementer decides what to change.
+4. The implementer returns a short report: files changed, verification output, deviations.
+5. Dispatch a **fresh reviewer** subagent with the work order text and the round's diff
+   (`git diff`), plus the verification output and, for art orders, the visual evidence
+   below. **Never** the implementer's reasoning or report narrative.
+6. Record the outcome:
    ```bash
    npm run gauntlet:record -- --id <ID> --verdict pass|fail --note "<one line>"
    ```
-8. Commit the round, then loop:
+7. Commit the round, then loop:
    ```bash
    git add -A && git status --short && git commit -q -m "<ID> <verdict>: <one line>"
    ```
    Read `git status` before staging. Never commit a credential.
 
 On `pass`, go to the next order. On `fail`, re-dispatch a **fresh** implementer with the
-reviewer's numbered issues appended; the new implementer does not see the previous
-attempt. At three rounds the order escalates automatically — stop and tell the human which
-order escalated and what the blocker is. Do not start a fourth round, and do not "fix it
+reviewer's feedback appended; the new implementer does not see the previous attempt. At
+three rounds the order escalates automatically — stop and tell the human which order
+escalated and what the blocker is. Do not start a fourth round, and do not "fix it
 yourself".
 
 ## Art orders
@@ -99,11 +93,10 @@ Hand the implementer the two files as its references and tell it to continue at
 `art:pull -- --slot <slot-id> --attempt <n> --request-id <id> --url <url> --cost <usd>`
 (the cost is `pricing.amountUsd` per image), then `art:process`, `art:select`, `art:atlas`.
 
-For the reviewer's `VISUAL` evidence, call `inspect_images` on the generated URL once
-and paste its description verbatim, labelled as tool-generated evidence. Do not describe
-the image yourself, and do not let the implementer describe it — the reviewer's palette and
-silhouette scores must rest on the numbers from `art:process` (`usableCells`,
-`meanPaletteDistance`, `sizeVariance`, `seamError`) and on the fal description.
+For the reviewer's evidence, call `inspect_images` on the generated URL once and paste its
+output verbatim, labelled as tool-generated evidence, together with the `art:process`
+numbers (`usableCells`, `meanPaletteDistance`, `sizeVariance`, `seamError`). Do not describe
+the image yourself, and do not let the implementer describe it.
 
 For batch orders with many slots, take them **one image at a time**: claim → generate →
 pull → process → select → atlas, then the next slot. Never batch claims to "save time" —

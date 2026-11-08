@@ -9,7 +9,8 @@ The three rules that matter most:
    ceiling is 80 images and the ledger is the audit trail.
 2. **Work in gauntlet rounds.** One implementer, one fresh reviewer, verdict recorded with
    `npm run gauntlet:record`.
-3. **Only edit files in the current work order's whitelist.**
+3. **Solve the work order; don't refactor what it didn't ask about.** No file whitelist —
+   change whatever the fix needs.
 
 Run before reporting done:
 
