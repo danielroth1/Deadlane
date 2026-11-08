@@ -9,10 +9,18 @@ export interface DebugSnapshot extends RunDebugState {
   readonly pauseCard: boolean;
 }
 
+/** Debug-only actions for Playwright, installed beside the read-only snapshot. */
+export interface DebugControl {
+  /** Put a lone civilian directly in the gun line, a short way ahead of the car. */
+  stageCivilianAhead(): void;
+}
+
 declare global {
   interface Window {
     /** Read-only run snapshot, installed only when the page is opened with `?debug=1`. */
     __deadlane?: DebugSnapshot;
+    /** Debug-only actions, installed only when the page is opened with `?debug=1`. */
+    __deadlaneControl?: DebugControl;
   }
 }
 
@@ -229,8 +237,13 @@ export class HudScene extends Phaser.Scene {
       }),
     });
 
+    window.__deadlaneControl = {
+      stageCivilianAhead: () => this.gameScene.debugStageCivilianAhead(),
+    };
+
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
       delete window.__deadlane;
+      delete window.__deadlaneControl;
     });
   }
 }

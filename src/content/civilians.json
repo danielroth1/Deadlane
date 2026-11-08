@@ -1,5 +1,5 @@
 {
-  "$comment": "Neutral traffic. Hitting a civilian costs score and armour, which is the whole point of having them. Colors are assigned at runtime from the muted civilian subset.",
+  "$comment": "Neutral traffic. Hitting a civilian costs score but never armour; shooting one destroys it and costs more. That is the whole point of having them. Colors are assigned at runtime from the muted civilian subset.",
   "civilians": [
     { "id": "sedan", "label": "SEDAN", "shape": "wedge", "size": 60, "speed": 0.30, "weight": 10 },
     { "id": "wagon", "label": "ESTATE", "shape": "wedge", "size": 62, "speed": 0.28, "weight": 8 },

@@ -8,8 +8,9 @@ import type { VehicleShape } from '@/art/placeholders';
 /**
  * Neutral traffic.
  *
- * Civilians exist to make the road feel alive and to make shooting careless expensive:
- * hitting one costs score and armour. They never attack and never chase.
+ * Civilians exist to make the road feel alive and to make carelessness expensive: clipping
+ * one costs score, and shooting one destroys it for a larger penalty. Neither ever costs
+ * armour. They never attack and never chase.
  */
 
 const ART_SLOTS = ['civilians', 'civilians-a'];

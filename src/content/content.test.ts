@@ -40,7 +40,6 @@ describe('enemy content', () => {
     for (const enemy of ENEMIES) {
       expect(enemy.hp).toBeGreaterThan(0);
       expect(enemy.speed).toBeGreaterThan(0);
-      expect(enemy.score).toBeGreaterThan(0);
       expect(enemy.size).toBeGreaterThanOrEqual(32);
       expect(enemy.size).toBeLessThanOrEqual(128);
       expect(enemy.speed).toBeLessThan(2);

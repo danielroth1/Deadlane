@@ -33,6 +33,9 @@ npm run dev        # http://localhost:5173
 
 Replay a specific run with `?seed=12345`.
 
+Scoring: a kill pays a fixed reward from `config.ts`; shooting civilian traffic destroys
+it for a bigger penalty than clipping it; enemy fire costs armour, never score.
+
 ## How it is built
 
 Two halves, deliberately separated:

@@ -23,7 +23,6 @@ export interface EnemyDef {
   behavior: BehaviorId;
   speed: number;
   hp: number;
-  score: number;
   shape: VehicleShape;
   color: PaletteKey;
   accent: PaletteKey;

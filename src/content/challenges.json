@@ -15,8 +15,8 @@
     },
     {
       "kind": "clean",
-      "label": "NO CIVILIAN CONTACT",
-      "description": "Complete the section without hitting a civilian vehicle.",
+      "label": "SPARE CIVILIANS",
+      "description": "Complete the section without destroying a civilian vehicle.",
       "reward": 500
     },
     {

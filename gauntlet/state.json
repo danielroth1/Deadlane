@@ -400,9 +400,11 @@
       "id": "WO-35",
       "title": "Damage and score truth",
       "file": "gauntlet/work-orders/WO-35-damage-score.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "bullets wreck civilians for -500, armour hit costs armour only, kill pays SCORE.enemyDestroyed via pure table, e2e proof"
     },
     {
       "id": "WO-36",

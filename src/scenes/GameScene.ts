@@ -20,6 +20,7 @@ import { laneCenter, type LevelEvent } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
 import { AudioSystem } from '@/systems/audio';
 import { ChallengeSystem } from '@/systems/challenges';
+import { scoreDelta, type ScoreEventKind } from '@/systems/scoring';
 import {
   createSpawnerState,
   resetSpawner,
@@ -82,6 +83,12 @@ export interface SectorCardState {
   readonly label: string;
 }
 
+/** One scoring event resolved this run, as the debug surface reports it. */
+export interface ScoreEventRecord {
+  readonly kind: ScoreEventKind;
+  readonly delta: number;
+}
+
 /** Read-only run view served to Playwright through `window.__deadlane` at `?debug=1`. */
 export interface RunDebugState {
   readonly paused: boolean;
@@ -92,6 +99,10 @@ export interface RunDebugState {
   readonly sectorCard: SectorCardState | null;
   /** The most recent card this run has presented, whether or not it is still up. */
   readonly lastSectorCard: SectorCardState | null;
+  /** The most recent scoring event, or null before the first. */
+  readonly lastScoreEvent: ScoreEventRecord | null;
+  /** Text of the most recent banner, or null before the first. */
+  readonly lastBanner: string | null;
   readonly hud: HudState;
 }
 
@@ -144,6 +155,9 @@ export class GameScene extends Phaser.Scene {
   private challengeProgress = 0;
   private challengeTarget = 0;
   private paused = false;
+  /** Observation for the debug surface; never read by gameplay. */
+  private lastScoreEvent: ScoreEventRecord | null = null;
+  private lastBanner: string | null = null;
 
   constructor() {
     super('Game');
@@ -167,6 +181,8 @@ export class GameScene extends Phaser.Scene {
     this.pickups = [];
     this.props = [];
     this.paused = false;
+    this.lastScoreEvent = null;
+    this.lastBanner = null;
   }
 
   create(): void {
@@ -258,8 +274,43 @@ export class GameScene extends Phaser.Scene {
       civilians: this.civilians.length,
       sectorCard: this.sectorCard,
       lastSectorCard: this.lastSectorCard,
+      lastScoreEvent: this.lastScoreEvent,
+      lastBanner: this.lastBanner,
       hud: this.hudState,
     };
+  }
+
+  /**
+   * Debug-only: clear the firing line and stage one civilian in it.
+   *
+   * Playwright reaches this through `window.__deadlaneControl` at `?debug=1`, so the
+   * bullet-versus-civilian rule is exercised on the real collision path. Nothing in the
+   * run calls it, and the civilian is pinned to the car's own x so a shot cannot miss.
+   */
+  debugStageCivilianAhead(): void {
+    for (const enemy of this.enemies) enemy.destroy();
+    this.enemies = [];
+    for (const civilian of this.civilians) civilian.destroy();
+    this.civilians = [];
+    for (const bullet of this.bullets) {
+      if (bullet.from !== 'enemy') continue;
+      bullet.sprite.destroy();
+      bullet.at = Number.NEGATIVE_INFINITY;
+    }
+    this.bullets = this.bullets.filter((bullet) => bullet.from === 'player');
+
+    const civilian = new CivilianVehicle(
+      this,
+      this.art,
+      getCivilian('sedan'),
+      this.distance + 60,
+      0,
+      this.blueprint.road,
+      0,
+    );
+    civilian.sprite.x = this.player.x;
+    civilian.sprite.y = PLAYER.y + this.distance - civilian.at;
+    this.civilians.push(civilian);
   }
 
   /**
@@ -625,6 +676,25 @@ export class GameScene extends Phaser.Scene {
         }
       }
     }
+
+    // Player bullets vs civilian traffic. Shooting a civilian is a deliberate act, so it
+    // costs more than clipping one: the road punishes careless gunnery, not just
+    // careless driving. A wrecked civilian hit again in the same frame is skipped.
+    for (const bullet of this.bullets) {
+      if (bullet.from !== 'player' || !Number.isFinite(bullet.at)) continue;
+      const civilian = this.civilians.find(
+        (c) =>
+          !c.wrecked &&
+          Math.abs(bullet.sprite.x - c.sprite.x) < c.sprite.displayWidth * 0.45 &&
+          Math.abs(bullet.sprite.y - c.sprite.y) < c.sprite.displayHeight * 0.45,
+      );
+      if (!civilian) continue;
+
+      bullet.sprite.destroy();
+      bullet.at = Number.NEGATIVE_INFINITY;
+      this.applyScore('civilianDestroyed');
+      this.wreckCivilian(civilian, 'CIVILIAN DOWN');
+    }
     this.bullets = this.bullets.filter((b) => Number.isFinite(b.at));
 
     // Enemy bullets vs player.
@@ -647,17 +717,13 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
-    // Civilians vs player. Hitting traffic is a score penalty, not a life: the road is
+    // Civilians vs player. Hitting traffic costs score, but never armour: the road is
     // dense, and losing armour to unseen neutral cars reads as unfair rather than hard.
     for (const civilian of this.civilians) {
       if (civilian.wrecked) continue;
       if (this.overlapsPlayer(civilian.sprite.x, civilian.sprite.y, civilian.halfWidth, civilian.halfHeight)) {
-        civilian.wreck(this.distance);
-        this.challenges.notifyCivilianHit();
-        this.score = Math.max(0, this.score + SCORE.civilianHit);
-        this.cameras.main.shake(90, 0.005);
-        this.audio.play('hit');
-        this.showBanner('CIVILIAN HIT');
+        this.applyScore('civilianContact');
+        this.wreckCivilian(civilian, 'CIVILIAN HIT');
       }
     }
 
@@ -703,15 +769,33 @@ export class GameScene extends Phaser.Scene {
     if (!this.player.takeHit(time)) return;
     this.cameras.main.shake(160, 0.008);
     this.audio.play('hit');
-    this.score = Math.max(0, this.score + SCORE.civilianHit * 0.2);
+    // Armour and score are separate resources: a hit that the car survives costs no
+    // points, so only a destroyed vehicle moves the score.
+    this.applyScore('armourHit');
 
     if (this.player.isDestroyed) {
       this.endRun();
     }
   }
 
+  /** Apply one scoring rule, clamped at zero, and record it for the debug surface. */
+  private applyScore(kind: ScoreEventKind): void {
+    const delta = scoreDelta(kind);
+    this.score = Math.max(0, this.score + delta);
+    this.lastScoreEvent = { kind, delta };
+  }
+
+  /** Shared civilian wreck: tint, challenge counter, feedback. Called by contact and fire. */
+  private wreckCivilian(civilian: CivilianVehicle, banner: string): void {
+    civilian.wreck(this.distance);
+    this.challenges.notifyCivilianHit();
+    this.cameras.main.shake(90, 0.005);
+    this.audio.play('hit');
+    this.showBanner(banner);
+  }
+
   private killEnemy(enemy: EnemyVehicle): void {
-    this.score += enemy.def.score;
+    this.applyScore('enemyDestroyed');
     this.challenges.notifyKill();
     this.audio.play('explosion');
     this.cameras.main.shake(90, 0.004);
@@ -879,6 +963,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   private showBanner(text: string): void {
+    this.lastBanner = text;
     const width = measureText(text, 1) + 16;
     const plate = this.add.graphics().setDepth(199);
     plate.fillStyle(PALETTE.void, 0.9);

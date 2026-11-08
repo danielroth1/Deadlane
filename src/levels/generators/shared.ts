@@ -242,7 +242,7 @@ function buildChallenges(rng: Rng, type: LevelType, length: number, index: numbe
           from,
           to,
           target: 0,
-          label: 'NO CIVILIAN CONTACT',
+          label: 'SPARE CIVILIANS',
         });
         break;
       default:
