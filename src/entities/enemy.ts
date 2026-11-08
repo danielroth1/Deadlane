@@ -1,5 +1,5 @@
 import type Phaser from 'phaser';
-import { PLAYER } from '@/config';
+import { GAME, PLAYER, SPAWN } from '@/config';
 import { laneCenter, type RoadProfile } from '@/levels/types';
 import type { EnemyDef } from '@/content';
 import type { Art } from '@/art';
@@ -68,8 +68,18 @@ export class EnemyVehicle {
     this.sprite.setScale(def.size / Math.max(1, this.sprite.width));
   }
 
-  get isOffscreen(): boolean {
-    return this.sprite.y > 460;
+  /**
+   * Past either edge of the play aperture.
+   *
+   * Screen `y` alone is not enough: a unit that has fallen behind the player is still on
+   * screen for another stretch, and after a sector boundary its world `at` belongs to the
+   * previous sector, so it would never reach the bottom edge at all.
+   */
+  isOffscreen(distance: number): boolean {
+    return (
+      this.at < distance - SPAWN.despawnMargin ||
+      this.sprite.y > GAME.height + SPAWN.despawnMargin
+    );
   }
 
   get wantsToFire(): boolean {

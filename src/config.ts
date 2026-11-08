@@ -61,12 +61,16 @@ export const SPEED = {
 } as const;
 
 export const SPAWN = {
-  /** Distance in world pixels between director ticks. */
-  directorInterval: 90,
   maxEnemiesOnScreen: 9,
   maxTrafficOnScreen: 14,
   /** Nothing spawns in the first stretch, so the player is never ambushed at spawn. */
   safeStartPixels: 900,
+  /**
+   * How far past the play aperture a unit travels before it is culled, in pixels.
+   *
+   * Applied on both edges: a unit that falls this far behind the player and one that
+   * escapes this far below the screen are both gone.
+   */
   despawnMargin: 120,
 } as const;
 
@@ -90,6 +94,10 @@ export const LEVEL = {
   lengthPixels: 24_000,
   /** Metadata distance unit shown to the player. */
   metresPerPixel: 0.04,
+  /** How long the sector card stays up before play resumes, in ms. */
+  introMs: 1600,
+  /** Fade-in for that card, in ms. */
+  introFadeMs: 180,
 } as const;
 
 export const AUDIO = {

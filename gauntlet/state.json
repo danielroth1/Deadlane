@@ -378,11 +378,13 @@
       "id": "WO-33",
       "title": "Sector transition: clear the world, present the sector, ramp from config",
       "file": "gauntlet/work-orders/WO-33-sector-transition.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-32"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "boundary clears world + resets spawner, LevelIntro card, visibility overlay, ramp/despawnMargin consumed"
     },
     {
       "id": "WO-34",

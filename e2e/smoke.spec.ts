@@ -16,6 +16,8 @@ interface DeadlaneSnapshot {
   muted: boolean;
   enemies: number;
   civilians: number;
+  sectorCard: { level: number; label: string } | null;
+  lastSectorCard: { level: number; label: string } | null;
   hud: { distance: number; speed: number; score: number; level: number };
 }
 
@@ -156,5 +158,45 @@ test('Esc pauses the run, and Esc resumes it', async ({ page }) => {
 
   expect(boosting.hud.speed).toBeGreaterThan(resumed.hud.speed);
   expect(boosting.hud.distance).toBeGreaterThan(resumed.hud.distance);
+  expect(errors).toEqual([]);
+});
+
+test('presents a sector card naming the sector and its road', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+
+  await page.goto(`${BASE}?debug=1&seed=424242`);
+  await expect(page.locator('#dl-root canvas')).toBeVisible({ timeout: 15_000 });
+
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press('Space');
+        return page.evaluate(() =>
+          Boolean((window as unknown as { __deadlane?: unknown }).__deadlane),
+        );
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+
+  // Sector 1 is the highway, and the card names it before the road starts moving.
+  await expect
+    .poll(async () => (await readSnapshot(page)).lastSectorCard?.label ?? null)
+    .toBe('INTERSTATE 9');
+
+  const card = await readSnapshot(page);
+  expect(card.lastSectorCard?.level).toBe(1);
+
+  // The card clears on its own and the run resumes from a standing start.
+  await page.waitForFunction(
+    () => {
+      const snap = (window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane;
+      return snap !== undefined && snap.sectorCard === null && snap.hud.distance > 0;
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+
   expect(errors).toEqual([]);
 });

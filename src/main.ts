@@ -4,6 +4,7 @@ import { BootScene, PreloadScene } from '@/scenes/BootScene';
 import { TitleScene } from '@/scenes/TitleScene';
 import { GameScene } from '@/scenes/GameScene';
 import { HudScene } from '@/scenes/HudScene';
+import { LevelIntroScene } from '@/scenes/LevelIntroScene';
 import { GameOverScene } from '@/scenes/GameOverScene';
 
 /**
@@ -32,7 +33,17 @@ const config: Phaser.Types.Core.GameConfig = {
     antialias: false,
     powerPreference: 'low-power',
   },
-  scene: [BootScene, PreloadScene, TitleScene, GameScene, HudScene, GameOverScene],
+  // Scene order is render order: the sector card must draw above both the world and the
+  // HUD, so it is registered after `Hud`.
+  scene: [
+    BootScene,
+    PreloadScene,
+    TitleScene,
+    GameScene,
+    HudScene,
+    LevelIntroScene,
+    GameOverScene,
+  ],
 };
 
 async function start(): Promise<void> {

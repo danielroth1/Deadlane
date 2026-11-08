@@ -116,7 +116,7 @@ src/                    the game (browser bundle)
   rng.ts                seeded sfc32 PRNG — the only source of randomness
   art/                  procedural placeholder sprites (game runs with zero AI art)
   entities/             player, enemies, civilians, projectiles, pickups
-  systems/              road, spawning, weapons, score, audio, challenges
+  systems/              road, spawner, audio, challenges
   levels/               LevelBlueprint types, generators, validation
   content/              JSON data tables (enemies, civilians, weapons, challenges)
   scenes/               Boot, Preload, Title, LevelIntro, Game, Hud, GameOver

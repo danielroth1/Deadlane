@@ -144,6 +144,11 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
   },
 };
 
+/** The human-readable name of a level type, as shown on the sector card. */
+export function levelLabelFor(type: LevelType): string {
+  return LEVEL_PROFILES[type].label;
+}
+
 export function roadProfileFor(type: LevelType): RoadProfile {
   const profile = LEVEL_PROFILES[type];
   const laneWidth = profile.type === 'tunnel' || profile.type === 'river' ? 76 : ROAD.laneWidth;

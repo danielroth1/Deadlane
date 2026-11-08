@@ -7,13 +7,20 @@ import { PlayerVehicle } from '@/entities/player';
 import { EnemyVehicle } from '@/entities/enemy';
 import { CivilianVehicle } from '@/entities/civilian';
 import { getCivilian, getEnemy } from '@/content';
-import { levelForSeed, typeForIndex, type LevelBlueprint } from '@/levels';
+import { levelForSeed, levelLabelFor, type LevelBlueprint } from '@/levels';
 import { laneCenter, type LevelEvent } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
 import { AudioSystem } from '@/systems/audio';
 import { ChallengeSystem } from '@/systems/challenges';
+import {
+  createSpawnerState,
+  resetSpawner,
+  takeDueEvents,
+  type SpawnerState,
+} from '@/systems/spawner';
 import { PixelText, measureText } from '@/ui/pixel-text';
 import { seedFromLocation } from '@/rng';
+import { SECTOR_INTRO_DONE_EVENT } from './LevelIntroScene';
 
 /** Emitted by this scene whenever the run is paused or resumed. The HUD owns the key. */
 export const RUN_PAUSED_EVENT = 'run:paused';
@@ -56,12 +63,22 @@ export interface HudState {
   challengeTarget: number;
 }
 
+/** What the sector card is currently saying. */
+export interface SectorCardState {
+  readonly level: number;
+  readonly label: string;
+}
+
 /** Read-only run view served to Playwright through `window.__deadlane` at `?debug=1`. */
 export interface RunDebugState {
   readonly paused: boolean;
   readonly muted: boolean;
   readonly enemies: number;
   readonly civilians: number;
+  /** The card on screen right now, or null once play has resumed. */
+  readonly sectorCard: SectorCardState | null;
+  /** The most recent card this run has presented, whether or not it is still up. */
+  readonly lastSectorCard: SectorCardState | null;
   readonly hud: HudState;
 }
 
@@ -85,7 +102,13 @@ export class GameScene extends Phaser.Scene {
   private distance = 0;
   private intensity = 0;
   private score = 0;
-  private eventCursor = 0;
+  private spawner: SpawnerState = createSpawnerState();
+  /** Play time since the run started, across sectors. Drives the difficulty ramp. */
+  private runSeconds = 0;
+  private introActive = false;
+  private sectorCard: SectorCardState | null = null;
+  private lastSectorCard: SectorCardState | null = null;
+  private darkness!: Phaser.GameObjects.Graphics;
 
   private enemies: EnemyVehicle[] = [];
   private civilians: CivilianVehicle[] = [];
@@ -114,7 +137,11 @@ export class GameScene extends Phaser.Scene {
     this.distance = 0;
     this.intensity = 0;
     this.score = 0;
-    this.eventCursor = 0;
+    this.spawner = createSpawnerState();
+    this.runSeconds = 0;
+    this.introActive = false;
+    this.sectorCard = null;
+    this.lastSectorCard = null;
     this.enemies = [];
     this.civilians = [];
     this.bullets = [];
@@ -151,6 +178,19 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.Key
     >;
 
+    // Darkness for the run, drawn above the world but below this scene's cards and banners.
+    this.darkness = this.add.graphics().setDepth(90);
+    this.applyVisibility();
+
+    const onIntroDone = (): void => {
+      this.introActive = false;
+      this.sectorCard = null;
+    };
+    this.events.on(SECTOR_INTRO_DONE_EVENT, onIntroDone);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(SECTOR_INTRO_DONE_EVENT, onIntroDone);
+    });
+
     // Esc is owned by the HUD, which keeps running while this scene is paused.
     this.scene.launch('Hud', { game: this });
 
@@ -161,6 +201,8 @@ export class GameScene extends Phaser.Scene {
 
     this.cameras.main.setBackgroundColor(GAME.background);
     this.cameras.main.fadeIn(300, 0, 0, 0);
+
+    this.presentSector();
   }
 
   /* ------------------------------- public API ------------------------------ */
@@ -176,7 +218,7 @@ export class GameScene extends Phaser.Scene {
       speed: this.currentScroll(),
       distance: Math.round(this.distance * LEVEL.metresPerPixel),
       level: this.levelIndex,
-      levelLabel: this.blueprint?.type.toUpperCase() ?? '',
+      levelLabel: this.blueprint ? levelLabelFor(this.blueprint.type) : '',
       challenge: this.challengeLabel,
       challengeProgress: this.challengeProgress,
       challengeTarget: this.challengeTarget,
@@ -194,6 +236,8 @@ export class GameScene extends Phaser.Scene {
       muted: this.audio?.isMuted ?? false,
       enemies: this.enemies.length,
       civilians: this.civilians.length,
+      sectorCard: this.sectorCard,
+      lastSectorCard: this.lastSectorCard,
       hud: this.hudState,
     };
   }
@@ -205,6 +249,8 @@ export class GameScene extends Phaser.Scene {
    * the HUD; this scene only owns the state and the scene lifecycle.
    */
   togglePause(): void {
+    // The world is already frozen behind the sector card; pausing it would only hide it.
+    if (this.introActive) return;
     if (this.paused) this.resumeRun();
     else this.pauseRun();
   }
@@ -226,10 +272,11 @@ export class GameScene extends Phaser.Scene {
   /* --------------------------------- update -------------------------------- */
 
   override update(time: number, delta: number): void {
-    if (this.paused || !this.player) return;
+    if (this.paused || this.introActive || !this.player) return;
 
     const dt = Math.min(delta, 50) / 1000;
 
+    this.runSeconds += dt;
     this.readInput(time);
     this.intensity = this.computeIntensity(dt);
 
@@ -292,22 +339,22 @@ export class GameScene extends Phaser.Scene {
   }
 
   private computeIntensity(dt: number): number {
-    const timeFactor = Math.min(1, this.distance / (LEVEL.lengthPixels * 0.9));
-    const target = Math.min(1, timeFactor * 0.8 + (this.levelIndex - 1) * 0.1);
+    // Full intensity after `rampSeconds` of play, with a per-sector floor so a late sector
+    // never opens as gently as the first one.
+    const ramp = Math.min(1, this.runSeconds / DIFFICULTY.rampSeconds);
+    const target = Math.min(1, ramp * 0.8 + (this.levelIndex - 1) * 0.1);
     return this.intensity + (target - this.intensity) * Math.min(1, dt / DIFFICULTY.smoothing / 1000 + dt * 0.4);
   }
 
   /* -------------------------------- spawning ------------------------------- */
 
   private spawnFromBlueprint(): void {
-    const horizon = this.distance + GAME.height + 120;
+    const due = takeDueEvents(this.spawner, this.blueprint.events, {
+      horizon: this.distance + GAME.height + 120,
+      behind: this.distance,
+    });
 
-    while (this.eventCursor < this.blueprint.events.length) {
-      const event = this.blueprint.events[this.eventCursor]!;
-      if (event.at > horizon) break;
-      this.eventCursor += 1;
-      this.spawnEvent(event);
-    }
+    for (const event of due) this.spawnEvent(event);
   }
 
   private spawnEvent(event: LevelEvent): void {
@@ -365,7 +412,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.enemies = this.enemies.filter((enemy) => {
-      if (enemy.isOffscreen) {
+      if (enemy.isOffscreen(this.distance)) {
         enemy.destroy();
         return false;
       }
@@ -378,7 +425,7 @@ export class GameScene extends Phaser.Scene {
       civilian.update(dt, scroll, this.distance);
     }
     this.civilians = this.civilians.filter((c) => {
-      if (c.isOffscreen) {
+      if (c.isOffscreen(this.distance)) {
         c.destroy();
         return false;
       }
@@ -649,16 +696,25 @@ export class GameScene extends Phaser.Scene {
 
   /* --------------------------------- flow ---------------------------------- */
 
+  /**
+   * Cross the sector boundary.
+   *
+   * World distance restarts at 0 here, which makes every carried-over entity's `at` a
+   * meaningless number in the thousands: it can never come back on screen, so it would sit
+   * in the arena forever and eat a spawn slot. The world is therefore emptied first, and
+   * the spawner cursor is reset so the new blueprint starts on its own first event.
+   */
   private advanceLevel(): void {
+    this.clearWorld();
+
     this.levelIndex += 1;
     this.blueprint = levelForSeed(this.seed, this.levelIndex);
     this.distance = 0;
-    this.eventCursor = 0;
-    this.intensity = Math.max(0.2, this.intensity * 0.7);
+    resetSpawner(this.spawner);
 
-    this.road.destroy();
-    this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type);
-
+    this.challengeLabel = '';
+    this.challengeProgress = 0;
+    this.challengeTarget = 0;
     this.challenges = new ChallengeSystem(
       this.blueprint,
       (plan) => {
@@ -668,7 +724,61 @@ export class GameScene extends Phaser.Scene {
       (plan) => this.showBanner(`CHALLENGE FAILED · ${plan.label}`),
     );
 
-    this.showBanner(`SECTOR ${this.levelIndex} · ${typeForIndex(this.levelIndex).toUpperCase()}`);
+    this.road.destroy();
+    this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type);
+    this.applyVisibility();
+
+    this.presentSector();
+  }
+
+  /** Destroy every live world object, on both edges of the play aperture. */
+  private clearWorld(): void {
+    for (const enemy of this.enemies) enemy.destroy();
+    for (const civilian of this.civilians) civilian.destroy();
+    for (const bullet of this.bullets) bullet.sprite.destroy();
+    for (const hazard of this.hazards) hazard.sprite.destroy();
+    for (const pickup of this.pickups) pickup.sprite.destroy();
+    for (const prop of this.props) prop.sprite.destroy();
+
+    this.enemies = [];
+    this.civilians = [];
+    this.bullets = [];
+    this.hazards = [];
+    this.pickups = [];
+    this.props = [];
+  }
+
+  /** Darken the world for the run. `visibility` 1 is clear; a tunnel is 0.45. */
+  private applyVisibility(): void {
+    const alpha = 1 - Math.max(0, Math.min(1, this.blueprint.visibility));
+    this.darkness.clear();
+
+    if (alpha <= 0) {
+      this.darkness.setVisible(false);
+      return;
+    }
+
+    this.darkness.setVisible(true);
+    this.darkness.fillStyle(PALETTE.void, alpha);
+    this.darkness.fillRect(0, 0, GAME.width, GAME.height);
+  }
+
+  /** Freeze the run behind a card naming the sector and the level type. */
+  private presentSector(): void {
+    const card: SectorCardState = {
+      level: this.levelIndex,
+      label: levelLabelFor(this.blueprint.type),
+    };
+
+    this.sectorCard = card;
+    this.lastSectorCard = card;
+    this.introActive = true;
+
+    this.scene.launch('LevelIntro', {
+      levelIndex: this.levelIndex,
+      type: this.blueprint.type,
+      targetScene: this.scene.key,
+    });
   }
 
   private endRun(): void {
