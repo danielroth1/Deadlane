@@ -228,7 +228,7 @@ Measured on the four attempts already pulled under the 2 × 2 @ 128 px contract.
 reports `usableCells 4/4` for all four slots, but that counter only counts non-empty cells,
 so the per-cell read below is the gate.
 
-| Slot | Attempt | `usableCells` | Transparency, cells 0–3 | Opaque border px, cells 0–3 | Shipped footprint, cells 0–3 |
+| Slot | Attempt | `usableCells` (non-empty tool counter) | Transparency, cells 0–3 | Opaque border px, cells 0–3 | Shipped footprint, cells 0–3 |
 | --- | --- | --- | --- | --- | --- |
 | `art-03-enemy-ground-a` | 2 | **4/4** | 74.5 / 61.5 / 74.3 / 55.4 % | 0 / 0 / 0 / 0 | 69×120, 65×120, 53×92, 70×120 |
 | `art-04-enemy-ground-b` | 1 | **4/4** | 52.3 / 53.9 / 71.3 / 64.8 % | 0 / 0 / 0 / 0 | 72×120, 98×120, 60×89, 61×120 |
@@ -291,18 +291,21 @@ Re-packed the same four paid attempts under the WO-25 trim/rotation and WO-26 ch
 fixes. **No image was generated, claimed or pulled.** This read supersedes the WO-24
 numbers above, which were taken before those fixes.
 
-`art:process` prints `usable cells 4/4` for all four slots, because that counter only
-rejects empty cells. It is quoted raw and unedited below and is **not** the gate. The
-per-cell read underneath it is the gate, and two cells fail it. A failing cell is deleted
-from `pipeline/work/` after the last `art:process` run and therefore has no processed cell
-file and no atlas frame — it is **not** shipped.
+`art:process` prints `usable cells 4/4` for all four slots. That counter only rejects empty
+cells: it is **not** the gate and it is not the yield. It reads 4/4 even for the two slots
+that ship three frames, because the cells the gate rejects are dropped by hand after
+`art:process` has already written `metrics.json`, and that file is not rewritten afterwards.
+Every `4/4` below is the tool counter and nothing more; the gate column is the yield.
 
-| Slot | Attempt | `usableCells` (raw tool output) | Cells passing gate |
+| Slot | Attempt | Non-empty cells — tool counter (`usableCells` in `metrics.json`) | Cells passing gate (yield) |
 | --- | --- | --- | --- |
 | `art-03-enemy-ground-a` | 2 | 4/4 | **3/4** |
 | `art-04-enemy-ground-b` | 1 | 4/4 | **4/4** |
 | `art-05-enemy-air` | 1 | 4/4 | **4/4** |
 | `art-06-enemy-sea` | 1 | 4/4 | **3/4** |
+
+Per-cell readings, taken from the processed 128 px cell files written by the final
+`art:process` run, before the two drops described at the end of this section:
 
 | Slot | Cell | Transparency | Opaque border px | Shipped footprint | Gate |
 | --- | --- | --- | --- | --- | --- |
@@ -356,12 +359,27 @@ Metrics as reported by `art:process`: `art-03` palette 40.7, size variance 0.01,
 `art-06` 43.5 / 0.03 / 79 % / 88.2.
 
 **Gate outcome (WO-27): 14 of 16 cells pass.** `art-03` is **3/4**, `art-04` **4/4**,
-`art-05` **4/4**, `art-06` **3/4**. The two failures are enforced, not just recorded: both
-cells were removed after the final `art:process` run, before `art:atlas`, so
-`public/assets/sheets/art-03-enemy-ground-a.png` and `art-06-enemy-sea.png` each pack **3
-frames** and `enemy-ground-a/enforcer-motorcycle` and `enemy-sea/speedboat-hostile` are
-absent from `assets.json`. The game draws placeholder art for those two ids. Fourteen enemy
-sprites are shipped from these four slots. No claim beyond these numbers is made here.
+`art-05` **4/4**, `art-06` **3/4**.
+
+**The two drops are a manual step. No script performs or enforces them.** After the final
+`art:process` run and before `art:atlas`, the two failing cell files were removed by hand:
+
+```
+rm pipeline/work/art-03-enemy-ground-a/attempt-2/cell-0.png
+rm pipeline/work/art-06-enemy-sea/attempt-1/cell-1.png
+```
+
+`pipeline/steps/process-slot.ts` rewrites `cell-<index>.png` for every non-empty cell, so
+re-running `npm run art:process -- --slot art-03-enemy-ground-a` (or `art-06-enemy-sea`)
+**restores both dropped cells**, and an `art:atlas` run after that packs them again. The
+drop survives only in the ordering process → `rm` → `atlas`; anyone re-running the work
+order's verification must repeat the two `rm` commands before `art:atlas`.
+
+Because the drop was performed in that order, `public/assets/sheets/art-03-enemy-ground-a.png`
+and `art-06-enemy-sea.png` each pack **3 frames**, and `enemy-ground-a/enforcer-motorcycle`
+and `enemy-sea/speedboat-hostile` are absent from `assets.json`. The game draws placeholder
+art for those two ids. Fourteen enemy sprites are shipped from these four slots. No claim
+beyond these numbers is made here.
 
 ## 6. Motion
 

@@ -311,14 +311,14 @@
       "id": "WO-27",
       "title": "Re-pack enemy sheets 03-06 and record measured yield",
       "file": "gauntlet/work-orders/WO-27-enemy-repack.md",
-      "status": "pending",
-      "round": 2,
+      "status": "escalated",
+      "round": 3,
       "dependsOn": [
         "WO-25",
         "WO-26"
       ],
       "lastVerdict": "fail",
-      "note": "manual cell delete is not enforced by any script and still documented as enforced; usableCells still reads 4/4 beside 3-frame sheets; verification transcript annotated not verbatim"
+      "note": "artefact correct (3/4/4/3 frames, 0 hot-pink, validate green); verdict turned on transcript fidelity: abridged art:04-06 stdout, rm steps left inside the verification block, no art:atlas output"
     }
   ]
 }
