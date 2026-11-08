@@ -198,7 +198,7 @@ export class GameScene extends Phaser.Scene {
     this.challenges = new ChallengeSystem(
       this.blueprint,
       (plan) => {
-        this.score += 250;
+        this.score += plan.reward;
         this.showBanner(`CHALLENGE COMPLETE · ${plan.label}`);
       },
       (plan) => {

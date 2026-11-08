@@ -121,10 +121,15 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
         message: `Challenge ${challenge.id} ends past the level`,
       });
     }
-    if (challenge.kind === 'destroy' && challenge.target <= 0) {
+    if (
+      (challenge.kind === 'destroy' ||
+        challenge.kind === 'collect' ||
+        challenge.kind === 'survive') &&
+      challenge.target <= 0
+    ) {
       issues.push({
         code: 'challenge-target',
-        message: `Challenge ${challenge.id} asks for ${challenge.target} kills`,
+        message: `Challenge ${challenge.id} (${challenge.kind}) has no target`,
       });
     }
   }

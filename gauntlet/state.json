@@ -411,8 +411,10 @@
       "title": "All five challenge kinds, paid from challenges.json",
       "file": "gauntlet/work-orders/WO-36-challenges.md",
       "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "fail",
+      "note": "advanceLevel() still pays hardcoded 300, plan.reward ignored after sector 1"
     },
     {
       "id": "WO-37",

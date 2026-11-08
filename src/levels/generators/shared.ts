@@ -1,4 +1,5 @@
-import { LEVEL, SPAWN } from '@/config';
+import { LEVEL, SPEED, SPAWN } from '@/config';
+import { CHALLENGE_TEMPLATES, type ChallengeDef } from '@/content';
 import { createRng, type Rng } from '@/rng';
 import {
   LEVEL_PROFILES,
@@ -202,53 +203,67 @@ function buildChallenges(rng: Rng, type: LevelType, length: number, index: numbe
   const windowSize = length / windows;
   const out: ChallengePlan[] = [];
 
-  const destroyTargets = ['enforcer', 'switchblade', 'roadlord'];
-  const target = destroyTargets[Math.min(destroyTargets.length - 1, Math.floor((index - 1) / 2))]!;
+  // Kinds come from the content table, so a template can never be orphaned by a generator
+  // that forgot one existed.
+  const offset = (index - 1) % CHALLENGE_TEMPLATES.length;
+  const scrollMultiplier = LEVEL_PROFILES[type].scrollMultiplier;
 
-  const kinds: readonly ChallengePlan['kind'][] = ['reach', 'destroy', 'clean'];
+  const destroyTargets = ['enforcer', 'switchblade', 'roadlord'];
+  const enemy = destroyTargets[Math.min(destroyTargets.length - 1, Math.floor((index - 1) / 2))]!;
 
   for (let i = 0; i < windows; i += 1) {
     const from = Math.round(i * windowSize);
     const to = Math.round((i + 1) * windowSize);
-    const kind = kinds[i % kinds.length]!;
+    // Rotating the starting kind per sector is what lets a three-window level still show
+    // all five kinds over a run instead of opening on `reach` every time.
+    const template = challengeTemplateAt(offset + i);
+    const kind = template.kind;
+    const target = challengeTarget(kind, rng, to - from, scrollMultiplier);
 
-    switch (kind) {
-      case 'reach':
-        out.push({
-          id: `c${i}-reach`,
-          kind,
-          from,
-          to,
-          target: 0,
-          label: `REACH ${Math.round(to * LEVEL.metresPerPixel)} m`,
-        });
-        break;
-      case 'destroy': {
-        const count = rng.int(2, 4);
-        out.push({
-          id: `c${i}-destroy`,
-          kind,
-          from,
-          to,
-          target: count,
-          label: `DESTROY ${count} ${target.toUpperCase()}S`,
-        });
-        break;
-      }
-      case 'clean':
-        out.push({
-          id: `c${i}-clean`,
-          kind,
-          from,
-          to,
-          target: 0,
-          label: 'SPARE CIVILIANS',
-        });
-        break;
-      default:
-        break;
-    }
+    const label = fillTemplate(template.label, {
+      metres: String(Math.round(to * LEVEL.metresPerPixel)),
+      count: String(target),
+      target: `${enemy.toUpperCase()}S`,
+      seconds: String(target),
+    });
+
+    out.push({ id: `c${i}-${kind}`, kind, from, to, target, label, reward: template.reward });
   }
 
   return out;
+}
+
+function challengeTemplateAt(index: number): ChallengeDef {
+  const template = CHALLENGE_TEMPLATES[index % CHALLENGE_TEMPLATES.length];
+  if (!template) {
+    throw new Error('challenges.json must define at least one challenge template');
+  }
+  return template;
+}
+
+/** Kinds with a counter target; `reach` and `clean` are pass/fail windows. */
+function challengeTarget(
+  kind: ChallengeDef['kind'],
+  rng: Rng,
+  windowPixels: number,
+  scrollMultiplier: number,
+): number {
+  switch (kind) {
+    case 'destroy':
+      return rng.int(2, 4);
+    case 'collect':
+      return rng.int(2, 3);
+    case 'survive':
+      // Nominal seconds for the window at base scroll; the HUD fills against the same
+      // number, so the gauge closes exactly as the window ends.
+      return Math.max(1, Math.round(windowPixels / (SPEED.baseScroll * scrollMultiplier)));
+    case 'reach':
+    case 'clean':
+    default:
+      return 0;
+  }
+}
+
+function fillTemplate(template: string, values: Readonly<Record<string, string>>): string {
+  return template.replace(/\{(\w+)\}/g, (match, key: string) => values[key] ?? match);
 }

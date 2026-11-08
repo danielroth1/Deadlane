@@ -57,7 +57,7 @@ export class ChallengeSystem {
       active: true,
       complete: this.completed.has(plan.id),
       failed: this.failed.has(plan.id),
-      progress: this.progressFor(plan),
+      progress: this.progressFor(plan, distance),
       target: plan.target,
     };
   }
@@ -86,7 +86,7 @@ export class ChallengeSystem {
     return this.plans.length;
   }
 
-  private progressFor(plan: ChallengePlan): number {
+  private progressFor(plan: ChallengePlan, distance: number): number {
     switch (plan.kind) {
       case 'destroy':
         return Math.min(plan.target, this.counters.kills);
@@ -94,8 +94,15 @@ export class ChallengeSystem {
         return Math.min(plan.target, this.counters.pickups);
       case 'clean':
         return Math.min(1, this.counters.civilianHits);
+      case 'survive': {
+        // Windows are distance-based, so the seconds gauge advances with the window itself
+        // rather than with wall-clock time, which varies with speed and boost.
+        const span = plan.to - plan.from;
+        if (span <= 0) return plan.target;
+        const ratio = Math.max(0, Math.min(1, (distance - plan.from) / span));
+        return Math.min(plan.target, Math.round(ratio * plan.target));
+      }
       case 'reach':
-      case 'survive':
       default:
         return 0;
     }

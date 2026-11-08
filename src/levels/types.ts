@@ -37,6 +37,8 @@ export interface ChallengePlan {
   readonly to: number;
   readonly target: number;
   readonly label: string;
+  /** Points paid on completion, straight from the template in `challenges.json`. */
+  readonly reward: number;
 }
 
 export interface LevelBlueprint {

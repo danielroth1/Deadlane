@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { CHALLENGE_TEMPLATES } from '@/content';
 import { LEVEL_TYPES, generateLevel, levelForSeed } from './index';
 import { validateBlueprint } from './validate';
 
@@ -74,5 +75,28 @@ describe('level generation', () => {
     const blueprint = levelForSeed(7, 1);
     expect(blueprint.challenges.length).toBe(3);
     expect(blueprint.challenges.every((c) => c.to > c.from)).toBe(true);
+  });
+
+  it('emits every template kind across a run of sectors', () => {
+    const seen = new Set<string>();
+
+    for (let index = 1; index <= LEVEL_TYPES.length; index += 1) {
+      for (const challenge of levelForSeed(7, index).challenges) {
+        seen.add(challenge.kind);
+      }
+    }
+
+    for (const template of CHALLENGE_TEMPLATES) {
+      expect(seen).toContain(template.kind);
+    }
+  });
+
+  it('pays the reward its challenge template declares', () => {
+    for (let index = 1; index <= LEVEL_TYPES.length; index += 1) {
+      for (const challenge of levelForSeed(7, index).challenges) {
+        const template = CHALLENGE_TEMPLATES.find((entry) => entry.kind === challenge.kind);
+        expect(challenge.reward).toBe(template?.reward);
+      }
+    }
   });
 });
