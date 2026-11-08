@@ -232,6 +232,23 @@ describe('contactCost', () => {
     expect(contactCost(HARD_TRAFFIC).trafficPenalty).toBe(true);
   });
 
+  it('pays the traffic penalty after the run has ended but drops the jolt', () => {
+    // The wrecked-run branch: the contact still scores and destroys the neutral car, it
+    // just must not shake a camera that belongs to a finished run.
+    expect(contactCost(HARD_TRAFFIC)).toEqual({
+      armour: false,
+      damageOther: false,
+      trafficPenalty: true,
+      jolt: true,
+    });
+    expect(contactCost({ ...HARD_TRAFFIC, runEnded: true })).toEqual({
+      armour: false,
+      damageOther: false,
+      trafficPenalty: true,
+      jolt: false,
+    });
+  });
+
   it('spends exactly one armour hit on a hard ram', () => {
     expect(contactCost(HARD_RAM)).toEqual({
       armour: true,
@@ -262,7 +279,20 @@ describe('contactCost', () => {
     expect(contactCost({ ...HARD_RAM, hard: false })).toEqual(glance);
   });
 
-  it('is deterministic: the same contact costs the same twice', () => {
-    expect(contactCost(HARD_RAM)).toEqual(contactCost(HARD_RAM));
+  it('costs a hard ram nothing once the run has ended', () => {
+    // The scene keeps ticking during the game-over delay, so a hostile can still touch the
+    // wreck: it resolves and costs nothing — no armour, no second wreck, no jolt.
+    expect(contactCost({ ...HARD_RAM, runEnded: true })).toEqual({
+      armour: false,
+      damageOther: false,
+      trafficPenalty: false,
+      jolt: false,
+    });
+    expect(contactCost({ ...HARD_RAM, runEnded: true, invulnerable: true })).toEqual({
+      armour: false,
+      damageOther: false,
+      trafficPenalty: false,
+      jolt: false,
+    });
   });
 });

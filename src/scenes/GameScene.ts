@@ -1563,11 +1563,15 @@ export class GameScene extends Phaser.Scene {
   /**
    * Start the deterministic camera kick a hit leaves behind.
    *
-   * Every armour hit goes through here — a shell, rough ground, a ram, the debug control —
-   * rather than through Phaser's `Camera.shake()`, which offsets the frame with
-   * `Math.random()` and would make a seeded run irreproducible frame for frame. This is the
-   * same beat written as a decaying sine on the camera's scroll: no randomness, no clock
-   * reads beyond the frame time, so a replay of the same run shakes exactly the same way.
+   * Every hit that jolts the frame goes through here — a shell, rough ground, a ram, a
+   * traffic contact on a run that is still driving, the debug control — rather than through
+   * Phaser's `Camera.shake()`, which offsets the frame with `Math.random()` and would make a
+   * seeded run irreproducible frame for frame. This is the same beat written as a decaying
+   * sine on the camera's scroll: no randomness, no clock reads beyond the frame time, so a
+   * replay of the same run shakes exactly the same way.
+   *
+   * The one `Camera.shake()` left in this scene is `defeatBoss`, a reward beat that no
+   * contact can reach (boss collisions are outside this order), never a damage path.
    */
   private kickCamera(time: number): void {
     this.shakeFrom = time;
@@ -1634,9 +1638,9 @@ export class GameScene extends Phaser.Scene {
     // the same frame: once the run is over, nothing else may touch the wreck.
     if (this.runEnded) return false;
     if (!this.player.takeHit(time)) return false;
-    // Every damage path kicks the camera through `kickCamera`, never `Camera.shake()`: the
-    // shake offsets the frame with `Math.random()`, and a seeded run has to replay the same
-    // way.
+    // Every damage path — a shell, a ram, rough ground, the debug control — kicks the camera
+    // through `kickCamera` and never through `Camera.shake()`: the Phaser shake offsets the
+    // frame with `Math.random()`, and a seeded run has to replay the same way.
     this.kickCamera(time);
     this.audio.play('hit');
     // Armour and score are separate resources: a hit that the car survives costs no
@@ -1730,11 +1734,17 @@ export class GameScene extends Phaser.Scene {
     this.lastScoreEvent = { kind, delta };
   }
 
-  /** Shared civilian wreck: tint, challenge counter, feedback. Called by contact and fire. */
+  /**
+   * Shared civilian wreck: tint, challenge counter, feedback. Called by contact and fire.
+   *
+   * The camera is not shaken here. A hard contact kicks deterministically from the contact
+   * path (and a run that has already ended gets no jolt at all), while a shot-down civilian
+   * is feedback enough through its audio and banner. `Camera.shake()` would spend
+   * `Math.random()` and break seed replay.
+   */
   private wreckCivilian(civilian: CivilianVehicle, banner: string): void {
     civilian.wreck(this.distance);
     this.challenges.notifyCivilianHit();
-    this.cameras.main.shake(90, 0.005);
     this.audio.play('hit');
     this.showBanner(banner);
   }
@@ -1743,8 +1753,8 @@ export class GameScene extends Phaser.Scene {
     this.applyScore('enemyDestroyed');
     this.challenges.notifyKill();
     this.audio.play('explosion');
-    this.cameras.main.shake(90, 0.004);
-
+    // No camera shake: the explosion sprite and its audio are the feedback, and the camera
+    // kick belongs to `kickCamera`, which only a hit on the player earns.
     const boom = this.art
       .imageFrom(EFFECT_ART.explosion, enemy.sprite.x, enemy.sprite.y, () =>
         flatTexture(this, 'explosion', 'amber', 34, 'white'),
@@ -1915,7 +1925,8 @@ export class GameScene extends Phaser.Scene {
 
     this.player.showWrecked();
     this.audio.play('engineFail');
-    this.cameras.main.shake(400, 0.02);
+    // The hit that ended the run already kicked the camera through `damagePlayer`; a run
+    // that is over gets no second, random shake.
     this.scene.stop('Hud');
 
     // The scene keeps ticking until the 600 ms hand-off, which would add a few points and

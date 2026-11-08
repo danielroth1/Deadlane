@@ -628,14 +628,14 @@
       "id": "WO-55",
       "title": "Collision response: push apart, not delete",
       "file": "gauntlet/work-orders/WO-55-collisions.md",
-      "status": "pending",
-      "round": 2,
+      "status": "done",
+      "round": 3,
       "dependsOn": [
         "WO-52",
         "WO-54"
       ],
-      "lastVerdict": "fail",
-      "note": "Camera.shake still reachable via wreckCivilian/killEnemy/endRun; trivially-true determinism test"
+      "lastVerdict": "pass",
+      "note": "contact resolver deterministic; boss shake only remaining; traffic rule restored"
     },
     {
       "id": "WO-56",
