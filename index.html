@@ -27,6 +27,13 @@
         height: 100%;
         background: var(--dl-bg);
         overflow: hidden;
+        /* No scroll, no pinch-zoom, no double-tap zoom and no text selection: the whole
+           surface is a game canvas with a two-thumb touch pad on it. */
+        touch-action: none;
+        overscroll-behavior: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
         font-family: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, monospace;
         color: var(--dl-ink);
       }
@@ -36,6 +43,7 @@
         inset: 0;
         display: grid;
         place-items: center;
+        touch-action: none;
       }
 
       #dl-root canvas {

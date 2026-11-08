@@ -569,12 +569,14 @@
       "id": "WO-50",
       "title": "Full touch controls",
       "file": "gauntlet/work-orders/WO-50-touch-controls.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-32",
         "WO-34"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "pure multi-touch input module, pad in the gutters, one input path with keyboard, desktop tap-to-fire kept"
     }
   ]
 }

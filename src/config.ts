@@ -82,6 +82,31 @@ export const SPEED = {
   brake: 0.55,
 } as const;
 
+/**
+ * Touch pad geometry and feel.
+ *
+ * The pad is drawn inside the letterboxed 640×360 canvas, so its numbers are authored in
+ * the same pixels as everything else. Every button sits in one of the two 128 px gutters
+ * beside the road, clear of the 28 px HUD strip at the top and the 24 px strip at the foot:
+ * the play field stays unobstructed and no readout is covered.
+ */
+export const TOUCH = {
+  /** Pointer travel, px, before a drag steers. Below this the car holds its line. */
+  steerDeadzone: 12,
+  /** How long a tapped button stays lit, ms. Purely feedback; the action fires on press. */
+  tapFlashMs: 140,
+  pad: {
+    /** Right gutter: the thumb that holds the trigger. */
+    fire: { x: 524, y: 236, width: 104, height: 92 },
+    pause: { x: 576, y: 32, width: 56, height: 44 },
+    /** Left gutter: movement and the two rear weapons. */
+    boost: { x: 8, y: 236, width: 112, height: 92 },
+    brake: { x: 8, y: 138, width: 112, height: 92 },
+    oil: { x: 6, y: 36, width: 58, height: 52 },
+    smoke: { x: 66, y: 36, width: 58, height: 52 },
+  },
+} as const;
+
 export const SPAWN = {
   maxEnemiesOnScreen: 9,
   maxTrafficOnScreen: 14,

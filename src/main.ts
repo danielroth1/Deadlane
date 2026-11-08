@@ -28,6 +28,11 @@ const config: Phaser.Types.Core.GameConfig = {
     width: GAME.width,
     height: GAME.height,
   },
+  input: {
+    // Pointer 0 is the mouse; the rest are fingers. Two thumbs must be able to steer and
+    // hold the trigger at the same time, and a third finger covers a pad tap mid-drag.
+    activePointers: 3,
+  },
   render: {
     pixelArt: true,
     antialias: false,

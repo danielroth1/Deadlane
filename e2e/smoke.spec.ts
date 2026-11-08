@@ -18,6 +18,8 @@ interface DeadlaneSnapshot {
   civilians: number;
   sectorCard: { level: number; label: string } | null;
   lastSectorCard: { level: number; label: string } | null;
+  input: { steer: number; boost: boolean; brake: boolean; fire: boolean };
+  touchPad: boolean;
   hud: { distance: number; speed: number; score: number; level: number };
 }
 
@@ -159,6 +161,108 @@ test('Esc pauses the run, and Esc resumes it', async ({ page }) => {
   expect(boosting.hud.speed).toBeGreaterThan(resumed.hud.speed);
   expect(boosting.hud.distance).toBeGreaterThan(resumed.hud.distance);
   expect(errors).toEqual([]);
+});
+
+/** Start a run on the debug page, waiting out the boot sequence rather than racing it. */
+async function startRun(page: Page): Promise<void> {
+  await page.goto(`${BASE}?debug=1&seed=424242`);
+  await expect(page.locator('#dl-root canvas')).toBeVisible({ timeout: 15_000 });
+
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press('Space');
+        return page.evaluate(() =>
+          Boolean((window as unknown as { __deadlane?: unknown }).__deadlane),
+        );
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+
+  await page.waitForFunction(
+    () => {
+      const snap = (window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane;
+      return snap !== undefined && snap.hud.distance > 0;
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+}
+
+test('the touch pad drives fire, steer and pause from pointer events alone', async ({ page }) => {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+
+  // `touch=1` stands in for a device that reports `pointer: coarse`.
+  await page.goto(`${BASE}?debug=1&seed=424242&touch=1`);
+  const canvas = page.locator('#dl-root canvas');
+  await expect(canvas).toBeVisible({ timeout: 15_000 });
+
+  await expect
+    .poll(
+      async () => {
+        await page.keyboard.press('Space');
+        return page.evaluate(() =>
+          Boolean((window as unknown as { __deadlane?: unknown }).__deadlane),
+        );
+      },
+      { timeout: 15_000 },
+    )
+    .toBe(true);
+
+  await page.waitForFunction(
+    () => {
+      const snap = (window as unknown as { __deadlane?: DeadlaneSnapshot }).__deadlane;
+      return snap !== undefined && snap.hud.distance > 0;
+    },
+    undefined,
+    { timeout: 15_000 },
+  );
+
+  expect((await readSnapshot(page)).touchPad).toBe(true);
+
+  // Authored pixels to viewport pixels: the 640×360 canvas is fitted, not resized.
+  const box = await canvas.boundingBox();
+  if (!box) throw new Error('canvas has no bounding box');
+  const at = (x: number, y: number): { x: number; y: number } => ({
+    x: box.x + (x / 640) * box.width,
+    y: box.y + (y / 360) * box.height,
+  });
+
+  // Holding FIRE is a held action, the same state holding Space sets.
+  const fire = at(576, 282);
+  await page.mouse.move(fire.x, fire.y);
+  await page.mouse.down();
+  await expect.poll(async () => (await readSnapshot(page)).input.fire).toBe(true);
+  await page.mouse.up();
+  await expect.poll(async () => (await readSnapshot(page)).input.fire).toBe(false);
+
+  // Dragging the play field left of the car steers left, with no keyboard involved.
+  const field = at(140, 200);
+  await page.mouse.move(field.x, field.y);
+  await page.mouse.down();
+  await expect.poll(async () => (await readSnapshot(page)).input.steer).toBe(-1);
+  await page.mouse.up();
+  await expect.poll(async () => (await readSnapshot(page)).input.steer).toBe(0);
+
+  // The pause button lives on the HUD, so it still works once the run is frozen.
+  const pause = at(604, 54);
+  await page.mouse.click(pause.x, pause.y);
+  await expect.poll(async () => (await readSnapshot(page)).paused).toBe(true);
+  expect((await readSnapshot(page)).pauseCard).toBe(true);
+
+  await page.mouse.click(pause.x, pause.y);
+  await expect.poll(async () => (await readSnapshot(page)).paused).toBe(false);
+
+  expect(errors).toEqual([]);
+});
+
+test('keeps the touch pad off a mouse-only desktop', async ({ page }) => {
+  await startRun(page);
+
+  const snap = await readSnapshot(page);
+  expect(snap.touchPad).toBe(false);
 });
 
 test('presents a sector card naming the sector and its road', async ({ page }) => {

@@ -25,6 +25,7 @@ import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
 import type { AudioSystem } from '@/systems/audio';
 import { ChallengeSystem } from '@/systems/challenges';
 import { scoreDelta, type ScoreEventKind } from '@/systems/scoring';
+import { TouchInput, buttonAt } from '@/systems/touch-input';
 import {
   createSpawnerState,
   resetSpawner,
@@ -98,6 +99,20 @@ export interface SectorCardState {
 }
 
 /**
+ * The input state the run resolved this frame.
+ *
+ * Observation only: the debug surface reports it so a spec can prove that a pointer
+ * sequence reached gameplay, without having to infer intent from the score or the car's
+ * position a second later.
+ */
+export interface InputDebugState {
+  readonly steer: number;
+  readonly boost: boolean;
+  readonly brake: boolean;
+  readonly fire: boolean;
+}
+
+/**
  * One scoring event resolved this run, as the debug surface reports it.
  *
  * `bossDestroyed` is reported here but is deliberately not a `scoreDelta` rule: the reward
@@ -132,6 +147,8 @@ export interface RunDebugState {
   readonly lastBanner: string | null;
   /** The live act boss, or null between encounters. */
   readonly boss: { readonly id: string; readonly hp: number; readonly maxHp: number } | null;
+  /** What the run read from the keyboard and the touch pad this frame. */
+  readonly input: InputDebugState;
   readonly hud: HudState;
 }
 
@@ -186,9 +203,14 @@ export class GameScene extends Phaser.Scene {
 
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
+  /** Touch pad state. Fed by pointer events, read by `readInput()` like the keyboard. */
+  readonly touchInput = new TouchInput();
+  /** True while the pad is on screen, so a field tap on a button is not treated as a shot. */
+  private touchPadActive = false;
   private steer = 0;
   private boostHeld = false;
   private brakeHeld = false;
+  private fireHeld = false;
   private challengeLabel = '';
   private challengeProgress = 0;
   private challengeTarget = 0;
@@ -221,6 +243,12 @@ export class GameScene extends Phaser.Scene {
     this.boss = null;
     this.victoryAt = null;
     this.paused = false;
+    this.steer = 0;
+    this.boostHeld = false;
+    this.brakeHeld = false;
+    this.fireHeld = false;
+    this.touchPadActive = false;
+    this.touchInput.reset();
     this.lastScoreEvent = null;
     this.lastBanner = null;
   }
@@ -265,12 +293,9 @@ export class GameScene extends Phaser.Scene {
     // Esc is owned by the HUD, which keeps running while this scene is paused.
     this.scene.launch('Hud', { game: this });
 
-    // A click on the play field fires, on the same path as the Space key. Dragging still
-    // steers; the gun is free, so the two do not fight each other.
-    this.input.on('pointerdown', () => {
-      this.audio.unlock();
-      this.fireGun();
-    });
+    // A click on the play field fires, on the same path as the Space key; a drag steers,
+    // and the touch pad's buttons set the same input state the keys do.
+    this.installPointerControls();
 
     this.cameras.main.setBackgroundColor(GAME.background);
     this.cameras.main.fadeIn(300, 0, 0, 0);
@@ -321,6 +346,12 @@ export class GameScene extends Phaser.Scene {
       boss: this.boss
         ? { id: this.boss.def.id, hp: Math.max(0, this.boss.hp), maxHp: this.boss.maxHp }
         : null,
+      input: {
+        steer: this.steer,
+        boost: this.boostHeld,
+        brake: this.brakeHeld,
+        fire: this.fireHeld,
+      },
       hud: this.hudState,
     };
   }
@@ -401,6 +432,17 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * Report whether the touch pad is on screen.
+   *
+   * The HUD owns that decision (it is the scene that knows about the pointer type and the
+   * first touch), but the hit test has to happen here, where a field tap is turned into a
+   * shot instead of a button.
+   */
+  setTouchPadActive(active: boolean): void {
+    this.touchPadActive = active;
+  }
+
+  /**
    * Pause/resume the run.
    *
    * Phaser refuses keyboard input to a scene that is not RUNNING, so the pause key lives in
@@ -416,6 +458,9 @@ export class GameScene extends Phaser.Scene {
   pauseRun(): void {
     if (this.paused) return;
     this.paused = true;
+    // A frozen scene stops receiving pointer events, so any finger still held on a pad
+    // button would otherwise resume as a stuck control.
+    this.touchInput.reset();
     this.events.emit(RUN_PAUSED_EVENT, true);
     this.scene.pause();
   }
@@ -465,31 +510,73 @@ export class GameScene extends Phaser.Scene {
 
   /* --------------------------------- input --------------------------------- */
 
+  /**
+   * Route pointer input into the same state the keyboard sets.
+   *
+   * Points that land on a pad button travel through `TouchInput`, one owning pointer per
+   * button and at most one owner for the steer drag, so a thumb holding the trigger cannot
+   * take the car away from the thumb steering it. Pause is the exception: it is handled by
+   * the HUD, which keeps running while this scene is frozen.
+   *
+   * A mouse click on the play field still fires, on the same path as Space: desktop has no
+   * pad to press. A touch drag only steers, because firing on every touch would make the
+   * pad's own trigger pointless.
+   */
+  private installPointerControls(): void {
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      this.audio.unlock();
+      if (this.introActive || this.paused) return;
+
+      const button = this.touchPadActive ? buttonAt(pointer.worldX, pointer.worldY) : null;
+      if (button) {
+        // Pause belongs to the HUD: it must work while this scene cannot see input at all.
+        if (button.action !== 'pause') {
+          this.touchInput.press(pointer.id, button, this.time.now);
+        }
+        return;
+      }
+
+      this.touchInput.beginSteer(pointer.id, pointer.worldX);
+      if (!pointer.wasTouch) this.fireGun();
+    });
+
+    this.input.on('pointermove', (pointer: Phaser.Input.Pointer) => {
+      this.touchInput.move(pointer.id, pointer.worldX);
+    });
+
+    const release = (pointer: Phaser.Input.Pointer): void => this.touchInput.release(pointer.id);
+    this.input.on('pointerup', release);
+    this.input.on('pointerupoutside', release);
+  }
+
   private readInput(time: number): void {
     let steer = 0;
     if (this.cursors.left?.isDown || this.keys['A']?.isDown) steer -= 1;
     if (this.cursors.right?.isDown || this.keys['D']?.isDown) steer += 1;
-
-    // Pointer control: dragging steers toward the pointer.
-    const pointer = this.input.activePointer;
-    if (pointer.isDown) {
-      const dx = pointer.worldX - this.player.x;
-      if (Math.abs(dx) > 12) steer += Math.sign(dx);
-    }
+    steer += this.touchInput.steerFor(this.player.x);
 
     this.steer = Math.max(-1, Math.min(1, steer));
-    this.boostHeld = Boolean(this.cursors.up?.isDown || this.keys['W']?.isDown);
-    this.brakeHeld = Boolean(this.cursors.down?.isDown || this.keys['S']?.isDown);
+    this.boostHeld = Boolean(
+      this.cursors.up?.isDown || this.keys['W']?.isDown || this.touchInput.isHeld('boost'),
+    );
+    this.brakeHeld = Boolean(
+      this.cursors.down?.isDown || this.keys['S']?.isDown || this.touchInput.isHeld('brake'),
+    );
 
-    if (this.keys['SPACE']?.isDown) {
+    this.fireHeld = Boolean(this.keys['SPACE']?.isDown || this.touchInput.isHeld('fire'));
+    if (this.fireHeld) {
       this.fireGun(time);
     }
 
     const smokeKey = this.keys['SHIFT'];
-    if (smokeKey && Phaser.Input.Keyboard.JustDown(smokeKey)) this.dropSmoke(time);
+    if ((smokeKey && Phaser.Input.Keyboard.JustDown(smokeKey)) || this.touchInput.takeTap('smoke')) {
+      this.dropSmoke(time);
+    }
 
     const oilKey = this.keys['X'];
-    if (oilKey && Phaser.Input.Keyboard.JustDown(oilKey)) this.dropOil(time);
+    if ((oilKey && Phaser.Input.Keyboard.JustDown(oilKey)) || this.touchInput.takeTap('oil')) {
+      this.dropOil(time);
+    }
   }
 
   private currentScroll(): number {

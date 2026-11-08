@@ -3,11 +3,15 @@ import { BOSS, GAME } from '@/config';
 import { PALETTE } from '@/palette';
 import { PixelText } from '@/ui/pixel-text';
 import { toggleAudioMute } from '@/systems/audio-registry';
+import { buttonAt } from '@/systems/touch-input';
+import { TouchPad } from '@/ui/touch-pad';
 import { RUN_PAUSED_EVENT, type GameScene, type HudState, type RunDebugState } from './GameScene';
 
 export interface DebugSnapshot extends RunDebugState {
   /** True while the pause card is on screen; the card is the visible pause state. */
   readonly pauseCard: boolean;
+  /** True while the touch pad is on screen. Desktop leaves it hidden. */
+  readonly touchPad: boolean;
 }
 
 /** Debug-only actions for Playwright, installed beside the read-only snapshot. */
@@ -52,7 +56,10 @@ export class HudScene extends Phaser.Scene {
   private pips!: Phaser.GameObjects.Graphics;
   private speedBar!: Phaser.GameObjects.Graphics;
   private pauseCard?: Phaser.GameObjects.Container;
+  private pauseHint?: PixelText;
   private pauseCardVisible = false;
+  private touchPad!: TouchPad;
+  private touchPadVisible = false;
 
   constructor() {
     super('Hud');
@@ -130,12 +137,18 @@ export class HudScene extends Phaser.Scene {
     }
 
     this.buildPauseCard();
+    this.touchPad = new TouchPad(this);
+    this.installTouchControls();
     this.installPauseControl();
     this.installMuteControl();
     this.installDebugSnapshot();
   }
 
   override update(): void {
+    // The pad keeps drawing while the run is frozen, so the pause button stays lit and
+    // tappable on the card it just raised.
+    this.touchPad.render(this.gameScene.touchInput, this.time.now);
+
     if (!this.gameScene?.scene.isActive()) return;
 
     const state = this.gameScene.hudState;
@@ -226,6 +239,47 @@ export class HudScene extends Phaser.Scene {
     g.fillRect(x, y, Math.round(width * ratio), BOSS.healthBarHeight);
   }
 
+  /* --------------------------------- touch --------------------------------- */
+
+  /**
+   * Show the pad on a touch-first device, arm it after the first touch, and own Pause.
+   *
+   * Every other control is routed by the run into the same input state the keyboard sets,
+   * so there is one gameplay path. Pause cannot be: a paused scene receives no pointer
+   * events at all, so the button that resumes a frozen run has to live in the scene that
+   * keeps running.
+   */
+  private installTouchControls(): void {
+    const params = new URLSearchParams(window.location.search);
+    const touchFirst =
+      params.get('touch') === '1' ||
+      (typeof window.matchMedia === 'function' &&
+        window.matchMedia('(pointer: coarse)').matches);
+
+    let visible = touchFirst;
+    const apply = (): void => {
+      this.touchPadVisible = visible;
+      this.touchPad.setVisible(visible);
+      this.gameScene.setTouchPadActive(visible);
+    };
+
+    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // A touch anywhere arms the pad, which covers hybrid devices whose primary pointer
+      // is a mouse. A mouse never does: desktop keeps the pad hidden.
+      if (!visible && pointer.wasTouch) {
+        visible = true;
+        apply();
+      }
+      if (!visible) return;
+      if (buttonAt(pointer.worldX, pointer.worldY)?.action !== 'pause') return;
+      this.gameScene.togglePause();
+    });
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.touchPad.destroy());
+
+    apply();
+  }
+
   /* --------------------------------- pause --------------------------------- */
 
   private buildPauseCard(): void {
@@ -260,6 +314,7 @@ export class HudScene extends Phaser.Scene {
       scale: 1,
       align: 'center',
     }).setText('ESC RESUME   M MUTE');
+    this.pauseHint = hint;
 
     this.pauseCard = this.add.container(0, 0, [overlay, title, hint]).setDepth(200).setVisible(false);
   }
@@ -273,6 +328,10 @@ export class HudScene extends Phaser.Scene {
 
     const onPaused = (paused: boolean): void => {
       this.pauseCardVisible = paused;
+      // Name the control the player actually has in front of them.
+      this.pauseHint?.setText(
+        this.touchPadVisible ? 'PAUSE TO RESUME' : 'ESC RESUME   M MUTE',
+      );
       this.pauseCard?.setVisible(paused);
     };
 
@@ -302,6 +361,7 @@ export class HudScene extends Phaser.Scene {
       get: (): DebugSnapshot => ({
         ...this.gameScene.debugState,
         pauseCard: this.pauseCardVisible,
+        touchPad: this.touchPadVisible,
       }),
     });
 
