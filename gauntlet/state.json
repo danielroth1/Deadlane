@@ -363,6 +363,151 @@
       ],
       "lastVerdict": "pass",
       "note": "content test pins 5 enemy art ids to real manifest frames, negative control verified"
+    },
+    {
+      "id": "WO-32",
+      "title": "Pause that can be resumed",
+      "file": "gauntlet/work-orders/WO-32-pause.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-33",
+      "title": "Sector transition: clear the world, present the sector, ramp from config",
+      "file": "gauntlet/work-orders/WO-33-sector-transition.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-32"
+      ]
+    },
+    {
+      "id": "WO-34",
+      "title": "Weapons that work, driven by weapons.json",
+      "file": "gauntlet/work-orders/WO-34-weapons.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-35",
+      "title": "Damage and score truth",
+      "file": "gauntlet/work-orders/WO-35-damage-score.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-36",
+      "title": "All five challenge kinds, paid from challenges.json",
+      "file": "gauntlet/work-orders/WO-36-challenges.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-37",
+      "title": "Every enemy resolves to a shipped frame",
+      "file": "gauntlet/work-orders/WO-37-enemy-art.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-38",
+      "title": "Player shows its damage and wreck states",
+      "file": "gauntlet/work-orders/WO-38-player-damage.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-39",
+      "title": "Stoppable engine and a mute control",
+      "file": "gauntlet/work-orders/WO-39-audio-mute.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-40",
+      "title": "art-08 civilians: traffic from the atlas",
+      "file": "gauntlet/work-orders/WO-40-art-civilians.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": []
+    },
+    {
+      "id": "WO-41",
+      "title": "art-09 pickups and art-10 effects",
+      "file": "gauntlet/work-orders/WO-41-art-pickups-fx.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-34"
+      ]
+    },
+    {
+      "id": "WO-42",
+      "title": "art-11 and art-12: roadside and terrain props",
+      "file": "gauntlet/work-orders/WO-42-art-props.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-33"
+      ]
+    },
+    {
+      "id": "WO-43",
+      "title": "E2E reaches the end of a run",
+      "file": "gauntlet/work-orders/WO-43-e2e-end-of-run.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-32",
+        "WO-33"
+      ]
+    },
+    {
+      "id": "WO-44",
+      "title": "Tile layer, starting with art-13 highway tiles",
+      "file": "gauntlet/work-orders/WO-44-tiles-highway.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-33"
+      ]
+    },
+    {
+      "id": "WO-45",
+      "title": "art-14 canyon and art-15 water tiles",
+      "file": "gauntlet/work-orders/WO-45-tiles-canyon-water.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-44"
+      ]
+    },
+    {
+      "id": "WO-46",
+      "title": "art-16 city and art-17 tunnel tiles",
+      "file": "gauntlet/work-orders/WO-46-tiles-city-tunnel.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-44"
+      ]
+    },
+    {
+      "id": "WO-47",
+      "title": "art-18 transition and overlay tiles",
+      "file": "gauntlet/work-orders/WO-47-tiles-transition.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-44"
+      ]
     }
   ]
 }
