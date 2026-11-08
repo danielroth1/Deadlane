@@ -311,14 +311,14 @@
       "id": "WO-27",
       "title": "Re-pack enemy sheets 03-06 and record measured yield",
       "file": "gauntlet/work-orders/WO-27-enemy-repack.md",
-      "status": "escalated",
+      "status": "done",
       "round": 3,
       "dependsOn": [
         "WO-25",
         "WO-26"
       ],
-      "lastVerdict": "fail",
-      "note": "artefact correct (3/4/4/3 frames, 0 hot-pink, validate green); verdict turned on transcript fidelity: abridged art:04-06 stdout, rm steps left inside the verification block, no art:atlas output"
+      "lastVerdict": "pass",
+      "note": "human override 2026-11-08: sheets accepted (3/4/4/3 frames, 0 hot-pink, art:validate green); round-3 reviewer FAIL was transcript fidelity, not the artefact. Residuals: manual cell drop, non-empty usableCells counter, enemy.ts frame-id lookup mismatch"
     }
   ]
 }
