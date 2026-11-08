@@ -208,8 +208,10 @@ function buildChallenges(rng: Rng, type: LevelType, length: number, index: numbe
   const offset = (index - 1) % CHALLENGE_TEMPLATES.length;
   const scrollMultiplier = LEVEL_PROFILES[type].scrollMultiplier;
 
-  const destroyTargets = ['enforcer', 'switchblade', 'roadlord'];
-  const enemy = destroyTargets[Math.min(destroyTargets.length - 1, Math.floor((index - 1) / 2))]!;
+  const destroyTargets = ['enforcer', 'switchblade', 'roadlord'] as const;
+  const enemy =
+    destroyTargets[Math.min(destroyTargets.length - 1, Math.floor((index - 1) / 2))] ??
+    destroyTargets[0];
 
   for (let i = 0; i < windows; i += 1) {
     const from = Math.round(i * windowSize);

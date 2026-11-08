@@ -195,16 +195,7 @@ export class GameScene extends Phaser.Scene {
     this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type);
     this.player = new PlayerVehicle(this, this.art);
 
-    this.challenges = new ChallengeSystem(
-      this.blueprint,
-      (plan) => {
-        this.score += plan.reward;
-        this.showBanner(`CHALLENGE COMPLETE · ${plan.label}`);
-      },
-      (plan) => {
-        this.showBanner(`CHALLENGE FAILED · ${plan.label}`);
-      },
-    );
+    this.challenges = this.createChallengeSystem();
 
     this.cursors = this.input.keyboard!.createCursorKeys();
     this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,SHIFT,X') as Record<
@@ -847,6 +838,23 @@ export class GameScene extends Phaser.Scene {
 
   /* ------------------------------- challenge ------------------------------- */
 
+  /**
+   * One definition of the challenge callbacks. The first sector and every sector after it
+   * are built here, so the reward paid is always the one `challenges.json` declares.
+   */
+  private createChallengeSystem(): ChallengeSystem {
+    return new ChallengeSystem(
+      this.blueprint,
+      (plan) => {
+        this.score += plan.reward;
+        this.showBanner(`CHALLENGE COMPLETE · ${plan.label}`);
+      },
+      (plan) => {
+        this.showBanner(`CHALLENGE FAILED · ${plan.label}`);
+      },
+    );
+  }
+
   private updateChallenge(): void {
     const state = this.challenges.update(this.distance);
     if (!state) return;
@@ -876,14 +884,7 @@ export class GameScene extends Phaser.Scene {
     this.challengeLabel = '';
     this.challengeProgress = 0;
     this.challengeTarget = 0;
-    this.challenges = new ChallengeSystem(
-      this.blueprint,
-      (plan) => {
-        this.score += 300;
-        this.showBanner(`CHALLENGE COMPLETE · ${plan.label}`);
-      },
-      (plan) => this.showBanner(`CHALLENGE FAILED · ${plan.label}`),
-    );
+    this.challenges = this.createChallengeSystem();
 
     this.road.destroy();
     this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type);
