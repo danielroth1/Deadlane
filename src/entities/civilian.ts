@@ -1,8 +1,9 @@
 import type Phaser from 'phaser';
-import { PLAYER, SPAWN, WORLD } from '@/config';
+import { COLLISION, PLAYER, SPAWN, WORLD } from '@/config';
 import { laneCenter, type RoadProfile } from '@/levels/types';
 import type { CivilianDef } from '@/content';
 import { civilianColorFor, type Art } from '@/art';
+import { easeTowards } from '@/systems/motion';
 
 /**
  * Neutral traffic.
@@ -35,6 +36,15 @@ export class CivilianVehicle {
    * debug stage in `GameScene` puts one in the gun line — must stay where it was put.
    */
   private laneOffset = 0;
+  /** Lateral speed a contact gave the car, px/s. Bleeds off at `COLLISION.impulseDrag`. */
+  private impulseX = 0;
+  /** Forward speed a contact gave the car, px/s, added to `speed` while it bleeds off. */
+  private impulseAt = 0;
+  /** The last world distance and scroll the car was stepped at, world px and px/s. */
+  private lastDistance: number | null = null;
+  /** The last road cross-section the car was stepped against, so a shove can redraw it. */
+  private lastRoad: RoadProfile;
+  private scroll = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -48,6 +58,7 @@ export class CivilianVehicle {
     this.at = at;
     this.lane = lane;
     this.speed = speed;
+    this.lastRoad = road;
 
     const x = laneCenter(road, lane);
 
@@ -75,6 +86,7 @@ export class CivilianVehicle {
    */
   pinTo(x: number, road: RoadProfile): void {
     this.laneOffset = x - laneCenter(road, this.lane);
+    this.lastRoad = road;
     this.sprite.x = x;
   }
 
@@ -93,12 +105,56 @@ export class CivilianVehicle {
     return this.entered && this.sprite.y < -SPAWN.despawnMargin;
   }
 
+  /** Box centre on the lane axis, world px. */
+  get x(): number {
+    return this.sprite.x;
+  }
+
+  /** Box centre on the road axis, world px. */
+  get y(): number {
+    return this.sprite.y;
+  }
+
   get halfWidth(): number {
     return this.sprite.displayWidth * 0.34;
   }
 
   get halfHeight(): number {
     return this.sprite.displayHeight * 0.4;
+  }
+
+  /** Lateral velocity, world px/s: a live impulse only. Traffic steers nothing. */
+  get vx(): number {
+    return this.impulseX;
+  }
+
+  /** Velocity down-screen, px/s: the road scrolling past less the car's own forward speed. */
+  get vy(): number {
+    return this.scroll - (this.speed + this.impulseAt);
+  }
+
+  /** False: the car moves along `at`, so a contact may push it down the road. */
+  get pinnedY(): boolean {
+    return false;
+  }
+
+  /**
+   * Take a contact's positional correction, world px.
+   *
+   * `at` is the source of screen y, so a vertical correction is applied to `at` (positive is
+   * down-screen, which means less road travelled) rather than to the sprite.
+   */
+  shift(dx: number, dy: number): void {
+    this.laneOffset += dx;
+    this.at -= dy;
+    this.sprite.x = laneCenter(this.lastRoad, this.lane) + this.laneOffset;
+    this.sprite.y = PLAYER.y + (this.lastDistance ?? 0) - this.at;
+  }
+
+  /** Take a contact's impulse, world px/s, in screen axes. */
+  applyImpulse(vx: number, vy: number): void {
+    this.impulseX = vx;
+    this.impulseAt = -vy;
   }
 
   /**
@@ -110,12 +166,21 @@ export class CivilianVehicle {
    * rest — it is debris, not a driver.
    */
   update(dt: number, distance: number, road: RoadProfile): void {
+    this.lastRoad = road;
+    if (this.lastDistance !== null && dt > 0) {
+      this.scroll = (distance - this.lastDistance) / dt;
+    }
+    this.lastDistance = distance;
+
     if (!this.wrecked) {
-      this.at += this.speed * dt;
+      this.at += (this.speed + this.impulseAt) * dt;
       // Gentle sway so a lane of traffic does not look like a conveyor belt.
       this.sprite.rotation = Math.sin(this.at * 0.004) * 0.02;
+      this.laneOffset += this.impulseX * dt;
       this.sprite.x = laneCenter(road, this.lane) + this.laneOffset;
     }
+    this.impulseX = easeTowards(this.impulseX, 0, COLLISION.impulseDrag * dt);
+    this.impulseAt = easeTowards(this.impulseAt, 0, COLLISION.impulseDrag * dt);
     this.sprite.y = PLAYER.y + distance - this.at;
     if (this.sprite.y >= 0 && this.sprite.y <= WORLD.height) this.entered = true;
   }

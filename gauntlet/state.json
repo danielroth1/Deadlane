@@ -629,11 +629,13 @@
       "title": "Collision response: push apart, not delete",
       "file": "gauntlet/work-orders/WO-55-collisions.md",
       "status": "pending",
-      "round": 0,
+      "round": 1,
       "dependsOn": [
         "WO-52",
         "WO-54"
-      ]
+      ],
+      "lastVerdict": "fail",
+      "note": "neutral traffic now costs armour; traffic penalty swallowed by i-frame gate; double shake"
     },
     {
       "id": "WO-56",

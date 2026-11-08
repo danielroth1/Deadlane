@@ -1,8 +1,9 @@
 import type Phaser from 'phaser';
-import { MOTION, PLAYER, SPAWN, WORLD } from '@/config';
+import { COLLISION, MOTION, PLAYER, SPAWN, WORLD } from '@/config';
 import { laneCenter, type RoadProfile } from '@/levels/types';
 import type { EnemyDef } from '@/content';
 import type { Art } from '@/art';
+import { easeTowards } from '@/systems/motion';
 
 /**
  * A hostile unit.
@@ -44,6 +45,17 @@ export class EnemyVehicle {
   private readonly speed: number;
   /** True once the unit has been drawn inside the aperture. */
   private entered = false;
+  /** Lateral distance from the lane centre the unit holds, px. Zero unless pinned. */
+  private laneOffset = 0;
+  /** Lateral speed the unit's own steering produced this frame, px/s. */
+  private steerVelocity = 0;
+  /** Lateral speed a contact gave the unit, px/s. Bleeds off at `COLLISION.impulseDrag`. */
+  private impulseX = 0;
+  /** Forward speed a contact gave the unit, px/s, added to `speed` while it bleeds off. */
+  private impulseAt = 0;
+  /** The last world distance and scroll the unit was stepped at, world px and px/s. */
+  private lastDistance: number | null = null;
+  private scroll = 0;
 
   constructor(
     private readonly scene: Phaser.Scene,
@@ -105,12 +117,91 @@ export class EnemyVehicle {
     return false;
   }
 
+  /** Box centre on the lane axis, world px. */
+  get x(): number {
+    return this.sprite.x;
+  }
+
+  /** Box centre on the road axis, world px. */
+  get y(): number {
+    return this.sprite.y;
+  }
+
+  /** Half-extents used for collision against the player. */
+  get halfWidth(): number {
+    return this.sprite.displayWidth * 0.4;
+  }
+
+  get halfHeight(): number {
+    return this.sprite.displayHeight * 0.4;
+  }
+
+  /** Lateral velocity, world px/s: the unit's own steering plus any live impulse. */
+  get vx(): number {
+    return this.steerVelocity + this.impulseX;
+  }
+
+  /** Velocity down-screen, px/s: the road scrolling past less the unit's own forward speed. */
+  get vy(): number {
+    return this.scroll - (this.speed + this.impulseAt);
+  }
+
+  /** False: the unit moves along `at`, so a contact may push it down the road. */
+  get pinnedY(): boolean {
+    return false;
+  }
+
+  /**
+   * Take a contact's positional correction, world px.
+   *
+   * `at` is the source of screen y, so a vertical correction is applied to `at` (positive is
+   * down-screen, which means less road travelled) rather than to the sprite. The road clamp
+   * in `update()` pulls an over-large lateral shove back onto the surface next frame.
+   */
+  shift(dx: number, dy: number): void {
+    this.currentX += dx;
+    this.at -= dy;
+    this.sprite.x = this.currentX;
+    this.sprite.y = PLAYER.y + (this.lastDistance ?? 0) - this.at;
+  }
+
+  /** Take a contact's impulse, world px/s, in screen axes. */
+  applyImpulse(vx: number, vy: number): void {
+    this.impulseX = vx;
+    this.impulseAt = -vy;
+  }
+
+  /**
+   * Pin the unit to a world x and world `at`, holding both until something pushes it.
+   *
+   * `at` is the source of screen y, so a pinned `at` is a pinned screen station. Used by the
+   * debug collision stage, which needs a hostile exactly where a contact is about to happen
+   * and nothing of its own steering mixed into the result.
+   */
+  pinTo(x: number, at: number, distance: number, road: RoadProfile): void {
+    this.laneOffset = x - laneCenter(road, this.lane);
+    this.currentX = x;
+    this.at = at;
+    this.lastDistance = distance;
+    this.steerVelocity = 0;
+    this.sprite.x = x;
+    this.sprite.y = PLAYER.y + distance - at;
+  }
+
   update(ctx: EnemyUpdateContext, road: RoadProfile): boolean {
-    this.at += this.speed * ctx.dt;
+    this.at += (this.speed + this.impulseAt) * ctx.dt;
+    this.impulseAt = easeTowards(this.impulseAt, 0, COLLISION.impulseDrag * ctx.dt);
     this.phase += ctx.dt;
 
+    // The scroll the road is moving at, measured rather than assumed: the contact pass needs
+    // it to turn a push along the road into a velocity down the screen.
+    if (this.lastDistance !== null && ctx.dt > 0) {
+      this.scroll = (ctx.distance - this.lastDistance) / ctx.dt;
+    }
+    this.lastDistance = ctx.distance;
+
     const screenY = PLAYER.y + ctx.distance - this.at;
-    const homeX = laneCenter(road, this.lane);
+    const homeX = laneCenter(road, this.lane) + this.laneOffset;
 
     let targetX = homeX;
 
@@ -144,7 +235,10 @@ export class EnemyVehicle {
     }
 
     // Smooth lateral motion so nothing teleports sideways.
-    this.currentX += (targetX - this.currentX) * Math.min(1, ctx.dt * 6);
+    const steerStep = (targetX - this.currentX) * Math.min(1, ctx.dt * 6);
+    this.steerVelocity = ctx.dt > 0 ? steerStep / ctx.dt : 0;
+    this.currentX += steerStep + this.impulseX * ctx.dt;
+    this.impulseX = easeTowards(this.impulseX, 0, COLLISION.impulseDrag * ctx.dt);
 
     const minX = road.left + this.sprite.displayWidth * 0.3;
     const maxX = road.left + road.width - this.sprite.displayWidth * 0.3;

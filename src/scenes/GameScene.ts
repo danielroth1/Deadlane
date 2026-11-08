@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import {
   BOSS,
   CAMERA,
+  COLLISION,
   DIFFICULTY,
   GAME,
   LEVEL,
@@ -44,6 +45,7 @@ import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
 import type { AudioSystem } from '@/systems/audio';
 import { speedRatio, stepSpeed } from '@/systems/motion';
+import { resolveContact } from '@/systems/collision';
 import { ChallengeSystem } from '@/systems/challenges';
 import { scoreDelta, type ScoreEventKind } from '@/systems/scoring';
 import { TouchInput, buttonAt } from '@/systems/touch-input';
@@ -157,6 +159,45 @@ export interface ScoreEventRecord {
   readonly delta: number;
 }
 
+/**
+ * One car as the contact pass sees it.
+ *
+ * Deliberately the collision box rather than the sprite: a spec that proves two cars were
+ * parted has to measure the box the resolver measured, not the artwork's bounds.
+ */
+export interface VehicleDebugState {
+  readonly kind: 'player' | 'enemy' | 'civilian';
+  readonly id: string;
+  readonly x: number;
+  readonly y: number;
+  readonly halfWidth: number;
+  readonly halfHeight: number;
+  /** Lateral velocity, world px/s. */
+  readonly vx: number;
+  /** Velocity down-screen, world px/s. Zero for the car, which holds its station. */
+  readonly vy: number;
+  readonly wrecked: boolean;
+}
+
+/** One contact the resolver finished this run, as the debug surface reports it. */
+export interface ContactDebugState {
+  /** 1-based order of resolution, so a spec can tell a new contact from the last one. */
+  readonly index: number;
+  readonly other: 'enemy' | 'civilian';
+  /** Penetration the contact started with, px. */
+  readonly depth: number;
+  readonly nx: number;
+  readonly ny: number;
+  /** Closing speed along the normal, px/s. */
+  readonly approach: number;
+  /** True when the contact was hard enough to cost armour. */
+  readonly hard: boolean;
+  /** Lateral velocity the contact gave the car, world px/s. */
+  readonly playerVx: number;
+  /** Lateral velocity it gave the other car, world px/s. Opposite in sign. */
+  readonly otherVx: number;
+}
+
 /** Read-only run view served to Playwright through `window.__deadlane` at `?debug=1`. */
 export interface RunDebugState {
   readonly paused: boolean;
@@ -185,6 +226,12 @@ export interface RunDebugState {
   readonly input: InputDebugState;
   /** True while the car is off the drivable surface. */
   readonly offRoad: boolean;
+  /** The player car as the contact pass sees it. */
+  readonly car: VehicleDebugState;
+  /** Every other car on the road, in the order the contact pass walks them. */
+  readonly vehicles: readonly VehicleDebugState[];
+  /** The most recent resolved contact this run, or null before the first. */
+  readonly lastContact: ContactDebugState | null;
   /**
    * The road cross-section at the car's own `at`, in world pixels.
    *
@@ -305,6 +352,19 @@ export class GameScene extends Phaser.Scene {
   /** Observation for the debug surface; never read by gameplay. */
   private lastScoreEvent: ScoreEventRecord | null = null;
   private lastBanner: string | null = null;
+  /** How many contacts the resolver has finished this run, and the most recent one. */
+  private contactCount = 0;
+  private lastContact: ContactDebugState | null = null;
+  /**
+   * The deterministic camera kick's window, and the scroll it returns to.
+   *
+   * Phaser's own `Camera.shake()` offsets the frame with `Math.random()`, which would make a
+   * seeded run irreproducible; the collision hit is written as a decaying sine on the scroll
+   * instead, so a replay of the same run shakes identically.
+   */
+  private shakeFrom = 0;
+  private shakeUntil = 0;
+  private cameraHome: { readonly x: number; readonly y: number } | null = null;
 
   constructor() {
     super('Game');
@@ -345,6 +405,11 @@ export class GameScene extends Phaser.Scene {
     this.touchInput.reset();
     this.lastScoreEvent = null;
     this.lastBanner = null;
+    this.contactCount = 0;
+    this.lastContact = null;
+    this.shakeFrom = 0;
+    this.shakeUntil = 0;
+    this.cameraHome = null;
   }
 
   create(): void {
@@ -454,6 +519,42 @@ export class GameScene extends Phaser.Scene {
         fire: this.fireHeld,
       },
       offRoad: this.offRoad,
+      car: {
+        kind: 'player',
+        id: 'player',
+        x: this.player.x,
+        y: this.player.y,
+        halfWidth: this.player.halfWidth,
+        halfHeight: this.player.halfHeight,
+        vx: this.player.vx,
+        vy: this.player.vy,
+        wrecked: this.player.isDestroyed,
+      },
+      vehicles: [
+        ...this.enemies.map((enemy) => ({
+          kind: 'enemy' as const,
+          id: enemy.def.id,
+          x: enemy.sprite.x,
+          y: enemy.sprite.y,
+          halfWidth: enemy.halfWidth,
+          halfHeight: enemy.halfHeight,
+          vx: enemy.vx,
+          vy: enemy.vy,
+          wrecked: false,
+        })),
+        ...this.civilians.map((civilian) => ({
+          kind: 'civilian' as const,
+          id: civilian.def.id,
+          x: civilian.sprite.x,
+          y: civilian.sprite.y,
+          halfWidth: civilian.halfWidth,
+          halfHeight: civilian.halfHeight,
+          vx: civilian.vx,
+          vy: civilian.vy,
+          wrecked: civilian.wrecked,
+        })),
+      ],
+      lastContact: this.lastContact,
       road: this.roadDebugState(),
       hud: this.hudState,
     };
@@ -520,6 +621,50 @@ export class GameScene extends Phaser.Scene {
   debugFastForward(pixels: number): void {
     if (!Number.isFinite(pixels) || pixels <= 0) return;
     this.distance += pixels;
+  }
+
+  /**
+   * Debug-only: stage a hostile on the car's flank, already overlapping it.
+   *
+   * The point is the contact pass, so the road is cleared first and the staged car is placed
+   * on the car's own screen station, one `COLLISION.stageOverlap` deep. It holds its lane,
+   * which means nothing of its own steering can be mistaken for the impulse the resolver
+   * gives it — the only motion after the call is the resolver's.
+   *
+   * `approachSpeed` is the closing speed the staged car is given toward the player, px/s.
+   * Zero stages a sideswipe; a value at or above `COLLISION.hardImpactSpeed` stages a hard
+   * hit. Playwright reaches this through `window.__deadlaneControl` at `?debug=1`; nothing in
+   * the run calls it.
+   */
+  debugStageCollision(approachSpeed = 0): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+
+    for (const enemy of this.enemies) enemy.destroy();
+    this.enemies = [];
+    for (const civilian of this.civilians) civilian.destroy();
+    this.civilians = [];
+    for (const bullet of this.bullets) {
+      if (bullet.from !== 'enemy') continue;
+      bullet.sprite.destroy();
+      bullet.at = Number.NEGATIVE_INFINITY;
+    }
+    this.bullets = this.bullets.filter((bullet) => Number.isFinite(bullet.at));
+
+    // `hauler` holds its lane: a weaving hostile would drag the staged car out of the
+    // contact before the resolver ever saw it.
+    const def = safeEnemy('hauler');
+    if (!def) return;
+
+    const road = roadAt(this.blueprint.road, this.distance);
+    const hostile = new EnemyVehicle(this, this.art, def, this.distance, 0, road, 0);
+    const x =
+      this.player.x + this.player.halfWidth + hostile.halfWidth - COLLISION.stageOverlap;
+    hostile.pinTo(x, this.distance, this.distance, road);
+    if (Number.isFinite(approachSpeed) && approachSpeed > 0) {
+      // Placed on the right, so closing on the car means moving left.
+      hostile.applyImpulse(-approachSpeed, 0);
+    }
+    this.enemies.push(hostile);
   }
 
   /**
@@ -650,6 +795,9 @@ export class GameScene extends Phaser.Scene {
     // The sector transition is owned by the boss now: while one is alive the run holds,
     // and only a destroyed boss releases the boundary.
     this.updateActBoundary(time);
+
+    // Last, so a kick taken this frame is the offset that is drawn this frame.
+    this.updateCameraKick(time);
 
     this.score += dt * (speed / SCORE.distancePerPoint) * 0.15;
   }
@@ -1279,26 +1427,21 @@ export class GameScene extends Phaser.Scene {
     }
     this.bullets = this.bullets.filter((b) => Number.isFinite(b.at));
 
-    // Enemies vs player. A respawn clears the threats around the car, which replaces the
-    // array this loop holds, so iterate the same array it started with and skip anything the
-    // sweep already destroyed — a cleared pursuer must not pay a kill.
+    // Enemies and traffic against the car. Every contact goes through the resolver, which
+    // parts the two cars and gives each an impulse before anything is decided; what a
+    // contact then costs is a separate question. A respawn clears the threats around the
+    // car, which replaces the array this loop holds, so iterate a copy and skip whatever
+    // the sweep already destroyed.
     for (const enemy of [...this.enemies]) {
       if (!enemy.sprite.active) continue;
-      if (this.overlapsPlayer(enemy.sprite.x, enemy.sprite.y, enemy.sprite.displayWidth * 0.4, enemy.sprite.displayHeight * 0.4)) {
-        enemy.hit(99);
-        this.killEnemy(enemy);
-        this.damagePlayer(time);
-      }
+      this.resolveVehicleContact(time, enemy);
     }
 
-    // Civilians vs player. Hitting traffic costs score, but never armour: the road is
-    // dense, and losing armour to unseen neutral cars reads as unfair rather than hard.
-    for (const civilian of this.civilians) {
-      if (civilian.wrecked) continue;
-      if (this.overlapsPlayer(civilian.sprite.x, civilian.sprite.y, civilian.halfWidth, civilian.halfHeight)) {
-        this.applyScore('civilianContact');
-        this.wreckCivilian(civilian, 'CIVILIAN HIT');
-      }
+    // Traffic never costs armour: the road is dense, and losing armour to unseen neutral
+    // cars reads as unfair rather than hard.
+    for (const civilian of [...this.civilians]) {
+      if (civilian.wrecked || !civilian.sprite.active) continue;
+      this.resolveVehicleContact(time, civilian);
     }
 
     // Player vs pickups.
@@ -1340,6 +1483,103 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
+   * One car against the player, on the real contact path.
+   *
+   * The resolver does the whole of the contact first — both cars are parted, both get an
+   * impulse — because a collision that leaves two cars overlapping, or deletes one on the
+   * spot, is the bug this exists to prevent. Only then does the contact cost anything, and
+   * only if it was a hard one:
+   *
+   * - the car takes a hit through `damagePlayer`, which owns the i-frame window, so a contact
+   *   cannot spend armour twice in one frame or at all while invulnerable;
+   * - the hit that landed leaves the wheel wobbling and the camera kicked;
+   * - the other car takes `COLLISION.impactDamage`, which wrecks a light one and only marks a
+   *   heavy one — a hard hit *may* wreck the car it lands on, it does not erase it.
+   *
+   * A glance from a sideswipe is neither: the cars are pushed apart and both drive on.
+   */
+  private resolveVehicleContact(
+    time: number,
+    other: EnemyVehicle | CivilianVehicle,
+  ): void {
+    const hit = resolveContact(this.player, other);
+    if (!hit) return;
+
+    this.player.shift(hit.shiftAX);
+    this.player.applyImpulse(hit.deltaAX);
+    other.shift(hit.shiftBX, hit.shiftBY);
+    other.applyImpulse(hit.deltaBX, hit.deltaBY);
+
+    const hostile = other instanceof EnemyVehicle;
+    this.contactCount += 1;
+    this.lastContact = {
+      index: this.contactCount,
+      other: hostile ? 'enemy' : 'civilian',
+      depth: hit.contact.depth,
+      nx: hit.contact.nx,
+      ny: hit.contact.ny,
+      approach: hit.approach,
+      hard: hit.hard,
+      playerVx: hit.deltaAX,
+      otherVx: hit.deltaBX,
+    };
+
+    if (!hit.hard) return;
+    if (!this.damagePlayer(time)) return;
+
+    this.player.wobble(time);
+    this.kickCamera(time);
+
+    // A wreck at zero armour respawns and sweeps the road around the car, so the car that
+    // was just hit may already be gone.
+    if (!other.sprite.active) return;
+
+    if (hostile) {
+      if (other.hit(COLLISION.impactDamage)) this.killEnemy(other);
+      return;
+    }
+    this.applyScore('civilianContact');
+    this.wreckCivilian(other, 'CIVILIAN HIT');
+  }
+
+  /**
+   * Start the deterministic camera kick a hard contact leaves behind.
+   *
+   * Phaser's `Camera.shake()` offsets the frame with `Math.random()`, which would make a
+   * seeded run irreproducible frame for frame. This is the same beat written as a decaying
+   * sine on the camera's scroll: no randomness, no clock reads beyond the frame time, so a
+   * replay of the same run shakes exactly the same way.
+   */
+  private kickCamera(time: number): void {
+    this.shakeFrom = time;
+    this.shakeUntil = time + COLLISION.shakeMs;
+    if (!this.cameraHome) {
+      this.cameraHome = { x: this.cameras.main.scrollX, y: this.cameras.main.scrollY };
+    }
+  }
+
+  /** Apply or undo the camera kick. Runs last in `update()`, so it owns the frame's scroll. */
+  private updateCameraKick(time: number): void {
+    const camera = this.cameras.main;
+    const home = this.cameraHome;
+    if (!home) return;
+
+    if (time >= this.shakeUntil) {
+      camera.setScroll(home.x, home.y);
+      this.cameraHome = null;
+      return;
+    }
+
+    const age = Math.max(0, time - this.shakeFrom) / 1000;
+    const decay = (this.shakeUntil - time) / COLLISION.shakeMs;
+    const phase = age * COLLISION.shakeHz * Math.PI * 2;
+    camera.setScroll(
+      home.x + Math.sin(phase) * COLLISION.shakeOffset * decay,
+      home.y + Math.cos(phase * 2) * COLLISION.shakeOffset * 0.5 * decay,
+    );
+  }
+
+  /**
    * The rough-ground rules, run every frame the world moves.
    *
    * Off the paint the car is not destroyed outright: it is warned, slowed, and then hit on
@@ -1370,11 +1610,11 @@ export class GameScene extends Phaser.Scene {
     this.damagePlayer(time);
   }
 
-  private damagePlayer(time: number): void {
+  private damagePlayer(time: number): boolean {
     // The scene keeps ticking during the game-over delay, and two collisions can land on
     // the same frame: once the run is over, nothing else may touch the wreck.
-    if (this.runEnded) return;
-    if (!this.player.takeHit(time)) return;
+    if (this.runEnded) return false;
+    if (!this.player.takeHit(time)) return false;
     this.cameras.main.shake(160, 0.008);
     this.audio.play('hit');
     // Armour and score are separate resources: a hit that the car survives costs no
@@ -1384,6 +1624,7 @@ export class GameScene extends Phaser.Scene {
     if (this.player.isDestroyed) {
       this.spendLife(time);
     }
+    return true;
   }
 
   /**

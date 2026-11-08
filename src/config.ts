@@ -232,6 +232,57 @@ export const MOTION = {
 } as const;
 
 /**
+ * Vehicle-versus-vehicle contact.
+ *
+ * A contact separates both cars and hands each an impulse; damage is what a *hard* contact
+ * costs, not what a contact is. The maths lives in `systems/collision.ts` and is closed-form,
+ * so these numbers are the whole of the feel and a seeded run resolves every contact the same
+ * way twice.
+ */
+export const COLLISION = {
+  /** Penetration left behind after separation, px, so neither box re-touches next frame. */
+  slop: 0.5,
+  /** Share of the closing speed a contact gives back as a bounce. */
+  restitution: 0.35,
+  /**
+   * Kick every contact imparts, px/s, before the closing speed is folded in.
+   *
+   * Without it two cars that merely end up overlapping would part with no motion at all,
+   * and a held steering key would grind along the other car instead of bouncing off it.
+   */
+  minPush: 70,
+  /** Ceiling on that kick, px/s, so a closing speed cannot throw a car across the road. */
+  maxPush: 320,
+  /**
+   * Closing speed along the contact normal that turns a contact into a hard one, px/s.
+   *
+   * Below it the cars scrape and part; at or above it the hit costs armour. A full-lock
+   * steer is 260 px/s, so steering into another car is always hard, while rear-ending a
+   * slower car from cruise is a scrape and needs the throttle to hurt.
+   */
+  hardImpactSpeed: 130,
+  /** How fast an impact impulse bleeds off, px/s². */
+  impulseDrag: 320,
+  /** Damage a hard contact does to the other car. */
+  impactDamage: 2,
+  /** Steering wobble after a hard hit: peak additive steer (−1–1), length, rate. */
+  wobbleSteer: 0.55,
+  wobbleMs: 340,
+  wobbleHz: 6,
+  /**
+   * Camera kick after a hard hit: scroll travel in world px, length, rate.
+   *
+   * Written as a decaying sine on the camera scroll rather than through Phaser's
+   * `Camera.shake()`, which offsets the frame with `Math.random()`.
+   */
+  shakeOffset: 5,
+  shakeMs: 220,
+  shakeHz: 11,
+  /** Depth, px, the debug collision stage leaves the staged car overlapping by. */
+  stageOverlap: 12,
+} as const;
+
+/**
  * Touch pad geometry and feel.
  *
  * The pad is drawn inside the letterboxed 640×360 canvas, so its numbers are authored in

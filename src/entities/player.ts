@@ -1,8 +1,9 @@
 import type Phaser from 'phaser';
-import { OFFROAD, PLAYER, WORLD } from '@/config';
+import { COLLISION, OFFROAD, PLAYER, WORLD } from '@/config';
 import { PALETTE } from '@/palette';
 import type { RoadProfile } from '@/levels/types';
 import type { Art, VehicleOptions } from '@/art';
+import { clamp, easeTowards } from '@/systems/motion';
 
 /**
  * The player Interceptor.
@@ -63,6 +64,13 @@ export class PlayerVehicle {
   smoke: number = PLAYER.startSmoke;
 
   private invulnerableUntil = 0;
+  /** Lateral speed the steering asked for this frame, px/s. Recorded for the contact pass. */
+  private steerVelocity = 0;
+  /** Lateral speed a contact gave the car, px/s. Bleeds off at `COLLISION.impulseDrag`. */
+  private impulseX = 0;
+  /** When the control wobble of the last hard hit starts, and when it ends. */
+  private wobbleFrom = 0;
+  private wobbleUntil = 0;
   /** When each weapon last fired, so its content cooldown can be enforced. */
   private readonly lastUsedAt: Record<WeaponId, number> = {
     gun: Number.NEGATIVE_INFINITY,
@@ -157,6 +165,68 @@ export class PlayerVehicle {
     return this.sprite.displayHeight * HALF_HEIGHT_RATIO;
   }
 
+  /** Lateral velocity this frame, world px/s: what the steering asked for plus any impulse. */
+  get vx(): number {
+    return this.steerVelocity + this.impulseX;
+  }
+
+  /**
+   * Velocity down-screen, px/s. Always zero.
+   *
+   * The car holds its station on the road, so it never moves down the screen however hard
+   * something hits it; the contact pass reads this and puts the whole vertical share of a
+   * hit onto the other car.
+   */
+  get vy(): number {
+    return 0;
+  }
+
+  /** True: `PLAYER.y` is the road projection's anchor, so the car is pinned to it. */
+  get pinnedY(): boolean {
+    return true;
+  }
+
+  /**
+   * Take a contact's positional correction, world px.
+   *
+   * Lateral only, for the same reason `vy` is zero: a vertical correction is applied to the
+   * other car by the contact pass.
+   */
+  shift(dx: number): void {
+    this.sprite.x += dx;
+  }
+
+  /**
+   * Take a contact's impulse, world px/s.
+   *
+   * Replaces the live impulse rather than adding to it: contacts are resolved once per
+   * frame, and the last one is the one that moved the car.
+   */
+  applyImpulse(vx: number): void {
+    this.impulseX = vx;
+  }
+
+  /**
+   * Start the short steering wobble a hard hit leaves behind.
+   *
+   * A decaying sine of the scene clock, not a random walk: the same run at the same frame
+   * rate wobbles the same way every time, which is what keeps a seeded run reproducible.
+   */
+  wobble(time: number): void {
+    this.wobbleFrom = time;
+    this.wobbleUntil = time + COLLISION.wobbleMs;
+  }
+
+  /** Additive steering, `-COLLISION.wobbleSteer`–`+`, from a live wobble. Zero without one. */
+  private wobbleAt(time: number): number {
+    if (time >= this.wobbleUntil) return 0;
+    const age = Math.max(0, time - this.wobbleFrom) / 1000;
+    const decay = (this.wobbleUntil - time) / COLLISION.wobbleMs;
+    return (
+      Math.sin(age * COLLISION.wobbleHz * Math.PI * 2) * COLLISION.wobbleSteer * decay
+    );
+  }
+
   /**
    * Steering with a speed-dependent lean.
    *
@@ -171,16 +241,23 @@ export class PlayerVehicle {
    * the only thing that limits how far out the car can get.
    */
   update(dt: number, steer: number, time: number, road: RoadProfile): void {
-    const dx = steer * PLAYER.lateralSpeed * dt;
+    // A hard hit takes the wheel for a moment: the wobble is added to whatever the player
+    // asked for, and the sum stays inside one full lock so the car cannot outrun its own
+    // lateral speed.
+    const steering = clamp(steer + this.wobbleAt(time), -1, 1);
+    this.steerVelocity = steering * PLAYER.lateralSpeed;
+
+    const dx = (this.steerVelocity + this.impulseX) * dt;
     const minX = road.left - OFFROAD.apron;
     const maxX = road.left + road.width + OFFROAD.apron;
 
     this.sprite.x = Math.max(minX, Math.min(maxX, this.sprite.x + dx));
+    this.impulseX = easeTowards(this.impulseX, 0, COLLISION.impulseDrag * dt);
 
     // Lean once the lateral velocity clears the shared threshold, not at an arbitrary
     // fraction of full tilt.
-    const lateralVelocity = Math.abs(steer) * PLAYER.lateralSpeed;
-    const lean = lateralVelocity > PLAYER.leanThreshold ? Math.sign(steer) * 2.5 : 0;
+    const lateralVelocity = Math.abs(steering) * PLAYER.lateralSpeed;
+    const lean = lateralVelocity > PLAYER.leanThreshold ? Math.sign(steering) * 2.5 : 0;
     this.sprite.setRotation((lean * Math.PI) / 180);
     this.sprite.y = PLAYER.y;
 
@@ -267,6 +344,10 @@ export class PlayerVehicle {
     // Clear the terminal wreck state first: `setArtState()` refuses to repaint a wreck.
     this.wrecked = false;
     this.invulnerableUntil = time + PLAYER.respawnIFrames;
+    // A fresh car: neither the shove that wrecked the last one nor its wobble carries over.
+    this.impulseX = 0;
+    this.steerVelocity = 0;
+    this.wobbleUntil = 0;
     if (road) this.sprite.x = road.left + road.width / 2;
     this.refreshArt();
   }

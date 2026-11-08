@@ -18,6 +18,13 @@ export interface DebugSnapshot extends RunDebugState {
 export interface DebugControl {
   /** Put a lone civilian directly in the gun line, a short way ahead of the car. */
   stageCivilianAhead(): void;
+  /**
+   * Put a hostile on the car's flank, already overlapping it.
+   *
+   * `approachSpeed` is the closing speed it is given toward the car, px/s: zero stages a
+   * sideswipe, a number at or above `COLLISION.hardImpactSpeed` stages a hard hit.
+   */
+  stageCollision(approachSpeed?: number): void;
   /** Advance the run by `pixels` of world distance instead of waiting out the clock. */
   fastForward(pixels: number): void;
   /** Spend one life through the real wreck path, respawning or ending the run. */
@@ -401,6 +408,8 @@ export class HudScene extends Phaser.Scene {
 
     window.__deadlaneControl = {
       stageCivilianAhead: () => this.gameScene.debugStageCivilianAhead(),
+      stageCollision: (approachSpeed?: number) =>
+        this.gameScene.debugStageCollision(approachSpeed),
       fastForward: (pixels: number) => this.gameScene.debugFastForward(pixels),
       loseLife: () => this.gameScene.debugLoseLife(),
       destroyPlayer: () => this.gameScene.debugDestroyPlayer(),
