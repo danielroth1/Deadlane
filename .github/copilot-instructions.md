@@ -6,7 +6,7 @@ happens in this repository.
 The three rules that matter most:
 
 1. **Never call a fal generation tool without `npm run art:claim` first.** The lifetime
-   ceiling is 80 images and the ledger is the audit trail.
+   ceiling is 150 images and the ledger is the audit trail.
 2. **Work the whole queue, not one round.** One implementer and one fresh reviewer per
    order, verdict recorded with `npm run gauntlet:record`; keep going until nothing is
    dispatchable. Plan new work with `/gauntlet-plan`, never from inside the loop.

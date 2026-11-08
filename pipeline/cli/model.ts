@@ -1,4 +1,5 @@
 import { loadModel, saveModel } from '../lib/model.js';
+import { loadLedger } from '../lib/ledger.js';
 import { banner, info, ok, parseArgs, requireFlag, run } from './util.js';
 
 /**
@@ -32,9 +33,13 @@ run(async () => {
 
   await saveModel(model);
 
+  const ledger = await loadLedger();
   banner('DEADLANE · model pinned');
   ok(endpointId);
   info(`count=${model.params.count}  seed=${model.params.seed}  size=${model.params.imageSize}`);
   if (model.pricing) info(`$${model.pricing.amountUsd} / image`);
-  info('Budget of 80 images ≈ $' + ((model.pricing?.amountUsd ?? 0) * 80).toFixed(2));
+  info(
+    `Budget of ${ledger.limit} images ≈ $` +
+      ((model.pricing?.amountUsd ?? 0) * ledger.limit).toFixed(2),
+  );
 });

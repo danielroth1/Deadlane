@@ -78,10 +78,11 @@ export function createLedger(slotIds: readonly string[], limit: number, perSlotL
 /**
  * Lifetime ceiling for the project, in images.
  *
- * Raised from 80 to 120 by an explicit human decision (WO-20). Raise it only the same
- * way — see AGENTS.md, "Do not raise the ceiling without the human saying so".
+ * Raised 80 → 120 by an explicit human decision (WO-20), then 120 → 150 by an explicit
+ * human decision (2026-11-08). Raise it only the same way — see AGENTS.md, "Do not raise
+ * the ceiling without the human saying so".
  */
-export const DEFAULT_IMAGE_LIMIT = 120;
+export const DEFAULT_IMAGE_LIMIT = 150;
 
 /**
  * Change the lifetime ceiling, keeping every existing slot and attempt intact.

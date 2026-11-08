@@ -23,7 +23,7 @@ works offline once loaded.
 
 1. **Never call a fal generation tool without claiming budget first.**
    Run `npm run art:claim -- --slot <slot-id>` and only then call `run_model`.
-   The lifetime ceiling is **80 images**. See `pipeline/BUDGET.md`.
+   The lifetime ceiling is **150 images**. See `pipeline/BUDGET.md`.
 
 2. **Never put a fal key or OAuth token in the repo, in a prompt, or in chat.**
    The fal MCP relay authenticates with OAuth through your editor. There is no
@@ -126,7 +126,7 @@ pipeline/               asset factory (Node, never bundled)
   cli/                  claim, release, pull, process, select, atlas, validate
   steps/                slice, quantize, score, variants, atlas, validate
   ui/                   attempt review gallery
-  budget.json           80-image ledger (committed, auditable)
+  budget.json           150-image ledger (committed, auditable)
   BUDGET.md             how the budget works and why
 
 gauntlet/               work order queue + verdicts + state
@@ -177,5 +177,5 @@ fixed, so re-scoping art means re-allocating within them.
 - Do not add runtime network calls to the game.
 - Do not add an analytics or telemetry dependency.
 - Do not commit `pipeline/raw/` (gitignored) — only processed atlas output is committed.
-- Do not raise the 80-image ceiling or the 6-attempt cap without the human explicitly
+- Do not raise the 150-image ceiling or the 6-attempt cap without the human explicitly
   saying so in the conversation.

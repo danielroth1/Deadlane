@@ -94,7 +94,7 @@ Call 2 endpoints:
 
 Both calls returned non-empty pages and the reply footer resolved to the named fal
 account `Daniel Roth`. No `run_model` call was made, no claim was taken, and the ledger
-still reads `0/80`.
+still reads `0/150`.
 
 ## Current state
 

@@ -508,6 +508,37 @@
       "dependsOn": [
         "WO-44"
       ]
+    },
+    {
+      "id": "WO-48",
+      "title": "Act bosses",
+      "file": "gauntlet/work-orders/WO-48-boss-encounters.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-33"
+      ]
+    },
+    {
+      "id": "WO-49",
+      "title": "art-07 bosses",
+      "file": "gauntlet/work-orders/WO-49-art-bosses.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-48"
+      ]
+    },
+    {
+      "id": "WO-50",
+      "title": "Full touch controls",
+      "file": "gauntlet/work-orders/WO-50-touch-controls.md",
+      "status": "pending",
+      "round": 0,
+      "dependsOn": [
+        "WO-32",
+        "WO-34"
+      ]
     }
   ]
 }

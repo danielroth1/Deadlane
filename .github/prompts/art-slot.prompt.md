@@ -79,7 +79,7 @@ npm run art:validate
 ## 7. Report
 
 ```
-<slot-id>  attempt <n>/6  cells <u>/16  score <s>  images used <n>/80
+<slot-id>  attempt <n>/6  cells <u>/16  score <s>  images used <n>/150
 ```
 
 If the slot needed more than three attempts, say which metric improved each time. If it hit

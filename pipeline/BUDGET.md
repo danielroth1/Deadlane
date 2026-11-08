@@ -1,6 +1,6 @@
 # The image budget
 
-DEADLANE has a hard ceiling of **80 generated images for the life of the project**. This
+DEADLANE has a hard ceiling of **150 generated images for the life of the project**. This
 document explains how that number is spent, why the rules are enforced by code rather than
 by good intentions, and what to do when something goes wrong.
 
@@ -8,16 +8,16 @@ by good intentions, and what to do when something goes wrong.
 
 | Limit | Value | Enforced by |
 | --- | --- | --- |
-| Lifetime images | 80 | `pipeline/lib/ledger.ts` rule R1 |
+| Lifetime images | 150 | `pipeline/lib/ledger.ts` rule R1 |
 | Attempts per slot | 6 (1 + 5 retries) | rule R2 |
 | Slots | 20, fixed for the project | `pipeline/registry/slots.ts` |
 
-80 / 20 = 4 attempts per slot on average. That is the design point: one image to see
-whether the approach works, three to get it right.
+150 / 20 = 7.5 attempts per slot on average, above the 6-attempt per-slot cap — so R2 is
+the binding limit, not R1. The ceiling is headroom for retries, not a target to spend.
 
 ## The four rules
 
-**R1 — lifetime ceiling.** Once 80 images are consumed, `art:claim` refuses. There is no
+**R1 — lifetime ceiling.** Once 150 images are consumed, `art:claim` refuses. There is no
 override. Shipping happens with whatever exists.
 
 **R2 — per-slot cap.** A slot may be attempted six times. After that, `art:select` chooses
@@ -71,7 +71,7 @@ npm run art:validate                # CI gate
 | Image exists but is unusable | **Do not release it.** It was billed. Retry with a new seed |
 | A slot used all six attempts | `art:select --attempt <best>` and move on |
 | Budget exhausted, game still has gaps | Ship. `src/art/placeholders.ts` covers every missing sprite |
-| Tempted to raise 80 | Ask the human first. This is their money and their call |
+| Tempted to raise 150 | Ask the human first. This is their money and their call |
 
 ## What the budget buys
 

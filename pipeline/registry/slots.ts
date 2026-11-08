@@ -1,7 +1,7 @@
 /**
  * The 20 art slots.
  *
- * A "slot" is a permanent reservation in the 80-image budget. Slots are fixed for the
+ * A "slot" is a permanent reservation in the 150-image budget. Slots are fixed for the
  * life of the project; re-scoping art means re-allocating cells inside a slot, not adding
  * new slots. Everything the game can draw is ultimately addressed by a sprite id that
  * belongs to exactly one slot.
