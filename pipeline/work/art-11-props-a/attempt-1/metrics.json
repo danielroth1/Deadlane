@@ -1,0 +1,167 @@
+{
+  "slotId": "art-11-props-a",
+  "attempt": 1,
+  "sourcePath": "pipeline/raw/art-11-props-a/attempt-1.png",
+  "processedAt": "2026-11-08T12:19:11.866Z",
+  "grid": {
+    "cols": 4,
+    "rows": 4
+  },
+  "finalSize": 32,
+  "cells": [
+    {
+      "index": 0,
+      "name": "traffic cone",
+      "empty": false,
+      "fill": 0.3701171875,
+      "meanPaletteDistance": 94.12305951420898,
+      "distinctColors": 11,
+      "symmetry": 0.9435897435897436
+    },
+    {
+      "index": 1,
+      "name": "jersey barrier",
+      "empty": false,
+      "fill": 0.35546875,
+      "meanPaletteDistance": 66.55102834872922,
+      "distinctColors": 11,
+      "symmetry": 0.956989247311828
+    },
+    {
+      "index": 2,
+      "name": "tyre stack",
+      "empty": false,
+      "fill": 0.6494140625,
+      "meanPaletteDistance": 24.942124092226102,
+      "distinctColors": 7,
+      "symmetry": 0.9616519174041298
+    },
+    {
+      "index": 3,
+      "name": "warning sign",
+      "empty": false,
+      "fill": 0.341796875,
+      "meanPaletteDistance": 57.3843748547528,
+      "distinctColors": 12,
+      "symmetry": 0.7948717948717948
+    },
+    {
+      "index": 4,
+      "name": "roadblock",
+      "empty": false,
+      "fill": 0.71484375,
+      "meanPaletteDistance": 26.549561220120815,
+      "distinctColors": 9,
+      "symmetry": 0.9572192513368984
+    },
+    {
+      "index": 5,
+      "name": "dumpster",
+      "empty": false,
+      "fill": 0.515625,
+      "meanPaletteDistance": 43.79681085092479,
+      "distinctColors": 8,
+      "symmetry": 0.8461538461538461
+    },
+    {
+      "index": 6,
+      "name": "manhole",
+      "empty": false,
+      "fill": 0.5712890625,
+      "meanPaletteDistance": 57.245874269068764,
+      "distinctColors": 11,
+      "symmetry": 0.95
+    },
+    {
+      "index": 7,
+      "name": "hazard stripe",
+      "empty": false,
+      "fill": 0.6552734375,
+      "meanPaletteDistance": 23.471567048913204,
+      "distinctColors": 9,
+      "symmetry": 0.90625
+    },
+    {
+      "index": 8,
+      "name": "spike strip",
+      "empty": false,
+      "fill": 0.533203125,
+      "meanPaletteDistance": 67.42344769755174,
+      "distinctColors": 12,
+      "symmetry": 0.9293286219081273
+    },
+    {
+      "index": 9,
+      "name": "sawhorse barrier",
+      "empty": false,
+      "fill": 0.44140625,
+      "meanPaletteDistance": 56.94757475288734,
+      "distinctColors": 11,
+      "symmetry": 0.8299595141700404
+    },
+    {
+      "index": 10,
+      "name": "sandbag wall",
+      "empty": false,
+      "fill": 0.46875,
+      "meanPaletteDistance": 41.69163465329046,
+      "distinctColors": 13,
+      "symmetry": 0.9047619047619048
+    },
+    {
+      "index": 11,
+      "name": "chain fence",
+      "empty": false,
+      "fill": 0.220703125,
+      "meanPaletteDistance": 51.77910985142893,
+      "distinctColors": 11,
+      "symmetry": 0.9152542372881356
+    },
+    {
+      "index": 12,
+      "name": "reflector post",
+      "empty": false,
+      "fill": 0.83203125,
+      "meanPaletteDistance": 68.4936904259458,
+      "distinctColors": 7,
+      "symmetry": 0.9452054794520548
+    },
+    {
+      "index": 13,
+      "name": "pallet stack",
+      "empty": false,
+      "fill": 0.59375,
+      "meanPaletteDistance": 63.025642475803735,
+      "distinctColors": 13,
+      "symmetry": 0.9363057324840764
+    },
+    {
+      "index": 14,
+      "name": "road patch",
+      "empty": false,
+      "fill": 0.80078125,
+      "meanPaletteDistance": 65.82251735078438,
+      "distinctColors": 8,
+      "symmetry": 0.9339622641509434
+    },
+    {
+      "index": 15,
+      "name": "pothole",
+      "empty": false,
+      "fill": 0.443359375,
+      "meanPaletteDistance": 39.75308385068149,
+      "distinctColors": 9,
+      "symmetry": 0.8530612244897959
+    }
+  ],
+  "summary": {
+    "totalCells": 16,
+    "usableCells": 16,
+    "meanPaletteDistance": 53.06256882858241,
+    "sizeVariance": 0.10440670828471506,
+    "meanSymmetry": 0.9102852987108324,
+    "meanSeamError": 0,
+    "meanDistinctColors": 10.125,
+    "score": 86.31
+  }
+}

@@ -341,25 +341,38 @@ export const SLOTS: readonly SlotSpec[] = [
     grid: { cols: 4, rows: 4 },
     finalSize: 32,
     subject:
-      'sixteen top-down roadside objects for a highway: traffic cone, jersey barrier, guardrail segment, tyres stack, warning sign, overhead gantry, streetlight, billboard, road patch, pothole, metal spike strip, sandbag wall, chain fence segment, sawhorse barrier, reflector post and a stack of pallets',
+      'sixteen top-down roadside objects for a highway, a city street and a service tunnel: a traffic cone, a jersey barrier, a stack of tyres, a warning sign on a post, a striped roadblock, a dumpster, a manhole cover, a hazard stripe board, a metal spike strip, a sawhorse barrier, a sandbag wall, a chain fence segment, a reflector post, a stack of pallets, a road patch and a pothole',
+    // WO-42: every id the level `propPool` rows can emit needs a cell, or the prop spawn
+    // path has nothing to resolve and falls back to the procedural cone. The pool ids this
+    // sheet must carry are cone, barrier, tyre-stack, sign, roadblock, dumpster, manhole
+    // and hazard-stripe. Four cells were re-scoped to make room: `guardrail` (already a
+    // tile in art-13 `guardrail top`), `overhead gantry` (spans the road, cannot read in a
+    // single 32 px cell), `streetlight` and `billboard` (a pole and a plate seen from
+    // directly overhead read as a dot and a bar, and no generator asks for them).
     cells: padCells([
       'traffic cone',
       'jersey barrier',
-      'guardrail',
       'tyre stack',
       'warning sign',
-      'overhead gantry',
-      'streetlight',
-      'billboard',
-      'road patch',
-      'pothole',
+      'roadblock',
+      'dumpster',
+      'manhole',
+      'hazard stripe',
       'spike strip',
+      'sawhorse barrier',
       'sandbag wall',
       'chain fence',
-      'sawhorse',
       'reflector post',
       'pallet stack',
+      'road patch',
+      'pothole',
     ]),
+    emphasis: [
+      'must read at 32x32',
+      'every prop is seen from directly above: an upright object shows its footprint, never its side',
+      'flat objects lie in the ground plane with no thickness drawn',
+      'no road surface, no lane paint and no terrain behind the props',
+    ],
   },
   {
     id: 'art-12-props-b',
@@ -369,25 +382,37 @@ export const SLOTS: readonly SlotSpec[] = [
     grid: { cols: 4, rows: 4 },
     finalSize: 32,
     subject:
-      'sixteen top-down natural and industrial objects: boulder, rock pile, dry bush, pine tree, palm tree, cactus, burnt tree, oil pump, pipeline segment, water tower, shack, container stack, cable spool, wrecked car, crater and a fallen signpost',
+      'sixteen top-down terrain, waterside and industrial props: a boulder, a rock pile, a dry bush, a desert cactus, a crater, a palm tree, a burnt tree, a channel buoy, a reed bed, a wooden pier, a concrete support pillar, a rubble pile, an oil pump, a pipeline segment, a water tower and a wrecked car',
+    // WO-42: the pool ids this sheet must carry are boulder, rock-pile, cactus, dry-bush,
+    // crater, buoy, reed-bed, pier, pillar and rubble. Five cells were re-scoped to make
+    // room: `pine tree` (no level type asks for conifers), `shack` (a roof from directly
+    // above is art-16 `building roof`, not a prop), `container stack` (multi-tile mass),
+    // `cable spool` (reads as a plain ring at 32 px) and `fallen signpost` (a second sign,
+    // and art-11 already carries `warning sign`).
     cells: padCells([
       'boulder',
       'rock pile',
       'dry bush',
-      'pine tree',
-      'palm tree',
       'cactus',
+      'crater',
+      'palm tree',
       'burnt tree',
+      'buoy',
+      'reed bed',
+      'wooden pier',
+      'concrete pillar',
+      'rubble pile',
       'oil pump',
       'pipeline segment',
       'water tower',
-      'shack',
-      'container stack',
-      'cable spool',
       'wrecked car',
-      'crater',
-      'fallen signpost',
     ]),
+    emphasis: [
+      'must read at 32x32',
+      'every prop is seen from directly above',
+      'natural subjects lie flat in the ground plane, industrial subjects show their footprint',
+      'no road surface and no terrain painted behind the props',
+    ],
   },
   {
     id: 'art-13-tiles-highway',

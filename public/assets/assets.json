@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T12:03:45.167Z",
+  "generatedAt": "2026-11-08T12:19:39.777Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -432,6 +432,112 @@
           "h": 32
         }
       }
+    },
+    "art-11-props-a": {
+      "slot": "art-11-props-a",
+      "code": "props-a",
+      "cellSize": 32,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-11-props-a.png",
+      "frames": {
+        "props-a/traffic-cone": {
+          "x": 0,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/jersey-barrier": {
+          "x": 32,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/tyre-stack": {
+          "x": 64,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/warning-sign": {
+          "x": 96,
+          "y": 0,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/roadblock": {
+          "x": 0,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/dumpster": {
+          "x": 32,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/manhole": {
+          "x": 64,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/hazard-stripe": {
+          "x": 96,
+          "y": 32,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/spike-strip": {
+          "x": 0,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/sawhorse-barrier": {
+          "x": 32,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/sandbag-wall": {
+          "x": 64,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/chain-fence": {
+          "x": 96,
+          "y": 64,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/reflector-post": {
+          "x": 0,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/pallet-stack": {
+          "x": 32,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/road-patch": {
+          "x": 64,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        },
+        "props-a/pothole": {
+          "x": 96,
+          "y": 96,
+          "w": 32,
+          "h": 32
+        }
+      }
     }
   },
   "sprites": {
@@ -829,6 +935,118 @@
     },
     "fx/headlight-cone": {
       "sheet": "art-10-fx",
+      "x": 96,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/traffic-cone": {
+      "sheet": "art-11-props-a",
+      "x": 0,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/jersey-barrier": {
+      "sheet": "art-11-props-a",
+      "x": 32,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/tyre-stack": {
+      "sheet": "art-11-props-a",
+      "x": 64,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/warning-sign": {
+      "sheet": "art-11-props-a",
+      "x": 96,
+      "y": 0,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/roadblock": {
+      "sheet": "art-11-props-a",
+      "x": 0,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/dumpster": {
+      "sheet": "art-11-props-a",
+      "x": 32,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/manhole": {
+      "sheet": "art-11-props-a",
+      "x": 64,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/hazard-stripe": {
+      "sheet": "art-11-props-a",
+      "x": 96,
+      "y": 32,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/spike-strip": {
+      "sheet": "art-11-props-a",
+      "x": 0,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/sawhorse-barrier": {
+      "sheet": "art-11-props-a",
+      "x": 32,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/sandbag-wall": {
+      "sheet": "art-11-props-a",
+      "x": 64,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/chain-fence": {
+      "sheet": "art-11-props-a",
+      "x": 96,
+      "y": 64,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/reflector-post": {
+      "sheet": "art-11-props-a",
+      "x": 0,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/pallet-stack": {
+      "sheet": "art-11-props-a",
+      "x": 32,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/road-patch": {
+      "sheet": "art-11-props-a",
+      "x": 64,
+      "y": 96,
+      "w": 32,
+      "h": 32
+    },
+    "props-a/pothole": {
+      "sheet": "art-11-props-a",
       "x": 96,
       "y": 96,
       "w": 32,

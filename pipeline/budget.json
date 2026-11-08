@@ -223,8 +223,20 @@
     },
     "art-11-props-a": {
       "id": "art-11-props-a",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 64360272,
+          "promptHash": "9b23c10513352a72",
+          "state": "generated",
+          "claimedAt": "2026-11-08T12:18:18.528Z",
+          "requestId": "01a1bb18-92c8-7782-9fef-74c91192456b",
+          "url": "https://v3b.fal.media/files/b/0ab1a40f/yqf9MX--lCZLOolb4QR_0_uvHIU4Dk.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 1
     },
     "art-12-props-b": {
       "id": "art-12-props-b",
