@@ -47,9 +47,11 @@ async function main(): Promise<void> {
   const updated = state.orders.find((o) => o.id === id);
   const finalStatus: OrderStatus = updated?.status ?? 'pending';
   if (finalStatus === 'escalated') {
-    console.log('\n\x1b[33mEscalated.\x1b[0m Round budget spent. A human must decide:');
-    console.log('  - accept the current implementation and move on, or');
-    console.log('  - split the order into smaller ones and re-queue.');
+    console.log('\n\x1b[33mEscalated.\x1b[0m Round budget spent on this order — it is parked, not fatal.');
+    console.log('  The queue continues with the next dispatchable order. A human decides later:');
+    console.log('  - accept the current implementation and move on,');
+    console.log('  - re-scope it into a new work order, or');
+    console.log('  - leave it escalated and keep working the rest of the queue.');
   }
 }
 

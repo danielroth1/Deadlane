@@ -61,7 +61,14 @@ orchestrator  →  implementer (fresh)  →  reviewer (fresh, read-only)  →  v
 - The **reviewer** gets only the work order, the diff, and the test output. It answers one
   question — does this solve the order without breaking anything? — and never sees the
   implementer's reasoning.
-- Maximum **3 rounds**. Then the order is escalated to the human.
+- Maximum **3 rounds per order**. An order that cannot be finished is recorded `escalate`
+  and parked; the loop moves on to the rest of the queue and reports escalations when the
+  queue drains. One failed order never stops the run.
+- The loop stops early only for an **environment** problem (no fal tool, blocked fal
+  account, broken build/test baseline) or when nothing is dispatchable.
+- **New work is planned, not invented.** Run `/gauntlet-plan`: a read-only planner produces
+  a gap list, you discuss it, and the accepted orders are written to `gauntlet/work-orders/`
+  and `gauntlet/state.json`. The loop itself never authors orders.
 - The **orchestrator** never reads source files. It reads `gauntlet/state.json` and
   verdict summaries only.
 - **The orchestrator is the only agent with fal tools.** Subagents do not have them. For an

@@ -21,11 +21,12 @@ async function main(): Promise<void> {
   if (!dispatch) {
     const escalated = state.orders.filter((o) => o.status === 'escalated');
     if (escalated.length > 0) {
-      console.log('\n\x1b[31mNothing dispatchable.\x1b[0m Escalated orders need a human decision:');
+      console.log('\n\x1b[31mNothing dispatchable.\x1b[0m These orders are parked for a human:');
       for (const order of escalated) console.log(`  ${order.id}  ${order.title}  (${order.note ?? ''})`);
     } else {
       console.log('\n\x1b[32mQueue empty.\x1b[0m');
     }
+    console.log('\n  Plan the next orders with /gauntlet-plan.');
     return;
   }
 

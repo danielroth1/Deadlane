@@ -1,13 +1,15 @@
 ---
-description: 'Work the DEADLANE gauntlet queue end to end: implement, review, record and commit one work order after another until the queue is empty or an order escalates. Use when told to run the gauntlet, continue the gauntlet loop, or work the queue.'
+description: 'Work the DEADLANE gauntlet queue end to end: implement, review, record and commit every dispatchable work order in one run. Use when told to run the gauntlet, continue the gauntlet loop, or work the queue.'
 ---
 
 # Work the gauntlet queue
 
-Keep going. Do not stop after one round and do not ask permission between rounds.
+Keep going until the queue is empty. Do not stop after one round, do not stop because an
+order failed, and do not ask permission between rounds.
 
-Repeat the round below until `npm run gauntlet:next` prints nothing dispatchable, or an
-order escalates, or a fal call fails and needs a human. Then report once.
+Repeat the round below until `npm run gauntlet:next` prints nothing dispatchable. The only
+other reason to stop early is a broken environment (no fal tool, blocked fal account,
+failing `typecheck`/`test` baseline) — see [When to stop](#when-to-stop).
 
 ## Each round
 
@@ -39,7 +41,8 @@ URL, `pricing.amountUsd` from `pipeline/registry/model.json`).
 
 Poll `check_job` if the result is `processing`. Never call `run_model` twice on one
 claim. On failure or a blocked account, `npm run art:release -- --slot <slot-id>
---attempt <n>` and stop.
+--attempt <n>`, then either record `escalate` for this order (slot-specific failure) and
+carry on, or stop (fal itself unavailable).
 
 ### 3. Implementer
 
@@ -90,8 +93,11 @@ npm run gauntlet:record -- --id <ID> --verdict fail --note "<what the review fou
 ```
 
 On `fail`, run step 3 again with a **fresh** implementer and the reviewer's feedback
-appended to the work order block. Do not reuse the previous implementer's context. Three
-rounds and the order escalates automatically — stop there and report it.
+appended to the work order block. Do not reuse the previous implementer's context.
+
+The three-round cap is per order. When it runs out, `gauntlet:record` escalates that order:
+note the blocker, then go back to step 1 and take the next dispatchable order. Do not start
+a fourth round on the same order.
 
 ### 6. Commit
 
@@ -109,16 +115,22 @@ Read `git status` before staging. Never commit a credential, never commit
 
 Go back to step 1. Do not summarise in between.
 
+## When to stop
+
+Stop and report only when `npm run gauntlet:next` prints nothing dispatchable, or the
+environment is broken for every remaining order (no fal tool, blocked fal account, failing
+`typecheck`/`test` baseline). An escalated order is not a stop signal — it is parked in
+`gauntlet/state.json` for the human.
+
 ## Final report
 
-When the queue drains or an order escalates, report at most six lines:
+When the queue drains, report once:
 
 ```
-rounds: <n>   passed: <ids>   failed: <ids>
-escalated: <id or none>
-images used: <n>/80
-next: <order id or "escalated to human" or "queue empty">
+rounds: <n>   passed: <ids>   escalated: <ids + one-line reason each>
+images: <used>/<ceiling> (from `npm run art:status`)
+next: plan the next orders with /gauntlet-plan
 ```
 
-Stop there.
+Stop there. Do not author new work yourself — planning is a conversation with the human.
 
