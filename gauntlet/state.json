@@ -582,11 +582,11 @@
       "id": "WO-51",
       "title": "Art process overhaul: unlimited images, new slots, soft art bible",
       "file": "gauntlet/work-orders/WO-51-art-pipeline.md",
-      "status": "pending",
-      "round": 2,
+      "status": "done",
+      "round": 3,
       "dependsOn": [],
-      "lastVerdict": "fail",
-      "note": "CI guard now real; MCP_SETUP 0/80 snapshot still wrong, ART_BIBLE §5 keyed-background marker still claims an unrun check"
+      "lastVerdict": "pass",
+      "note": "docs corrected against validate.ts/process.ts; CI guard now checks ledger truth"
     },
     {
       "id": "WO-52",

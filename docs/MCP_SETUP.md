@@ -94,8 +94,9 @@ Call 2 endpoints:
 
 Both calls returned non-empty pages and the reply footer resolved to the named fal
 account `Daniel Roth`. No `run_model` call was made and no claim was taken, so the ledger
-recorded no spend — it showed no images used and no ceiling, because the lifetime ceiling
-was retired in WO-51 (see [`pipeline/BUDGET.md`](../pipeline/BUDGET.md)).
+recorded no spend — at that snapshot it read `0/80`: 0 images used against the
+80-image lifetime ceiling then in force. Both caps (that ceiling and the per-slot attempt
+cap) were retired later, in WO-51 (see [`pipeline/BUDGET.md`](../pipeline/BUDGET.md)).
 
 ## Current state
 

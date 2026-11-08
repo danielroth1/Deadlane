@@ -37,13 +37,15 @@ builder, the sprite lookup or the keying step would break with it.
 | **No text in UI icons** | No letters, numbers or labels baked into the icon and chrome sheets. | The game renders its own text at runtime; baked text cannot be localised and reads as noise at 32 px. |
 | **No magenta bleed** | No opaque pixel of the key colour inside a shipped sprite. | A key-coloured pixel inside an outline means keying did not finish and the sprite will carry a hole or a plate. |
 
-`art:validate` machine-checks five things and fails the gate on any of them: the sheet is
+`art:validate` machine-checks six things and fails the gate on any of them: the sheet is
 exactly the declared columns × cell size by rows × cell size, every frame lies inside the
-sheet, no frame is fully transparent, no magenta key pixel survives inside a sprite, and
-every declared surface tile wraps without a seam. It does **not** look for a subject
-straddling a cell boundary and it cannot read text; "no boundary bleed" and "no text in UI
-icons" are reviewed requirements — the reviewer looks for them on the processed cells and
-on `art-19` / `art-20`.
+sheet, no frame is fully transparent, no magenta key pixel survives inside a sprite, every
+declared surface tile wraps without a seam, and a tile-target sheet actually declares at
+least one surface frame (with none declared the seam test has nothing to run on, so the
+sheet is rejected rather than passed). It does **not** look for a subject straddling a cell
+boundary and it cannot read text; "no boundary bleed" and "no text in UI icons" are
+reviewed requirements — the reviewer looks for them on the processed cells and on `art-19`
+/ `art-20`.
 
 ### 2.2 Preferences — style warnings
 
@@ -172,17 +174,25 @@ blocks the sheet just as firmly:
 - Every sprite wholly inside its own cell — no opaque pixel on a cell boundary *(reviewed;
   `art:validate` does not detect this)*.
 - Empty cells are acceptable; the slicer discards them and they cost nothing.
-- *(checked)* Flat solid `#FF00FF` background — magenta is never in the palette, so background removal
-  is a pure chroma-key with zero risk of eating a sprite pixel. The key is a
-  **hue-and-saturation** predicate, not a distance from one hex: a pixel is backdrop when
-  its brightest channel is ≥ 90, its saturation is ≥ 0.55, and its hue sits in
-  287.5°–357.5° (the key's 300° drifted 22.5° warm, widened by `tolerance / 12`), and it
+- Flat solid `#FF00FF` background behind every subject. Removing it is the keying step's
+  job, not `art:validate`'s: `chromaKey` in `pipeline/lib/image.ts`, run from
+  `pipeline/steps/process-slot.ts`, turns the plate transparent before slicing. Magenta is
+  never in the palette, so keying is a pure chroma-key with zero risk of eating a sprite
+  pixel. The key is a **hue-and-saturation** predicate, not a distance from one hex: a pixel
+  is backdrop when its brightest channel is ≥ 90, its saturation is ≥ 0.55, and its hue sits
+  in 287.5°–357.5° (the key's 300° drifted 22.5° warm, widened by `tolerance / 12`), and it
   is **4-connected to the image border**. Measured plates on this endpoint land at `#df0b63`
   (335.1° at 0.95 saturation) and `#c60756`, which are 194–236 away from `#ff00ff` in
   Manhattan distance — a radius test cannot separate them from palette `15 hot-pink`
   (`#ff2e63`, 345°, 0.82), which survives only because it never touches the border. Pale
   lane paint the model draws has saturation 0.18–0.30 and is therefore kept, by design.
+  `art:validate` checks only the narrower symptom: an opaque pixel whose hex is exactly the
+  palette key (`#ff00ff`) inside a frame *(checked)*. A plate left at a drifted colour such
+  as `#df0b63` is not caught by that test — it surfaces as palette warnings only.
 - *(checked)* Declared surface tiles wrap without a seam.
+- *(checked)* A tile-target sheet declares at least one surface frame — with none declared
+  the seam test has nothing to run on, so the sheet is rejected (`art:validate` reports
+  *"tile sheet declares no surface frames"*).
 
 What the prompt asks for — **preferred**, and a warning when it is missing:
 
