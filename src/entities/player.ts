@@ -17,6 +17,9 @@ const ART_CANDIDATES = [
   'player-vehicle/clean',
 ];
 
+/** The three weapons the car carries; cadence and lifetimes live in `weapons.json`. */
+export type WeaponId = 'gun' | 'oil' | 'smoke';
+
 /** Collision half-width as a fraction of the displayed sprite width. */
 export const HALF_WIDTH_RATIO = 0.36;
 /** Collision half-height as a fraction of the displayed sprite height. */
@@ -41,7 +44,12 @@ export class PlayerVehicle {
   smoke: number = PLAYER.startSmoke;
 
   private invulnerableUntil = 0;
-  private lastGunAt = 0;
+  /** When each weapon last fired, so its content cooldown can be enforced. */
+  private readonly lastUsedAt: Record<WeaponId, number> = {
+    gun: Number.NEGATIVE_INFINITY,
+    oil: Number.NEGATIVE_INFINITY,
+    smoke: Number.NEGATIVE_INFINITY,
+  };
   private baseY = PLAYER.y;
   private readonly baseX: number;
 
@@ -110,21 +118,29 @@ export class PlayerVehicle {
     }
   }
 
-  canFire(time: number): boolean {
-    if (time - this.lastGunAt < PLAYER.gunCooldown) return false;
-    this.lastGunAt = time;
+  /** True when `cooldown` ms have passed since this weapon last fired. */
+  canUseWeapon(id: WeaponId, time: number, cooldown: number): boolean {
+    return time - this.lastUsedAt[id] >= cooldown;
+  }
+
+  /** Pull the trigger. Returns false while the gun is still cooling down. */
+  canFire(time: number, cooldown: number): boolean {
+    if (!this.canUseWeapon('gun', time, cooldown)) return false;
+    this.lastUsedAt.gun = time;
     return true;
   }
 
-  useOil(): boolean {
-    if (this.oil <= 0) return false;
+  useOil(time: number, cooldown: number): boolean {
+    if (this.oil <= 0 || !this.canUseWeapon('oil', time, cooldown)) return false;
     this.oil -= 1;
+    this.lastUsedAt.oil = time;
     return true;
   }
 
-  useSmoke(): boolean {
-    if (this.smoke <= 0) return false;
+  useSmoke(time: number, cooldown: number): boolean {
+    if (this.smoke <= 0 || !this.canUseWeapon('smoke', time, cooldown)) return false;
     this.smoke -= 1;
+    this.lastUsedAt.smoke = time;
     return true;
   }
 

@@ -1,5 +1,5 @@
 {
-  "$comment": "Player equipment. Cooldowns are in milliseconds. Oil and smoke are dropped behind the car and persist on the road for a while.",
+  "$comment": "Player equipment. Cooldowns and lifetimes are in milliseconds and are the only place those numbers live. The slick trails behind the car; the smoke cloud hangs between the car and the pursuit.",
   "weapons": [
     {
       "id": "gun",

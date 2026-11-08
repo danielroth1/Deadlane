@@ -26,7 +26,8 @@ npm run dev        # http://localhost:5173
 | `←` `→` / `A` `D` / drag | Steer |
 | `↑` / `W` | Accelerate |
 | `↓` / `S` | Brake |
-| `Space` | Machine gun |
+| `Space` / click | Machine gun |
+| `X` | Oil slick |
 | `Shift` | Smoke screen |
 | `Esc` | Pause |
 

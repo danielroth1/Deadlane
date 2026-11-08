@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { BEHAVIORS, CHALLENGE_TEMPLATES, CIVILIANS, ENEMIES, WEAPONS } from './index';
+import { BEHAVIORS, CHALLENGE_TEMPLATES, CIVILIANS, ENEMIES, getWeapon, WEAPONS } from './index';
 import { PALETTE } from '@/palette';
 
 /**
@@ -119,6 +119,17 @@ describe('weapon content', () => {
     for (const weapon of WEAPONS) {
       expect(weapon.cooldown).toBeGreaterThan(0);
     }
+  });
+
+  it('gives the rear weapons a lifetime, because the scene reads it', () => {
+    for (const weapon of WEAPONS) {
+      if (weapon.slot !== 'rear') continue;
+      expect(weapon.duration ?? 0, `${weapon.id} needs duration`).toBeGreaterThan(0);
+    }
+  });
+
+  it('gives the gun a shell speed', () => {
+    expect(getWeapon('gun').projectileSpeed ?? 0).toBeGreaterThan(0);
   });
 });
 

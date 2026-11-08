@@ -148,3 +148,40 @@ describe('PlayerVehicle footprint', () => {
     expect(player.sprite.displayHeight).toBe(96 * displayScale(128));
   });
 });
+
+describe('weapon cooldowns', () => {
+  /** The player never touches the clock here, so an empty scene is enough. */
+  function makeBarePlayer(): PlayerVehicle {
+    const art = { imageAny: () => new StubImage(64, 64) } as unknown as Art;
+    return new PlayerVehicle({} as unknown as Phaser.Scene, art);
+  }
+
+  it('paces the gun with the cooldown it is handed, not one of its own', () => {
+    const player = makeBarePlayer();
+
+    expect(player.canFire(1_000, 180)).toBe(true);
+    expect(player.canFire(1_100, 180)).toBe(false);
+    expect(player.canFire(1_180, 180)).toBe(true);
+  });
+
+  it('will not spend two oils inside the slick cooldown', () => {
+    const player = makeBarePlayer();
+    const starting = player.oil;
+
+    expect(player.useOil(0, 900)).toBe(true);
+    expect(player.useOil(400, 900)).toBe(false);
+    expect(player.oil).toBe(starting - 1);
+    expect(player.useOil(900, 900)).toBe(true);
+    expect(player.oil).toBe(starting - 2);
+  });
+
+  it('refuses a smoke cloud it does not have', () => {
+    const player = makeBarePlayer();
+
+    for (let i = 0; i < PLAYER.startSmoke; i += 1) {
+      expect(player.useSmoke(i * 1400, 1400)).toBe(true);
+    }
+    expect(player.smoke).toBe(0);
+    expect(player.useSmoke(PLAYER.startSmoke * 1400, 1400)).toBe(false);
+  });
+});

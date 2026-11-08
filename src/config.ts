@@ -39,14 +39,36 @@ export const PLAYER = {
   maxArmor: 5,
   /** Invulnerability window after taking a hit, in ms. */
   iFrames: 1200,
-  /** Fire rate for the forward gun, ms. */
-  gunCooldown: 180,
   startOil: 3,
   startSmoke: 2,
   maxOil: 6,
   maxSmoke: 4,
   /** Steering lean threshold, px/s. */
   leanThreshold: 120,
+} as const;
+
+/**
+ * Where the rear weapons put their effects, and how big the catch windows are.
+ *
+ * Weapon cadence, damage and lifetimes are *not* here: they are content, in
+ * `src/content/weapons.json`. These numbers only position an effect on screen.
+ */
+export const WEAPON_FX = {
+  /** Screen offset of a dropped slick from the car's centre, px. Positive is behind. */
+  oilOffset: 30,
+  /** Screen offset of the smoke cloud from the car's centre, px. Negative is ahead. */
+  smokeOffset: -34,
+  /** Oil catch window around a slick's centre, px. */
+  oilCatchHalfWidth: 34,
+  oilCatchHalfHeight: 30,
+  /** Half-length of the smoke band along the road, px. */
+  smokeCover: 40,
+  /** Shell speed for a hostile whose content row omits `projectileSpeed`. */
+  enemyProjectileSpeed: 220,
+  /** Shell speed if `weapons.json` ever omits the gun's. */
+  gunProjectileSpeed: 640,
+  /** Ceiling on a hostile shell's lateral lead, px/s. Point-blank shots must not snap. */
+  maxShotDrift: 900,
 } as const;
 
 export const SPEED = {

@@ -1,12 +1,20 @@
 import Phaser from 'phaser';
-import { DIFFICULTY, GAME, LEVEL, PLAYER, SCORE, SPAWN, SPEED } from '@/config';
+import { DIFFICULTY, GAME, LEVEL, PLAYER, SCORE, SPAWN, SPEED, WEAPON_FX } from '@/config';
 import { PALETTE } from '@/palette';
 import { Art } from '@/art';
 import { flatTexture, pickupTexture, propTexture } from '@/art/placeholders';
 import { PlayerVehicle } from '@/entities/player';
 import { EnemyVehicle } from '@/entities/enemy';
 import { CivilianVehicle } from '@/entities/civilian';
-import { getCivilian, getEnemy } from '@/content';
+import { getCivilian, getEnemy, getWeapon } from '@/content';
+import {
+  forwardShot,
+  oilCatches,
+  returnShot,
+  screenYFromWorldAt,
+  smokeBlocksFire,
+  worldAtFromScreenY,
+} from '@/systems/weapons';
 import { levelForSeed, levelLabelFor, type LevelBlueprint } from '@/levels';
 import { laneCenter, type LevelEvent } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
@@ -28,17 +36,22 @@ export const RUN_PAUSED_EVENT = 'run:paused';
 interface Bullet {
   readonly sprite: Phaser.GameObjects.Image;
   at: number;
-  readonly x: number;
   readonly speed: number;
+  /** Lateral drift, px/s, so a hostile shell can arrive in the player's lane. */
+  readonly driftX: number;
   readonly from: 'player' | 'enemy';
   readonly damage: number;
 }
 
 interface Hazard {
   readonly sprite: Phaser.GameObjects.Image;
+  /** World position, re-derived every frame: a hazard rides with the car. */
   at: number;
   readonly kind: 'oil' | 'smoke';
-  readonly expiresAt: number;
+  /** Screen offset from the car's centre, px. Positive is behind, negative ahead. */
+  readonly screenOffset: number;
+  /** Mutable so a slick that has caught a pursuer can be spent on the spot. */
+  expiresAt: number;
 }
 
 interface Pickup {
@@ -95,6 +108,11 @@ export class GameScene extends Phaser.Scene {
   private road!: RoadSystem;
   private player!: PlayerVehicle;
   private challenges!: ChallengeSystem;
+
+  /** The three player weapons, straight out of `weapons.json`. */
+  private readonly gun = getWeapon('gun');
+  private readonly oilWeapon = getWeapon('oil');
+  private readonly smokeWeapon = getWeapon('smoke');
 
   private blueprint!: LevelBlueprint;
   private seed = 0;
@@ -173,7 +191,7 @@ export class GameScene extends Phaser.Scene {
     );
 
     this.cursors = this.input.keyboard!.createCursorKeys();
-    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,SHIFT') as Record<
+    this.keys = this.input.keyboard!.addKeys('W,A,S,D,SPACE,SHIFT,X') as Record<
       string,
       Phaser.Input.Keyboard.Key
     >;
@@ -194,9 +212,11 @@ export class GameScene extends Phaser.Scene {
     // Esc is owned by the HUD, which keeps running while this scene is paused.
     this.scene.launch('Hud', { game: this });
 
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    // A click on the play field fires, on the same path as the Space key. Dragging still
+    // steers; the gun is free, so the two do not fight each other.
+    this.input.on('pointerdown', () => {
       this.audio.unlock();
-      this.audio.play('gun');
+      this.fireGun();
     });
 
     this.cameras.main.setBackgroundColor(GAME.background);
@@ -291,7 +311,7 @@ export class GameScene extends Phaser.Scene {
     this.updateEnemies(dt, scroll, time);
     this.updateCivilians(dt, scroll);
     this.updateBullets(dt);
-    this.updateHazards(dt, time);
+    this.updateHazards(time);
     this.updatePickups(dt);
     this.updateProps();
 
@@ -323,12 +343,15 @@ export class GameScene extends Phaser.Scene {
     this.boostHeld = Boolean(this.cursors.up?.isDown || this.keys['W']?.isDown);
     this.brakeHeld = Boolean(this.cursors.down?.isDown || this.keys['S']?.isDown);
 
-    if (this.keys['SPACE']?.isDown && this.player.canFire(time)) {
-      this.fire();
+    if (this.keys['SPACE']?.isDown) {
+      this.fireGun(time);
     }
-    if (Phaser.Input.Keyboard.JustDown(this.keys['SHIFT']!)) {
-      this.dropSmoke(time);
-    }
+
+    const smokeKey = this.keys['SHIFT'];
+    if (smokeKey && Phaser.Input.Keyboard.JustDown(smokeKey)) this.dropSmoke(time);
+
+    const oilKey = this.keys['X'];
+    if (oilKey && Phaser.Input.Keyboard.JustDown(oilKey)) this.dropOil(time);
   }
 
   private currentScroll(): number {
@@ -408,7 +431,8 @@ export class GameScene extends Phaser.Scene {
 
     for (const enemy of this.enemies) {
       const wantsToFire = enemy.update(ctx, this.blueprint.road);
-      if (wantsToFire) this.enemyFire(enemy);
+      // `hostiles behind the cloud stop firing` — the cloud eats the shot, not the turn.
+      if (wantsToFire && !this.isBlindedBySmoke(enemy)) this.enemyFire(enemy);
     }
 
     this.enemies = this.enemies.filter((enemy) => {
@@ -436,7 +460,8 @@ export class GameScene extends Phaser.Scene {
   private updateBullets(dt: number): void {
     for (const bullet of this.bullets) {
       bullet.at += bullet.speed * dt;
-      bullet.sprite.y = PLAYER.y + this.distance - bullet.at;
+      bullet.sprite.x += bullet.driftX * dt;
+      bullet.sprite.y = screenYFromWorldAt(bullet.at, this.distance);
     }
     this.bullets = this.bullets.filter((bullet) => {
       const visible = bullet.sprite.y > -40 && bullet.sprite.y < GAME.height + 40;
@@ -445,13 +470,20 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private updateHazards(dt: number, time: number): void {
+  /**
+   * Hazards ride with the car at a fixed screen offset.
+   *
+   * A world-static slick or cloud is left behind in a fraction of a second — the player
+   * travels faster than anything else on the road, so a fixed effect would never be
+   * crossed by a pursuer and would never sit between a hostile and the car.
+   */
+  private updateHazards(time: number): void {
     for (const hazard of this.hazards) {
-      hazard.at += 0;
-      hazard.sprite.y = PLAYER.y + this.distance - hazard.at;
+      hazard.at = this.distance - hazard.screenOffset;
+      hazard.sprite.y = screenYFromWorldAt(hazard.at, this.distance);
       hazard.sprite.setAlpha(Math.max(0, Math.min(1, (hazard.expiresAt - time) / 800)));
-      void dt;
     }
+
     this.hazards = this.hazards.filter((hazard) => {
       const alive = time < hazard.expiresAt;
       if (!alive) hazard.sprite.destroy();
@@ -489,49 +521,89 @@ export class GameScene extends Phaser.Scene {
 
   /* -------------------------------- weapons -------------------------------- */
 
-  private fire(): void {
-    const key = flatTexture(this, 'bullet', 'white', 6);
-    const left = this.add.image(this.player.x - 10, this.player.y - 26, key).setDepth(45);
-    const right = this.add.image(this.player.x + 10, this.player.y - 26, key).setDepth(45);
+  /** Fire the twin forward guns. Public so a touch pad drives the same path as Space. */
+  fireGun(time = this.time.now): boolean {
+    if (!this.player.canFire(time, this.gun.cooldown)) return false;
 
-    for (const sprite of [left, right]) {
+    const key = flatTexture(this, 'bullet', 'white', 6);
+    const speed = this.gun.projectileSpeed ?? WEAPON_FX.gunProjectileSpeed;
+
+    for (const offset of [-10, 10]) {
+      const sprite = this.add
+        .image(this.player.x + offset, this.player.y - 26, key)
+        .setDepth(45);
       this.bullets.push({
         sprite,
-        at: this.distance + (PLAYER.y - sprite.y),
-        x: sprite.x,
-        speed: 640,
+        ...forwardShot(sprite.y, this.distance, speed),
         from: 'player',
-        damage: 1,
+        damage: this.gun.damage,
       });
     }
+
     this.audio.play('gun');
+    return true;
   }
 
   private enemyFire(enemy: EnemyVehicle): void {
     const key = flatTexture(this, 'enemy-bullet', 'signalRed', 7);
     const sprite = this.add.image(enemy.sprite.x, enemy.sprite.y, key).setDepth(45);
+
     this.bullets.push({
       sprite,
-      at: this.distance - (PLAYER.y - enemy.sprite.y),
-      x: enemy.sprite.x,
-      speed: -(enemy.def.projectileSpeed ?? 220),
+      ...returnShot({
+        enemyX: enemy.sprite.x,
+        enemyY: enemy.sprite.y,
+        playerX: this.player.x,
+        playerY: this.player.y,
+        distance: this.distance,
+        scroll: this.currentScroll(),
+        projectileSpeed: enemy.def.projectileSpeed ?? WEAPON_FX.enemyProjectileSpeed,
+        maxDrift: WEAPON_FX.maxShotDrift,
+      }),
       from: 'enemy',
       damage: 1,
     });
   }
 
-  private dropSmoke(time: number): void {
-    if (!this.player.useSmoke()) return;
+  /** Release the smoke cloud. Public so a touch pad drives the same path as Shift. */
+  dropSmoke(time = this.time.now): void {
+    if (!this.player.useSmoke(time, this.smokeWeapon.cooldown)) return;
+
     const key = flatTexture(this, 'smoke', 'steelLight', 56);
-    const sprite = this.add.image(this.player.x, this.player.y + 30, key).setDepth(35).setAlpha(0.6);
-    this.hazards.push({ sprite, at: this.distance - 30, kind: 'smoke', expiresAt: time + 4500 });
+    const y = this.player.y + WEAPON_FX.smokeOffset;
+    const sprite = this.add.image(this.player.x, y, key).setDepth(35).setAlpha(0.6);
+    this.hazards.push({
+      sprite,
+      at: worldAtFromScreenY(y, this.distance),
+      kind: 'smoke',
+      screenOffset: WEAPON_FX.smokeOffset,
+      expiresAt: time + (this.smokeWeapon.duration ?? 0),
+    });
   }
 
-  private dropOil(time: number): void {
-    if (!this.player.useOil()) return;
+  /** Drop an oil slick. Public so a touch pad drives the same path as X. */
+  dropOil(time = this.time.now): void {
+    if (!this.player.useOil(time, this.oilWeapon.cooldown)) return;
+
     const key = flatTexture(this, 'oil', 'void', 40);
-    const sprite = this.add.image(this.player.x, this.player.y + 30, key).setDepth(15).setAlpha(0.85);
-    this.hazards.push({ sprite, at: this.distance - 30, kind: 'oil', expiresAt: time + 7000 });
+    const y = this.player.y + WEAPON_FX.oilOffset;
+    const sprite = this.add.image(this.player.x, y, key).setDepth(15).setAlpha(0.85);
+    this.hazards.push({
+      sprite,
+      at: worldAtFromScreenY(y, this.distance),
+      kind: 'oil',
+      screenOffset: WEAPON_FX.oilOffset,
+      expiresAt: time + (this.oilWeapon.duration ?? 0),
+    });
+  }
+
+  /** True while any live smoke cloud sits between this hostile and the car. */
+  private isBlindedBySmoke(enemy: EnemyVehicle): boolean {
+    return this.hazards.some(
+      (hazard) =>
+        hazard.kind === 'smoke' &&
+        smokeBlocksFire(hazard.at, enemy.at, this.distance, WEAPON_FX.smokeCover),
+    );
   }
 
   /* ------------------------------ collisions ------------------------------- */
@@ -599,19 +671,24 @@ export class GameScene extends Phaser.Scene {
     }
     this.pickups = this.pickups.filter((p) => Number.isFinite(p.at));
 
-    // Oil slicks catch hostiles behind the player.
+    // Oil slicks wreck the next pursuer that crosses them, then they are spent.
     for (const hazard of this.hazards) {
       if (hazard.kind !== 'oil') continue;
-      if (hazard.sprite.y < PLAYER.y - 80) {
-        for (const enemy of this.enemies) {
-          if (Math.abs(enemy.sprite.y - hazard.sprite.y) < 30 &&
-              Math.abs(enemy.sprite.x - hazard.sprite.x) < 34) {
-            enemy.hit(99);
-            this.killEnemy(enemy);
-            this.score += SCORE.oilKill;
-          }
-        }
-      }
+
+      const target = this.enemies.find((enemy) =>
+        oilCatches(
+          hazard.sprite,
+          enemy.sprite,
+          WEAPON_FX.oilCatchHalfWidth,
+          WEAPON_FX.oilCatchHalfHeight,
+        ),
+      );
+      if (!target) continue;
+
+      hazard.expiresAt = time;
+      target.hit(target.hp);
+      this.killEnemy(target);
+      this.score += SCORE.oilKill;
     }
   }
 
@@ -835,10 +912,6 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Exposed for the HUD's oil button and for tests. */
-  dropOilPublic(time = this.time.now): void {
-    this.dropOil(time);
-  }
 }
 
 function safeEnemy(id: string) {

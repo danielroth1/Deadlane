@@ -390,9 +390,11 @@
       "id": "WO-34",
       "title": "Weapons that work, driven by weapons.json",
       "file": "gauntlet/work-orders/WO-34-weapons.md",
-      "status": "pending",
-      "round": 0,
-      "dependsOn": []
+      "status": "done",
+      "round": 1,
+      "dependsOn": [],
+      "lastVerdict": "pass",
+      "note": "muzzle-correct enemy fire, oil bound to X with catch window+expiry, smoke blinds hostiles, weapon data from weapons.json"
     },
     {
       "id": "WO-35",
