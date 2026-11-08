@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-07T23:48:45.555Z",
+  "generatedAt": "2026-11-07T23:56:57.477Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -59,12 +59,6 @@
       "rows": 2,
       "image": "assets/sheets/art-03-enemy-ground-a.png",
       "frames": {
-        "enemy-ground-a/enforcer-motorcycle": {
-          "x": 0,
-          "y": 0,
-          "w": 128,
-          "h": 128
-        },
         "enemy-ground-a/switchblade-interceptor": {
           "x": 128,
           "y": 0,
@@ -167,12 +161,6 @@
           "w": 128,
           "h": 128
         },
-        "enemy-sea/speedboat-hostile": {
-          "x": 128,
-          "y": 0,
-          "w": 128,
-          "h": 128
-        },
         "enemy-sea/hovercraft": {
           "x": 0,
           "y": 128,
@@ -221,13 +209,6 @@
       "sheet": "art-02-player-vehicle",
       "x": 128,
       "y": 128,
-      "w": 128,
-      "h": 128
-    },
-    "enemy-ground-a/enforcer-motorcycle": {
-      "sheet": "art-03-enemy-ground-a",
-      "x": 0,
-      "y": 0,
       "w": 128,
       "h": 128
     },
@@ -311,13 +292,6 @@
     "enemy-sea/gunboat": {
       "sheet": "art-06-enemy-sea",
       "x": 0,
-      "y": 0,
-      "w": 128,
-      "h": 128
-    },
-    "enemy-sea/speedboat-hostile": {
-      "sheet": "art-06-enemy-sea",
-      "x": 128,
       "y": 0,
       "w": 128,
       "h": 128

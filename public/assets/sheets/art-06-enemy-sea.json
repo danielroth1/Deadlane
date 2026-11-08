@@ -12,12 +12,6 @@
       "w": 128,
       "h": 128
     },
-    "enemy-sea/speedboat-hostile": {
-      "x": 128,
-      "y": 0,
-      "w": 128,
-      "h": 128
-    },
     "enemy-sea/hovercraft": {
       "x": 0,
       "y": 128,

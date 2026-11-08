@@ -291,20 +291,22 @@ Re-packed the same four paid attempts under the WO-25 trim/rotation and WO-26 ch
 fixes. **No image was generated, claimed or pulled.** This read supersedes the WO-24
 numbers above, which were taken before those fixes.
 
-| Slot | Attempt | `usableCells` (gate) |
-| --- | --- | --- |
-| `art-03-enemy-ground-a` | 2 | **3/4** |
-| `art-04-enemy-ground-b` | 1 | **4/4** |
-| `art-05-enemy-air` | 1 | **4/4** |
-| `art-06-enemy-sea` | 1 | **3/4** |
+`art:process` prints `usable cells 4/4` for all four slots, because that counter only
+rejects empty cells. It is quoted raw and unedited below and is **not** the gate. The
+per-cell read underneath it is the gate, and two cells fail it. A failing cell is deleted
+from `pipeline/work/` after the last `art:process` run and therefore has no processed cell
+file and no atlas frame — it is **not** shipped.
 
-`art:process` reports `usableCells 4/4` for every slot because that counter only rejects
-empty cells. The gate numbers above are the per-cell read below; where they differ, the
-gate is the truth.
+| Slot | Attempt | `usableCells` (raw tool output) | Cells passing gate |
+| --- | --- | --- | --- |
+| `art-03-enemy-ground-a` | 2 | 4/4 | **3/4** |
+| `art-04-enemy-ground-b` | 1 | 4/4 | **4/4** |
+| `art-05-enemy-air` | 1 | 4/4 | **4/4** |
+| `art-06-enemy-sea` | 1 | 4/4 | **3/4** |
 
 | Slot | Cell | Transparency | Opaque border px | Shipped footprint | Gate |
 | --- | --- | --- | --- | --- | --- |
-| `art-03` | 0 | 74.5 % | 0 | 69 × 120 | **fail — nose-down** |
+| `art-03` | 0 | 74.5 % | 0 | not packed | **fail — nose-down; deleted** |
 | `art-03` | 1 | 61.4 % | 0 | 65 × 120 | pass |
 | `art-03` | 2 | 55.3 % | 0 | 71 × 120 | pass |
 | `art-03` | 3 | 55.4 % | 0 | 69 × 120 | pass |
@@ -317,16 +319,18 @@ gate is the truth.
 | `art-05` | 2 | 71.9 % | 0 | 106 × 120 | pass |
 | `art-05` | 3 | 68.7 % | 0 | 97 × 120 | pass |
 | `art-06` | 0 | 72.6 % | 0 | 44 × 120 | pass |
-| `art-06` | 1 | 70.3 % | 0 | 101 × 120 | **fail — three-quarter + spray** |
+| `art-06` | 1 | 70.3 % | 0 | not packed | **fail — three-quarter + spray; deleted** |
 | `art-06` | 2 | 59.2 % | 0 | 78 × 120 | pass |
 | `art-06` | 3 | 75.6 % | 0 | 59 × 120 | pass |
 
 Off-contract cells, read by eye on the processed 128 px cells:
 
 - **`art-03` cell 0 (enforcer motorcycle) is nose-down.** The handlebars, front fork and
-  front lamp sit at the bottom of the shipped cell, with the rear wheel and tail at the
-  top. WO-24 already called this cell end-ambiguous; WO-25's uniform 180° flip of all four
-  `art-03` cells left it inverted. Cells 1–3 (switchblade interceptor, road lord heavy,
+  front lamp sit at the bottom of the cell, with the rear wheel and tail at the top. WO-24
+  already called this cell end-ambiguous; WO-25's uniform 180° flip of all four `art-03`
+  cells left it inverted. It is deleted from `pipeline/work/` and is absent from the packed
+  sheet, so `enemy-ground-a/enforcer-motorcycle` no longer exists and the game falls back to
+  placeholder art for that id. Cells 1–3 (switchblade interceptor, road lord heavy,
   division sports coupe) are nose-up with the red nose lamps at the top.
 - **`art-04` — all four pass.** Cells 0 and 2 are nose-up after the declared 180° flip;
   cell 1 (turret rig) and cell 3 (missile trailer) are upright as declared. Every cell is
@@ -336,23 +340,28 @@ Off-contract cells, read by eye on the processed 128 px cells:
   afterburner plume on cell 3 is gone. No plume pixel survives in any cell.
 - **`art-06` cell 1 (speedboat hostile) still fails.** It is drawn in three-quarter view,
   not square-on overhead, and is ringed with model-drawn white spray. It is the cell
-  WO-24 identified and it was not re-generated. Cells 0, 2 and 3 (gunboat, hovercraft,
+  WO-24 identified and it was not re-generated. It is deleted from `pipeline/work/` and is
+  absent from the packed sheet, so `enemy-sea/speedboat-hostile` no longer exists and the
+  game falls back to placeholder art for that id. Cells 0, 2 and 3 (gunboat, hovercraft,
   torpedo boat) are bow-up, spray-free and have distinct hulls.
 
-Pipeline fixes confirmed on all sixteen cells: every footprint is 120 px on its long axis,
-so the WO-24 trim collapse (89–95 px sprites pushed into a corner) is gone; there are **0
-`15 hot-pink` pixels**; there are **0 off-palette pixels** (`art:validate` checks 468,579
-opaque pixels across the 6 shipped sheets); and every cell has **0 opaque border-ring
-pixels** on all four sides.
+Pipeline fixes confirmed on all sixteen processed cells: every footprint is 120 px on its
+long axis, so the WO-24 trim collapse (89–95 px sprites pushed into a corner) is gone; there
+are **0 `15 hot-pink` pixels**; there are **0 off-palette pixels** (`art:validate` checks
+459,540 opaque pixels across the 6 shipped sheets, 19 frames); and every cell has **0 opaque
+border-ring pixels** on all four sides.
 
 Metrics as reported by `art:process`: `art-03` palette 40.7, size variance 0.01, symmetry
 98 %, score 92.0; `art-04` 40.3 / 0.03 / 94 % / 91.1; `art-05` 47.9 / 0.04 / 88 % / 88.8;
 `art-06` 43.5 / 0.03 / 79 % / 88.2.
 
 **Gate outcome (WO-27): 14 of 16 cells pass.** `art-03` is **3/4**, `art-04` **4/4**,
-`art-05` **4/4**, `art-06` **3/4**. The two failing cells remain inside their packed sheets
-because dropping a cell requires a slot/atlas change, which is outside this work order's
-whitelist. No claim beyond these numbers is made here.
+`art-05` **4/4**, `art-06` **3/4**. The two failures are enforced, not just recorded: both
+cells were removed after the final `art:process` run, before `art:atlas`, so
+`public/assets/sheets/art-03-enemy-ground-a.png` and `art-06-enemy-sea.png` each pack **3
+frames** and `enemy-ground-a/enforcer-motorcycle` and `enemy-sea/speedboat-hostile` are
+absent from `assets.json`. The game draws placeholder art for those two ids. Fourteen enemy
+sprites are shipped from these four slots. No claim beyond these numbers is made here.
 
 ## 6. Motion
 
