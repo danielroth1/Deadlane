@@ -17,6 +17,13 @@ const SEED = 424242;
 /** The hostile ids the content table declares water-only. */
 const WATER_ENEMIES = ['gunboat', 'speedboat', 'jetski', 'dredger'];
 
+/** The art-25 frames a water crossing is allowed to resolve to. */
+const SPLASH_FRAMES = [
+  'fx-expanded/water-splash-large',
+  'fx-expanded/water-splash-small',
+  'fx-expanded/shockwave-arc',
+];
+
 interface SurfaceSegment {
   readonly from: number;
   readonly to: number;
@@ -33,9 +40,15 @@ interface DeadlaneSnapshot {
     readonly to: 'land' | 'water';
     readonly kind: 'splash';
     readonly splashes: number;
+    readonly artIds: readonly string[];
   } | null;
   readonly sectorCard: { readonly level: number; readonly label: string } | null;
-  readonly vehicles: readonly { readonly kind: string; readonly id: string }[];
+  readonly vehicles: readonly {
+    readonly kind: string;
+    readonly id: string;
+    readonly surface: 'land' | 'water';
+    readonly affinity: 'land' | 'water' | 'any';
+  }[];
   readonly road: { readonly surface: 'land' | 'water'; readonly surfaces: readonly SurfaceSegment[] };
   readonly hud: { readonly distance: number; readonly level: number };
 }
@@ -123,6 +136,13 @@ test('a water stretch puts the car on the hull, spawns boats and splashes at the
   expect(onWater.surfaceEvents).toBeGreaterThanOrEqual(1);
   expect(onWater.lastSurfaceEvent).toMatchObject({ to: 'water', kind: 'splash' });
   expect(onWater.lastSurfaceEvent?.splashes ?? 0).toBeGreaterThan(0);
+  // The crossing reports the frames its sprites really resolved to, so this proves the
+  // art-25 water cells were drawn — not just that the branch ran and wrote a number.
+  const splashIds = onWater.lastSurfaceEvent?.artIds ?? [];
+  expect(splashIds.length).toBe(onWater.lastSurfaceEvent?.splashes ?? 0);
+  for (const id of splashIds) {
+    expect(SPLASH_FRAMES, `${id} is not a water splash frame`).toContain(id);
+  }
 
   // The sector really holds both materials; a stretch that merely floods the screen would
   // not prove a transform.
@@ -145,13 +165,14 @@ test('a water stretch puts the car on the hull, spawns boats and splashes at the
   );
 
   const withEnemies = await readSnapshot(page);
-  const enemyIds = withEnemies.vehicles
-    .filter((vehicle) => vehicle.kind === 'enemy')
-    .map((vehicle) => vehicle.id);
-  expect(enemyIds.some((id) => WATER_ENEMIES.includes(id))).toBe(true);
-  // ... and nothing wheeled is on the water with it.
-  for (const id of enemyIds) {
-    expect(WATER_ENEMIES, `${id} spawned on water`).toContain(id);
+  const enemies = withEnemies.vehicles.filter((vehicle) => vehicle.kind === 'enemy');
+  expect(enemies.some((enemy) => WATER_ENEMIES.includes(enemy.id))).toBe(true);
+  // ... and no land-only unit is over the water with it. Aircraft are `any` and may legally
+  // cross a water stretch, so the negative is about affinity, not about the id list.
+  for (const enemy of enemies) {
+    if (enemy.affinity === 'land') {
+      expect(enemy.surface, `${enemy.id} is land-only but is over water`).not.toBe('water');
+    }
   }
 
   // 3. Drive to the causeway and back onto the car. The jump targets just inside the land

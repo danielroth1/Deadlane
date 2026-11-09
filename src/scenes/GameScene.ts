@@ -19,7 +19,7 @@ import {
   WEAPON_FX,
   WORLD,
 } from '@/config';
-import { PALETTE } from '@/palette';
+import { PALETTE, type PaletteKey } from '@/palette';
 import { Art } from '@/art';
 import {
   EFFECT_ART,
@@ -60,6 +60,7 @@ import {
   roadAt,
   type LevelEvent,
   type RoadProfile,
+  type SurfaceAffinity,
   type SurfaceKind,
 } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
@@ -184,6 +185,13 @@ interface Rotor {
 /** What the car landed on: dust on a road, a splash on the river. */
 export type LandingKind = 'dust' | 'splash';
 
+/** One effect sprite the FX layer created, and the generated frame it resolved to. */
+interface SpawnedEffect {
+  readonly image: Phaser.GameObjects.Image;
+  /** Null when the sprite fell back to the procedural stand-in. */
+  readonly artId: string | null;
+}
+
 /** Which special weapon landed the most recent kill. Observation for the debug surface. */
 export type WeaponKillKind = 'rocket' | 'flame';
 
@@ -292,6 +300,10 @@ export interface VehicleDebugState {
   readonly airborne: boolean;
   /** True while a slick has this car spinning and out of control. Always false for the car. */
   readonly spinning: boolean;
+  /** The road surface under this vehicle right now, from the live blueprint. */
+  readonly surface: SurfaceKind;
+  /** The surface its content row allows it to spawn on; aircraft are `any`. */
+  readonly affinity: SurfaceAffinity;
 }
 
 /** One contact the resolver finished this run, as the debug surface reports it. */
@@ -329,8 +341,10 @@ export interface SurfaceEventDebugState {
   readonly from: SurfaceKind;
   readonly to: SurfaceKind;
   readonly kind: 'splash';
-  /** Splash sprites the crossing emitted. Always positive; the scene emits two. */
+  /** Splash sprites the crossing's FX calls actually created, as they were returned. */
   readonly splashes: number;
+  /** Generated frame ids those sprites resolved to; empty when every splash fell back. */
+  readonly artIds: readonly string[];
 }
 
 /** Read-only run view served to Playwright through `window.__deadlane` at `?debug=1`. */
@@ -794,6 +808,8 @@ export class GameScene extends Phaser.Scene {
         wrecked: this.player.isDestroyed,
         airborne: this.player.isAirborne,
         spinning: false,
+        surface: this.surface,
+        affinity: 'any',
       },
       vehicles: [
         ...this.enemies.map((enemy) => ({
@@ -810,6 +826,8 @@ export class GameScene extends Phaser.Scene {
           wrecked: false,
           airborne: false,
           spinning: enemy.isSpinning,
+          surface: roadAt(this.blueprint.road, enemy.at).surface,
+          affinity: enemy.def.surface,
         })),
         ...this.civilians.map((civilian) => ({
           kind: 'civilian' as const,
@@ -825,6 +843,8 @@ export class GameScene extends Phaser.Scene {
           wrecked: civilian.wrecked,
           airborne: false,
           spinning: false,
+          surface: roadAt(this.blueprint.road, civilian.at).surface,
+          affinity: civilian.def.surface,
         })),
       ],
       lastContact: this.lastContact,
@@ -1836,11 +1856,23 @@ export class GameScene extends Phaser.Scene {
     this.player.setSurface(surface);
 
     this.surfaceEvents += 1;
-    this.lastSurfaceEvent = { from, to: surface, kind: 'splash', splashes: 2 };
 
     // Both directions throw water: the car arrives and the hull leaves a wash behind it.
-    this.spawnSurfaceSplash(this.player.x, PLAYER.y + JUMP.shadowOffsetY);
-    this.spawnSurfaceSplash(this.player.x, PLAYER.y + 12);
+    // The count and the ids come from the sprites the FX layer returned, so a crossing can
+    // never report a splash that was not drawn, and a spec can check the frame it used.
+    const first = this.spawnSurfaceSplash(this.player.x, PLAYER.y + JUMP.shadowOffsetY);
+    const second = this.spawnSurfaceSplash(this.player.x, PLAYER.y + 12);
+    const drawn = [first, second].filter((splash) => splash.image.active);
+    this.lastSurfaceEvent = {
+      from,
+      to: surface,
+      kind: 'splash',
+      splashes: drawn.length,
+      artIds: drawn
+        .map((splash) => splash.artId)
+        .filter((id): id is string => id !== null),
+    };
+
     this.showBanner(surface === 'water' ? 'HULL DEPLOYED' : 'WHEELS DOWN');
   }
 
@@ -1867,12 +1899,13 @@ export class GameScene extends Phaser.Scene {
       320,
       0.45,
       22,
+      'teal',
     );
   }
 
   /** One art-25 water splash at a world point. Cosmetic; never touches gameplay. */
-  private spawnSurfaceSplash(x: number, y: number): void {
-    this.spawnOneShot(
+  private spawnSurfaceSplash(x: number, y: number): SpawnedEffect {
+    return this.spawnOneShot(
       WEAPON_EFFECT_ART.splash,
       x,
       y,
@@ -1881,6 +1914,7 @@ export class GameScene extends Phaser.Scene {
       380,
       0.9,
       30,
+      'teal',
     );
   }
 
@@ -1920,7 +1954,7 @@ export class GameScene extends Phaser.Scene {
     // side is a stable function of the landing's own road station, never a random draw.
     const side = Math.floor(this.distance) % 2 === 0 ? -1 : 1;
     this.spawnOneShot(
-      splash ? EFFECT_ART.splash : EFFECT_ART.dust,
+      splash ? WEAPON_EFFECT_ART.splash : EFFECT_ART.dust,
       this.player.x + side * FX.landingSpread,
       PLAYER.y + JUMP.shadowOffsetY,
       28,
@@ -1928,6 +1962,7 @@ export class GameScene extends Phaser.Scene {
       300,
       0.6,
       30,
+      splash ? 'teal' : 'amber',
     );
   }
 
@@ -1990,10 +2025,14 @@ export class GameScene extends Phaser.Scene {
     durationMs: number,
     alpha: number,
     depth: number,
-  ): void {
+    fallbackColor: PaletteKey = 'amber',
+  ): SpawnedEffect {
+    // Resolve first, so the caller reports the frame this sprite really wears rather than
+    // the frame the caller hoped for. `imageFrom` walks the list in the same order.
+    const artId = this.art.firstGenerated(ids);
     const sprite = this.fitEffect(
       this.art.imageFrom(ids, x, y, () =>
-        flatTexture(this, `fx-${footprint}`, 'amber', footprint),
+        flatTexture(this, `fx-${fallbackColor}-${footprint}`, fallbackColor, footprint),
       ),
       footprint,
     )
@@ -2007,6 +2046,8 @@ export class GameScene extends Phaser.Scene {
       duration: durationMs,
       onComplete: () => sprite.destroy(),
     });
+
+    return { image: sprite, artId };
   }
 
   /** A short spark spray where a shell or a bumper lands. */

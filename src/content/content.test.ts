@@ -247,7 +247,8 @@ describe('surface content', () => {
   });
 });
 
-describe('civilian content', () => {  it('has unique ids and positive weights', () => {
+describe('civilian content', () => {
+  it('has unique ids and positive weights', () => {
     const ids = CIVILIANS.map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const civilian of CIVILIANS) {

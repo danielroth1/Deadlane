@@ -77,7 +77,18 @@ export class Art {
   frameFor(id: string): SpriteRef | null {
     return this.generated(id);
   }
-
+  /**
+   * The first id in `ids` that has generated art, or null when none does.
+   *
+   * `imageFrom` walks the same list in the same order, so a caller that wants to report
+   * which frame it drew can resolve the id here and create the image with `imageFrom`.
+   */
+  firstGenerated(ids: readonly string[]): string | null {
+    for (const id of ids) {
+      if (this.generated(id)) return id;
+    }
+    return null;
+  }
   /**
    * A generated frame as a plain image at its native pixel size, or null when the manifest
    * or the texture behind the id is missing.

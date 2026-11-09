@@ -76,10 +76,10 @@ export const EFFECT_ART: Record<EffectKind, readonly string[]> = {
   oil: ['fx/oil-splatter'],
   // art-25 cells 4 and 6 — grey puffs. art-10's `fx/dust-cloud` is not a cloud at all.
   dust: ['fx-expanded/explosion-medium', 'fx-expanded/smoke-puff', 'fx/smoke-puff'],
-  // Cell 10 — kept as shipped. Inspecting the PNGs shows the cyan splash is the cell the
-  // label calls `muzzle flash` (cell 9) and cell 10 is the rubble pile, but water splash is
-  // WO-61's scope and this order does not re-point it.
-  splash: ['fx/water-splash'],
+  // art-25 cells 14 and 13 — the sheet's large and medium water splashes. art-10's
+  // `fx/water-splash` is cell 10, which inspection shows is the orange rubble pile (that
+  // sheet's splash is cell 9), so every water effect asks for the art-25 frames instead.
+  splash: ['fx-expanded/water-splash-large', 'fx-expanded/water-splash-small'],
   // art-10 cell 3 — the teardrop flame, with the medium burst behind it.
   fire: ['fx/fireball', 'fx/explosion-medium'],
   // art-25 cell 15 — the spark burst, then art-10's small radial burst.
