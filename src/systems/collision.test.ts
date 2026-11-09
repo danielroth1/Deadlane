@@ -4,6 +4,7 @@ import {
   closingSpeed,
   contactBetween,
   contactCost,
+  contactImpactDamage,
   resolveContact,
   type CollisionBox,
   type ContactBody,
@@ -221,9 +222,9 @@ describe('contactCost', () => {
     expect(contactCost({ ...HARD_TRAFFIC, runEnded: true }).armour).toBe(false);
   });
 
-  it('never marks the rammed car: a contact answers with its side weapon', () => {
+  it('marks the rammed car only on a hostile hit, never on traffic', () => {
     expect(contactCost(HARD_TRAFFIC).damageOther).toBe(false);
-    expect(contactCost(HARD_RAM).damageOther).toBe(false);
+    expect(contactCost(HARD_RAM).damageOther).toBe(true);
   });
 
   it('pays the traffic penalty during i-frames and after the run has ended', () => {
@@ -252,7 +253,7 @@ describe('contactCost', () => {
   it('spends exactly one armour hit on a hard ram', () => {
     expect(contactCost(HARD_RAM)).toEqual({
       armour: true,
-      damageOther: false,
+      damageOther: true,
       trafficPenalty: false,
       jolt: true,
     });
@@ -294,5 +295,38 @@ describe('contactCost', () => {
       trafficPenalty: false,
       jolt: false,
     });
+  });
+});
+
+/**
+ * What a ram does to the car it hits.
+ *
+ * WO-55 wants a hard impact to cost armour and to hurt the other car; WO-58 wants touching
+ * a side weapon to never delete the hostile in the contact frame. The clamp is where those
+ * two meet: a standing car is marked and left on 1 hp, and the next hit finishes it.
+ */
+describe('contactImpactDamage', () => {
+  it('marks a standing hostile without wrecking it in the contact frame', () => {
+    // Every enemy in `enemies.json` is at least 3 hp, so a ram leaves it on >= 1.
+    for (const hp of [3, 4, 6, 8]) {
+      expect(contactImpactDamage(hp)).toBe(COLLISION.impactDamage);
+      expect(hp - contactImpactDamage(hp)).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('clamps the hit so a nearly-wrecked car is left on exactly one point', () => {
+    expect(contactImpactDamage(2)).toBe(1);
+    expect(2 - contactImpactDamage(2)).toBe(1);
+  });
+
+  it('lets a later hit wreck a car the last contact left on its final point', () => {
+    const softened = 3 - contactImpactDamage(3);
+    expect(softened).toBe(1);
+    expect(softened - contactImpactDamage(softened)).toBeLessThanOrEqual(0);
+  });
+
+  it('never damages a car that is already wrecked', () => {
+    expect(contactImpactDamage(0)).toBe(0);
+    expect(contactImpactDamage(-2)).toBe(0);
   });
 });

@@ -136,12 +136,7 @@ export interface ContactFacts {
 export interface ContactCost {
   /** Spend one armour hit on the player. */
   readonly armour: boolean;
-  /**
-   * True when the hostile car that was rammed takes impact damage.
-   *
-   * Always false: since WO-58 a contact costs through the hostile's signature side weapon
-   * (a push and a steering lock), never by deleting the car that was touched.
-   */
+  /** The hostile car that was rammed takes `COLLISION.impactDamage`. */
   readonly damageOther: boolean;
   /** Score the neutral-traffic penalty and wreck the neutral car. */
   readonly trafficPenalty: boolean;
@@ -165,8 +160,9 @@ const NO_COST: ContactCost = {
  *
  * - **A hostile ram is armour.** It is the only cost the i-frame window buys, so a ram that
  *   lands inside the window parts the cars and spends nothing — and wrecks nothing either,
- *   because nothing hit. The hostile itself is never damaged by the contact: its signature
- *   side weapon applies the push and the steering lock (`systems/contact-weapons.ts`).
+ *   because nothing hit. The hostile itself takes `COLLISION.impactDamage`, clamped by
+ *   `contactImpactDamage` so the frame it is touched can never delete it; its signature
+ *   side weapon also applies a push and a steering lock (`systems/contact-weapons.ts`).
  * - **Traffic is never armour.** Hitting a civilian costs score and wrecks it; it never
  *   costs armour, and that includes while the window is open and while the run is ending.
  *   The penalty belongs to the contact, so the window cannot swallow it.
@@ -186,7 +182,26 @@ export function contactCost(facts: ContactFacts): ContactCost {
 
   if (facts.runEnded || facts.invulnerable) return NO_COST;
 
-  return { armour: true, damageOther: false, trafficPenalty: false, jolt: true };
+  return { armour: true, damageOther: true, trafficPenalty: false, jolt: true };
+}
+
+/**
+ * Damage a hard contact deals to the hostile it lands on.
+ *
+ * Two orders meet here. WO-55 wants a hard impact to cost the car that lands it armour and
+ * to *hurt* the car it hits; WO-58 wants touching a side weapon to never delete the hostile
+ * in the contact frame. Both hold if a hit cannot take a standing hostile below 1 hp: the
+ * car is marked and left on its last point, so the frame that touched it never kills it,
+ * while the next hit — another ram or a round — does. A hostile already on 1 hp is wrecked
+ * by the contact, which is the "may wreck the other car" half of WO-55, and a car already
+ * at zero cannot be damaged into a second wreck.
+ */
+export function contactImpactDamage(
+  hp: number,
+  impactDamage: number = COLLISION.impactDamage,
+): number {
+  if (!Number.isFinite(hp) || hp <= 0) return 0;
+  return hp > 1 ? Math.min(impactDamage, hp - 1) : impactDamage;
 }
 
 /**

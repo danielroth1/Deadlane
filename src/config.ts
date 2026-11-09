@@ -296,10 +296,15 @@ export const COLLISION = {
    * slower car from cruise is a scrape and needs the throttle to hurt.
    */
   hardImpactSpeed: 130,
-  /**
-   * How fast an impact impulse bleeds off, px/s².
-   */
+  /** How fast an impact impulse bleeds off, px/s². */
   impulseDrag: 320,
+  /**
+   * Damage a hard contact does to the other car.
+   *
+   * Never enough to wreck a car the contact finds standing, because the hit is clamped to
+   * leave it on at least 1 hp (`contactImpactDamage` in `systems/collision.ts`).
+   */
+  impactDamage: 2,
   /** Steering wobble after a hard hit: peak additive steer (−1–1), length, rate. */
   wobbleSteer: 0.55,
   wobbleMs: 340,

@@ -58,6 +58,7 @@ import { speedRatio, stepSpeed } from '@/systems/motion';
 import {
   contactBetween,
   contactCost,
+  contactImpactDamage,
   resolveContact,
   type CollisionBox,
 } from '@/systems/collision';
@@ -2303,9 +2304,12 @@ export class GameScene extends Phaser.Scene {
    * - a hostile ram spends one armour hit through `damagePlayer`, which owns the i-frame
    *   window, so a contact cannot spend armour twice in one frame or at all while
    *   invulnerable; the hit that landed leaves the wheel wobbling and the camera kicked;
+   *   and the car that was rammed takes `COLLISION.impactDamage`, clamped so the frame it is
+   *   touched cannot wreck it but the next hit can — a hard hit *may* wreck the car it lands
+   *   on, it does not erase it;
    * - every hostile also carries a signature side weapon. Touching it shoves the car away
-   *   along the contact normal and holds the wheel for the weapon's window, and it never
-   *   damages or deletes the hostile: the car that touched it is still there to be shot;
+   *   along the contact normal and holds the wheel for the weapon's window, alongside the
+   *   armour and impact damage above, never instead of them;
    * - traffic never costs armour, and its penalty is paid by the contact rather than by the
    *   damage window, so an i-frame cannot swallow it; see `content/civilians.json`.
    *
@@ -2371,9 +2375,17 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Armour, and only armour, is what the window buys: `damagePlayer` owns it and answers
-    // whether the hit landed, so a hard ram cannot spend twice in one frame. The hostile is
-    // deliberately untouched: the weapon already answered the contact.
-    if (cost.armour) this.damagePlayer(time);
+    // whether the hit landed, so a hard ram cannot spend twice in one frame.
+    if (!cost.armour || !this.damagePlayer(time)) return;
+
+    // A wreck at zero armour respawns and sweeps the road around the car, so the car that
+    // was just hit may already be gone.
+    if (!cost.damageOther || !(other instanceof EnemyVehicle)) return;
+    if (!other.sprite.active) return;
+
+    // `contactImpactDamage` is what keeps the side weapon's promise: the hostile is marked
+    // but left standing on the frame it is touched, and the next hit finishes it.
+    if (other.hit(contactImpactDamage(other.hp))) this.killEnemy(other);
   }
 
   /**

@@ -3,10 +3,12 @@ import { expect, test, type Page } from '@playwright/test';
 /**
  * Combat roster, end to end on the production build.
  *
- * Two rules from WO-58 cannot be seen from a unit test: a durable enemy must survive one
- * gun volley, and touching a hostile's side weapon must shove the car and take the wheel
- * without deleting the hostile. Both are driven through the same `?debug=1` control surface
- * every other spec uses, and both read the snapshot rather than the canvas.
+ * Three rules cannot be seen from a unit test: a durable enemy must survive one gun volley,
+ * touching a hostile's side weapon must shove the car and take the wheel without deleting
+ * the hostile, and a hard ram must damage that hostile without wrecking it in the contact
+ * frame (WO-58 step 3) while still spending the car's armour (WO-55 step 3). All three are
+ * driven through the same `?debug=1` control surface every other spec uses, and all three
+ * read the snapshot rather than the canvas.
  */
 
 const BASE = '/deadlane/';
@@ -28,6 +30,7 @@ interface ContactState {
   readonly index: number;
   readonly other: 'enemy' | 'civilian';
   readonly weapon: string | null;
+  readonly hard: boolean;
 }
 
 interface DeadlaneSnapshot {
@@ -177,4 +180,45 @@ test('touching a side weapon shoves the car and locks the wheel without deleting
   // A glance costs no armour; the side weapon is the cost.
   expect(after.hud.armor).toBe(before.hud.armor);
   expect(after.hud.lives).toBe(before.hud.lives);
+});
+
+test('a hard ram damages the hostile without deleting it in the contact frame', async ({
+  page,
+}) => {
+  await startRun(page);
+
+  const before = await readSnapshot(page);
+  const baseline = before.lastContact?.index ?? 0;
+  const armourBefore = before.hud.armor;
+  const livesBefore = before.hud.lives;
+  expect(armourBefore).toBeGreaterThan(1);
+
+  // 260 px/s is a full-lock steer into another car: well past `COLLISION.hardImpactSpeed`.
+  await control(page, 'stageCollision', 260);
+
+  await expect
+    .poll(
+      async () => {
+        const snap = await readSnapshot(page);
+        const contact = snap.lastContact;
+        if (!contact || contact.index <= baseline) return 'pending';
+        return contact.hard ? 'hard' : 'soft';
+      },
+      { intervals: [16, 16, 32, 64], timeout: 10_000 },
+    )
+    .toBe('hard');
+
+  const after = await readSnapshot(page);
+  const hostile = enemyById(after, 'hauler');
+
+  // The ram hurts the car it lands on: the staged hauler is marked.
+  expect(hostile, 'the contact frame deleted the hostile').not.toBeNull();
+  expect(hostile?.hp ?? 8, 'the ram did not damage the hostile').toBeLessThan(8);
+  // ...and it cannot be deleted on the frame it is touched: it stays on the road, alive.
+  expect(hostile?.hp ?? 0, 'the contact frame wrecked the hostile').toBeGreaterThanOrEqual(1);
+  expect(hostile?.wrecked).toBe(false);
+
+  // A hard ram is the one contact that costs armour: exactly one point, never a life.
+  expect(after.hud.armor, 'a hard ram did not cost one armour').toBe(armourBefore - 1);
+  expect(after.hud.lives).toBe(livesBefore);
 });
