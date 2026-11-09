@@ -1,0 +1,106 @@
+{
+  "slot": "art-20-ui-chrome",
+  "code": "ui-chrome",
+  "cellSize": 64,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-20-ui-chrome.png",
+  "frames": {
+    "ui-chrome/panel-corner": {
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/panel-edge-h": {
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/panel-edge-v": {
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/panel-fill": {
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/meter-frame": {
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/meter-fill": {
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/boss-bar-frame": {
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/boss-bar-fill": {
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/pause-card": {
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/sector-card": {
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/title-card": {
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/game-over-card": {
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/divider": {
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/banner": {
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/progress-cap": {
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/corner-bracket": {
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    }
+  }
+}

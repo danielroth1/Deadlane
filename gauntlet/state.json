@@ -696,13 +696,15 @@
       "id": "WO-60",
       "title": "Generated art batch: UI, civilians, remaining character sheets",
       "file": "gauntlet/work-orders/WO-60-generated-art.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-51",
         "WO-53",
         "WO-57"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "HUD icons, chrome, 14 civilian vehicles wired by pixel-verified cells; art-07 skipped by design"
     },
     {
       "id": "WO-61",

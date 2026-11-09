@@ -79,6 +79,38 @@ export class Art {
   }
 
   /**
+   * A generated frame as a plain image at its native pixel size, or null when the manifest
+   * or the texture behind the id is missing.
+   *
+   * For UI chrome the caller draws its primitive first and layers this on top, so a slot
+   * that was never pulled leaves the drawn stand-in in place.
+   */
+  sprite(id: string, x: number, y: number): Phaser.GameObjects.Image | null {
+    const ref = this.generated(id);
+    if (!ref) return null;
+    return this.scene.add.image(x, y, ref.key, ref.frame);
+  }
+
+  /**
+   * A generated frame repeated to fill a rect, or null when the manifest has nothing for it.
+   *
+   * `x`/`y` are the rect's top-left corner: the tile takes origin (0, 0) so a caller can hand
+   * it the rect it already computed. Used for the 64 px chrome cells behind cards — the cell
+   * repeats at its native size, so nothing is scaled by a fractional amount.
+   */
+  tile(
+    id: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+  ): Phaser.GameObjects.TileSprite | null {
+    const ref = this.generated(id);
+    if (!ref) return null;
+    return this.scene.add.tileSprite(x, y, width, height, ref.key, ref.frame).setOrigin(0, 0);
+  }
+
+  /**
    * Resolve an id, falling back to a placeholder vehicle when no art exists.
    *
    * `fallback` is only invoked when the manifest has nothing, so placeholder textures are

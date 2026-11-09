@@ -4,9 +4,11 @@ import { resolve } from 'node:path';
 import {
   CANYON_TILE_ART,
   CITY_TILE_ART,
+  CIVILIAN_ART,
   EFFECT_ART,
   FLAME_STREAM_ART,
   HIGHWAY_TILE_ART,
+  HUD_ICON_ART,
   PICKUP_ART,
   PROP_ART,
   PROP_PLACEHOLDER,
@@ -16,18 +18,23 @@ import {
   TRANSITION_PLACEHOLDER,
   TRANSITION_TILE_ART,
   TUNNEL_TILE_ART,
+  UI_CHROME_ART,
+  UI_CHROME_PLACEHOLDER,
   WATER_TILE_ART,
   WEAPON_EFFECT_ART,
   pickSceneryVariant,
   propArtIds,
   sceneryArtIds,
+  type CivilianArtKind,
   type EffectKind,
+  type HudIconKind,
   type PickupKind,
   type PropKind,
   type ScenerySurface,
   type TileArtByKind,
   type TileKind,
   type TransitionKind,
+  type UiChromeKind,
   type WeaponEffectKind,
 } from './ids';
 import { PICKUP_POOL } from '@/levels/generators/shared';
@@ -415,6 +422,206 @@ describe('transition tile art ids', () => {
         true,
       );
     }
+  });
+});
+
+describe('HUD icon art ids', () => {
+  /**
+   * Where each icon really sits on art-19 attempt 3, read cell by cell on
+   * `pipeline/work/art-19-ui-icons/attempt-3/`. The sheet drifts from its declared labels
+   * from cell 6 onward, so these are pixel reads, not label reads.
+   */
+  const cellIndex: Record<HudIconKind, number> = {
+    gun: 0,
+    oil: 1,
+    smoke: 2,
+    rocket: 3,
+    flame: 4,
+    armour: 5,
+    shield: 6,
+    warning: 10,
+    reticle: 13,
+    'arrow-left': 12,
+    boat: 15,
+  };
+
+  it('resolves every candidate in the shipped manifest', () => {
+    for (const [kind, ids] of Object.entries(HUD_ICON_ART)) {
+      expect(ids.length, `${kind} has no candidate ids`).toBeGreaterThan(0);
+      for (const id of ids) {
+        expect(sprites.has(id), `icon:${kind} → ${id} is not a key of .sprites`).toBe(true);
+      }
+    }
+  });
+
+  it('points every icon at the cell that really holds it', () => {
+    for (const [kind, index] of Object.entries(cellIndex) as [HudIconKind, number][]) {
+      const id = HUD_ICON_ART[kind][0];
+      expect(id, `${kind} has no primary frame`).toBeDefined();
+      const rect = manifest.sprites[id ?? ''];
+      expect(rect, `${kind} → ${id} is missing from the manifest`).toBeDefined();
+      expect({ x: rect?.x, y: rect?.y }).toEqual({
+        x: (index % 4) * 16,
+        y: Math.floor(index / 4) * 16,
+      });
+    }
+  });
+
+  it('never wires a cell that bakes lettering into the icon', () => {
+    // Cell 8 is captioned `NITRO`, cell 9 `km/h` and cell 11 `BOSS`; cell 7 is a second
+    // flame. None of them can be an icon the HUD draws.
+    const wired = new Set(Object.values(HUD_ICON_ART).flat());
+
+    for (const id of ['ui-icons/nitro', 'ui-icons/speed', 'ui-icons/warning', 'ui-icons/shield']) {
+      expect(wired, `${id} must never be referenced by the game`).not.toContain(id);
+      expect(sprites.has(id), `${id} should still exist as an unreferenced atlas frame`).toBe(
+        true,
+      );
+    }
+  });
+});
+
+describe('UI chrome art ids', () => {
+  /**
+   * Where each component really sits on art-20 attempt 3, matched on the processed cells.
+   * `divider` is absent on purpose: the cell its label sits on is a flat orange plate.
+   */
+  const cellIndex: Readonly<Partial<Record<UiChromeKind, number>>> = {
+    'panel-corner': 0,
+    'panel-edge-h': 1,
+    'panel-edge-v': 2,
+    'panel-fill': 3,
+    'meter-frame': 4,
+    'meter-fill': 6,
+    'boss-bar-fill': 7,
+    banner: 13,
+    'progress-cap': 14,
+    'corner-bracket': 15,
+  };
+
+  it('resolves every candidate in the shipped manifest', () => {
+    for (const [kind, ids] of Object.entries(UI_CHROME_ART)) {
+      if (UI_CHROME_PLACEHOLDER.includes(kind as UiChromeKind)) continue;
+      expect(ids.length, `${kind} has no candidate ids`).toBeGreaterThan(0);
+      for (const id of ids) {
+        expect(sprites.has(id), `chrome:${kind} → ${id} is not a key of .sprites`).toBe(true);
+      }
+    }
+  });
+
+  it('points every component at the cell that really holds it', () => {
+    for (const [kind, index] of Object.entries(cellIndex) as [UiChromeKind, number][]) {
+      const id = UI_CHROME_ART[kind][0];
+      expect(id, `${kind} has no primary frame`).toBeDefined();
+      const rect = manifest.sprites[id ?? ''];
+      expect(rect, `${kind} → ${id} is missing from the manifest`).toBeDefined();
+      expect({ x: rect?.x, y: rect?.y }).toEqual({
+        x: (index % 4) * 64,
+        y: Math.floor(index / 4) * 64,
+      });
+    }
+  });
+
+  it('keeps the divider on the drawn rule, because the sheet drew no rule', () => {
+    // Cell 12 sits on the `divider` label but is a flat orange plate, so every scene keeps
+    // the rule it draws.
+    expect(UI_CHROME_ART.divider).toEqual([]);
+    expect(UI_CHROME_PLACEHOLDER).toContain('divider');
+    expect(sprites.has('ui-chrome/divider'), 'the flat cell still exists in the atlas').toBe(
+      true,
+    );
+
+    const wired = Object.values(UI_CHROME_ART).flat();
+    expect(wired).not.toContain('ui-chrome/divider');
+  });
+
+  it('never wires a captioned card plate or the lettered gauge', () => {
+    // Cells 8–11 read `PAUSE FRAME`, `SECTOR CARD`, `TITLE` and `GAME PR CARD`; cell 5 is a
+    // gauge with tiny lettering. The cards keep their primitive plates.
+    const wired = new Set(Object.values(UI_CHROME_ART).flat());
+
+    for (const id of [
+      'ui-chrome/pause-card',
+      'ui-chrome/sector-card',
+      'ui-chrome/title-card',
+      'ui-chrome/game-over-card',
+      'ui-chrome/meter-fill',
+    ]) {
+      expect(wired, `${id} must never be referenced by the game`).not.toContain(id);
+      expect(sprites.has(id), `${id} should still exist as an unreferenced atlas frame`).toBe(
+        true,
+      );
+    }
+  });
+});
+
+describe('civilian art ids', () => {
+  /** Where each vehicle really sits on art-08 attempt 2, matched on the processed cells. */
+  const cellIndex: Record<CivilianArtKind, number> = {
+    sedan: 0,
+    wagon: 1,
+    hatchback: 2,
+    coupe: 3,
+    taxi: 4,
+    'pickup-truck': 5,
+    van: 11,
+    'box-truck': 9,
+    'small-lorry': 8,
+    'city-bus': 10,
+    limousine: 12,
+    skiff: 13,
+    barge: 14,
+    boat: 15,
+  };
+
+  it('resolves every candidate in the shipped manifest', () => {
+    for (const [kind, ids] of Object.entries(CIVILIAN_ART)) {
+      expect(ids.length, `${kind} has no candidate ids`).toBeGreaterThan(0);
+      for (const id of ids) {
+        expect(sprites.has(id), `civilian:${kind} → ${id} is not a key of .sprites`).toBe(true);
+      }
+    }
+  });
+
+  it('points every vehicle at the cell that really holds it', () => {
+    for (const [kind, index] of Object.entries(cellIndex) as [CivilianArtKind, number][]) {
+      const id = CIVILIAN_ART[kind][0];
+      expect(id, `${kind} has no primary frame`).toBeDefined();
+      const rect = manifest.sprites[id ?? ''];
+      expect(rect, `${kind} → ${id} is missing from the manifest`).toBeDefined();
+      expect({ x: rect?.x, y: rect?.y }).toEqual({
+        x: (index % 4) * 64,
+        y: Math.floor(index / 4) * 64,
+      });
+    }
+  });
+
+  it('keeps the six labels attempt 1 already shipped resolvable', () => {
+    for (const id of [
+      'civilians/sedan',
+      'civilians/taxi',
+      'civilians/pickup-truck',
+      'civilians/city-bus',
+      'civilians/small-lorry',
+      'civilians/limousine',
+    ]) {
+      expect(sprites.has(id), `${id} no longer resolves in the manifest`).toBe(true);
+    }
+  });
+
+  it('is the table every content row is wired through', () => {
+    const { civilians } = JSON.parse(
+      readFileSync(resolve(process.cwd(), 'src/content/civilians.json'), 'utf8'),
+    ) as { civilians: readonly { id: string; art?: string }[] };
+
+    const declared = civilians.map((row) => row.art).filter((art): art is string => art !== undefined);
+    const wired = Object.values(CIVILIAN_ART).map((ids) => ids[0]);
+
+    // Same set, so a content row can neither point at a cell the table does not claim nor
+    // leave a subject in the table unused.
+    expect([...declared].sort()).toEqual(
+      wired.filter((id): id is string => id !== undefined).sort(),
+    );
   });
 });
 

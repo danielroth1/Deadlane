@@ -253,47 +253,53 @@ export const SLOTS: readonly SlotSpec[] = [
     grid: { cols: 4, rows: 4 },
     finalSize: 64,
     subject:
-      'sixteen ordinary civilian vehicles seen from directly above: sedans, an estate wagon, a hatchback, a pickup truck, a delivery van, a box truck, a taxi, a city bus, a sports car, a small lorry, a flatbed lorry and a limousine on the road, plus three small civilian watercraft — a skiff, a river barge and a pleasure boat — one whole vehicle per cell, every vehicle drawn at the same scale, square to the frame and pointing straight up, centred in its own cell',
+      'fourteen ordinary civilian vehicles seen from directly above: a sedan, an estate wagon, a hatchback, a sports coupe, a taxi, a pickup truck, a delivery van, a box truck, a small lorry, a city bus and a limousine on the road, plus three small civilian watercraft — a skiff, a river barge and a pleasure boat — one whole vehicle per cell, every vehicle drawn at the same scale, square to the frame and pointing straight up, centred in its own cell',
+    // WO-60 retry layout: one whole vehicle per cell, named for the civilian id it serves.
+    // The six subjects that already ship keep their labels — sedan, taxi, pickup truck,
+    // city bus, small lorry and limousine — so `civilians/sedan`, `civilians/taxi`,
+    // `civilians/pickup-truck`, `civilians/city-bus`, `civilians/small-lorry` and
+    // `civilians/limousine` still resolve. The remaining eight cover the ids that have no
+    // art yet: wagon, hatchback, coupe, van, box-truck, skiff, barge and boat. Fourteen
+    // named cells in the existing 4x4 grid leave the last two cells blank.
     cells: padCells([
       'sedan',
-      'sedan alt',
-      'estate wagon',
+      'wagon',
       'hatchback',
-      'pickup truck',
-      'delivery van',
-      'box truck',
+      'coupe',
       'taxi',
-      'city bus',
-      // WO-40: the civilian ids skiff, barge and boat had no cell at all.
-      'skiff',
-      'civilian sports car',
+      'pickup truck',
+      'van',
+      'box truck',
       'small lorry',
+      'city bus',
       'limousine',
+      'skiff',
       'barge',
-      'flatbed lorry',
-      'pleasure boat',
+      'boat',
     ]),
-    // Gate read of attempt 1, cell by cell (WO-40). Only cells 0, 4, 7, 8, 11 and 12 are
-    // whole, square-on, nose-up vehicles on a clean key: sedan, pickup truck, taxi, city
-    // bus, small lorry, limousine. Cells 1, 2 and 5 fuse three vehicles into a cross;
-    // cells 3 and 6 are drawn side-on; cell 9 (declared skiff) is a side-on sedan; cell 10
-    // (declared civilian sports car) is a side-view motorboat; and cells 13, 14 and 15 are
-    // side-on watercraft ringed with model-drawn water. A side-on truck must not ship in a
-    // top-down game, so these ten are dropped.
+    // Gate read of attempt 1, cell by cell (WO-40), in the label order this slot used
+    // before the WO-60 retry layout. Only its cells 0, 4, 7, 8, 11 and 12 — sedan, pickup
+    // truck, taxi, city bus, small lorry, limousine — were whole, square-on, nose-up
+    // vehicles on a clean key. Cells 1, 2 and 5 fused three vehicles into a cross; cells 3
+    // and 6 were drawn side-on; cell 9 (declared skiff) was a side-on sedan; cell 10
+    // (declared civilian sports car) was a side-view motorboat; and cells 13, 14 and 15
+    // were side-on watercraft ringed with model-drawn water. A side-on truck must not ship
+    // in a top-down game, so those ten are dropped.
     //
-    // The drop is scoped to attempt 1 on purpose: a retry draws sixteen new cells, and a
-    // permanent drop here would ban the very subjects (wagon, hatchback, van, box truck,
-    // flatbed lorry, skiff, sports car, barge, boat) that attempt exists to supply. The
-    // slot stays open so the retry can be claimed.
+    // The drop is scoped to attempt 1 on purpose: the retry draws fourteen new cells in the
+    // layout above, and a permanent drop here would ban the very subjects (wagon,
+    // hatchback, van, box truck, skiff, barge, boat) that retry exists to supply. The slot
+    // stays open so the retry can be claimed.
     droppedCellsByAttempt: { 1: [1, 2, 3, 5, 6, 9, 10, 13, 14, 15] },
     emphasis: [
       'muted factory paint colours',
       'lower contrast than any combat vehicle',
       'never looks aggressive',
+      'one whole vehicle per cell: never two vehicles fused into one cell and never the same subject twice',
       'every vehicle and boat is axis-aligned with its nose or bow pointing up',
       'no rotation, no lean and no tilt: every subject sits square to the frame',
       'no side-on view and no three-quarter view, only a pure square-on overhead view',
-      'no water texture, no ripples and no spray around the boats',
+      'no water texture, no ripples, no wake and no spray around the boats',
       'no road markings and no terrain behind the vehicles',
       'no shadow cast onto the background',
     ],
@@ -617,28 +623,37 @@ export const SLOTS: readonly SlotSpec[] = [
     kind: 'sheet',
     target: 'icon',
     grid: { cols: 4, rows: 4 },
-    finalSize: 32,
+    // WO-60: the HUD draws these beside 5x7 bitmap text inside a 24 px bottom strip and a
+    // 28 px top strip, so a 32 px sprite is taller than the bar it sits in. 16 px is the
+    // largest power of two that fits at 1x, and it is the size the 7 px pips are drawn at
+    // twice over. The 16-icon set fills the 4x4 grid exactly; the old 32 px cells would
+    // have shipped four times the pixels every icon needs.
+    finalSize: 16,
     subject:
-      'sixteen flat single-colour-neutral HUD icons on magenta: machine gun, oil slick, smoke screen, armour plate, shield, timer, score star, warning triangle, target reticle, arrow left, arrow right, arrow up, fuel gauge, radio waves, lock-on and a skull',
+      'sixteen flat single-colour-neutral HUD icons on magenta: a machine gun, an oil slick, a smoke screen, a rocket, a flame, an armour plate, a life pip, a shield, a nitro canister, a speedometer gauge, a boss skull emblem, a warning triangle, a target reticle, an arrow pointing left, an arrow pointing right and a small boat',
     cells: padCells([
-      'machine gun',
-      'oil slick',
-      'smoke screen',
+      'gun',
+      'oil',
+      'smoke',
+      'rocket',
+      'flame',
       'armour',
+      'life',
       'shield',
-      'timer',
-      'score star',
+      'nitro',
+      'speed',
+      'boss',
       'warning',
       'reticle',
       'arrow left',
       'arrow right',
-      'arrow up',
-      'fuel gauge',
-      'radio waves',
-      'lock-on',
-      'skull',
+      'boat',
     ]),
-    emphasis: ['icons must survive being tinted at runtime', 'bold, minimum 2px strokes'],
+    emphasis: [
+      'icons must survive being tinted at runtime',
+      'bold, minimum 2px strokes at the final 16 px size',
+      'every icon is a distinct silhouette that reads at 16 px',
+    ],
   },
   {
     id: 'art-20-ui-chrome',
@@ -648,26 +663,40 @@ export const SLOTS: readonly SlotSpec[] = [
     grid: { cols: 4, rows: 4 },
     finalSize: 64,
     subject:
-      'sixteen flat pixel UI components on magenta: a panel frame corner, a panel edge horizontal, a panel edge vertical, a button raised, a button pressed, a meter frame, a meter fill, a divider, a title banner strip, a mission card frame, a warning banner, a number plate frame, a scanline strip, a progress bar cap, a corner bracket and a grid pattern',
+      'sixteen flat pixel UI components on magenta: a panel corner, a horizontal panel edge, a vertical panel edge, a panel fill, a meter frame, a meter fill, a boss bar frame, a boss bar fill, a pause card plate, a sector card plate, a title card plate, a game-over card plate, a divider rule, a banner strip, a progress bar cap and a corner bracket',
+    // WO-60: the cells the real scenes use. `boss bar` is a frame plus a fill because
+    // `HudScene.drawBoss` repaints the fill every frame; `panel edge` stays split into h and
+    // v because a nine-slice needs both; `sector card` is the card `LevelIntroScene` draws.
+    // Dropped from the old set: `button raised`/`button pressed` (the touch pad repaints a
+    // live pressed state on a Graphics plate every frame, so a baked sprite cannot switch
+    // state — the panel corner/edge/fill cells nine-slice behind it), `number plate` (no
+    // scene draws a plate; score, seed and boss text are plain bitmap text), `scanline
+    // strip` (no CRT or scanline overlay exists) and `grid pattern` (maps tile from
+    // art-13…art-17; no UI panel draws a grid). `title banner` and `warning banner` merge
+    // into one `banner`; `mission card` is renamed `sector card` for the scene that draws it.
     cells: padCells([
       'panel corner',
       'panel edge h',
       'panel edge v',
-      'button raised',
-      'button pressed',
+      'panel fill',
       'meter frame',
       'meter fill',
+      'boss bar frame',
+      'boss bar fill',
+      'pause card',
+      'sector card',
+      'title card',
+      'game-over card',
       'divider',
-      'title banner',
-      'mission card',
-      'warning banner',
-      'number plate',
-      'scanline strip',
+      'banner',
       'progress cap',
       'corner bracket',
-      'grid pattern',
     ]),
-    emphasis: ['grid-aligned so tiles can be nine-sliced', 'no text of any kind'],
+    emphasis: [
+      'grid-aligned so tiles can be nine-sliced',
+      'panel corners, edges and fill must join without a visible seam',
+      'no text of any kind',
+    ],
   },
   {
     id: 'art-21-transporter',

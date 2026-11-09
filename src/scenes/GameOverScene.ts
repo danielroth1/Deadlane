@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { GAME } from '@/config';
 import { PALETTE } from '@/palette';
+import { Art } from '@/art';
+import { UI_CHROME_ART } from '@/art/ids';
 import { acquireAudio } from '@/systems/audio-registry';
 import { PixelText } from '@/ui/pixel-text';
 import { formatSeed } from '@/rng';
@@ -39,12 +41,16 @@ declare global {
  * `?seed=` — which is the whole reason levels are generated from a seed in the first place.
  */
 export class GameOverScene extends Phaser.Scene {
+  private art!: Art;
+
   constructor() {
     super('GameOver');
   }
 
   create(data: GameOverData): void {
     this.cameras.main.setBackgroundColor(GAME.background);
+    this.art = new Art(this);
+    this.drawChrome();
 
     const centerX = GAME.width / 2;
 
@@ -113,6 +119,21 @@ export class GameOverScene extends Phaser.Scene {
     this.input.once('pointerdown', redeploy);
 
     this.installDebugSnapshot(data, best, isBest);
+  }
+
+  /**
+   * art-20 chrome for the result screen.
+   *
+   * The four captioned card plates are unusable and the sheet has no divider cell, so only
+   * the ribbon and two corner brackets are wired. Both are optional — the text is drawn
+   * either way.
+   */
+  private drawChrome(): void {
+    this.art.sprite(UI_CHROME_ART.banner[0] ?? '', GAME.width / 2, 44);
+
+    const corner = UI_CHROME_ART['corner-bracket'][0] ?? '';
+    this.art.sprite(corner, 0, 0)?.setOrigin(0, 0);
+    this.art.sprite(corner, GAME.width, GAME.height)?.setOrigin(1, 1).setFlip(true, true);
   }
 
   /**

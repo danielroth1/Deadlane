@@ -150,6 +150,203 @@ export const FLAME_STREAM_ART: readonly (readonly string[])[] = [
  */
 export const ROCKET_ART: readonly string[] = ['fx/electric-arc'];
 
+/** The HUD icons `art-19-ui-icons` supplies. */
+export type HudIconKind =
+  | 'gun'
+  | 'oil'
+  | 'smoke'
+  | 'rocket'
+  | 'flame'
+  | 'armour'
+  | 'shield'
+  | 'warning'
+  | 'reticle'
+  | 'arrow-left'
+  | 'boat';
+
+/**
+ * HUD icon → candidate frame ids, most specific first.
+ *
+ * art-19 attempt 3 (4 × 4 at 16 px) was matched cell by cell on
+ * `pipeline/work/art-19-ui-icons/attempt-3/cell-N.png`; it drifts from its declared labels
+ * from cell 6 onward. Row-major the sheet draws:
+ *   0 machine gun · 1 black oil slick · 2 grey smoke puff · 3 rocket · 4 flame · 5 grey
+ *   armour plate · 6 teal shield (label `life`) · 7 a second flame (label `shield`) ·
+ *   8 a green canister captioned `NITRO` (label `nitro`) · 9 a speedometer dial captioned
+ *   `km/h` (label `speed`) · 10 an orange warning triangle (label `boss`) · 11 a skull dial
+ *   captioned `BOSS` (label `warning`) · 12 a left arrow (label `reticle`) · 13 a reticle
+ *   (label `arrow left`) · 14 a second reticle (label `arrow right`) · 15 a small boat.
+ *
+ * Cells 8, 9 and 11 bake lettering into the icon, so nothing wires them, and cells 7 and 14
+ * are duplicates. That leaves the HUD with no clean cell for the life pip, the nitro
+ * canister, the speedometer, the boss emblem or a right arrow — those keep the primitives
+ * `HudScene` draws. The warning triangle is clean: its `!` is the standard pictogram rather
+ * than a caption, and it lives in the cell the registry labels `boss`.
+ */
+export const HUD_ICON_ART: Readonly<Record<HudIconKind, readonly string[]>> = {
+  // Cell 0.
+  gun: ['ui-icons/gun'],
+  // Cell 1.
+  oil: ['ui-icons/oil'],
+  // Cell 2.
+  smoke: ['ui-icons/smoke'],
+  // Cell 3.
+  rocket: ['ui-icons/rocket'],
+  // Cell 4.
+  flame: ['ui-icons/flame'],
+  // Cell 5.
+  armour: ['ui-icons/armour'],
+  // Cell 6 — a shield. The label on this cell says "life".
+  shield: ['ui-icons/life'],
+  // Cell 10 — a warning triangle. The label on this cell says "boss".
+  warning: ['ui-icons/boss'],
+  // Cells 13 and 14 — the same reticle twice. The label on cell 13 says "arrow left".
+  reticle: ['ui-icons/arrow-left', 'ui-icons/arrow-right'],
+  // Cell 12 — a left arrow. The label on this cell says "reticle".
+  'arrow-left': ['ui-icons/reticle'],
+  // Cell 15.
+  boat: ['ui-icons/boat'],
+};
+
+/** The chrome components `art-20-ui-chrome` supplies. */
+export type UiChromeKind =
+  | 'panel-corner'
+  | 'panel-edge-h'
+  | 'panel-edge-v'
+  | 'panel-fill'
+  | 'meter-frame'
+  | 'meter-fill'
+  | 'boss-bar-fill'
+  | 'divider'
+  | 'banner'
+  | 'progress-cap'
+  | 'corner-bracket';
+
+/**
+ * UI chrome → candidate frame ids, most specific first.
+ *
+ * art-20 attempt 3 (4 × 4 at 64 px) was matched cell by cell on
+ * `pipeline/work/art-20-ui-chrome/attempt-3/cell-N.png`. Row-major the sheet draws:
+ *   0 riveted L corner · 1 horizontal strip with an inset red bar · 2 vertical strip with
+ *   an inset red bar · 3 plain riveted plate · 4 lined plate · 5 a gauge with tiny lettering
+ *   (label `meter fill`) · 6 green/black two-tone bar (label `boss bar frame`) · 7 red/black
+ *   two-tone bar · 8 `PAUSE FRAME` · 9 `SECTOR CARD` · 10 `TITLE` · 11 `GAME PR CARD` ·
+ *   12 a flat orange plate (label `divider`) · 13 an orange ribbon (label `banner`) ·
+ *   14 a segmented bar with a green cap (label `progress cap`) · 15 a corner bracket.
+ *
+ * Cells 8–11 are the four card plates with their names baked in, so the pause, sector, title
+ * and game-over cards keep their primitive plates. Cell 5 is a gauge rather than a bar, so
+ * the sheet has no clean boss bar frame and the boss bar keeps its primitive one. Cell 12
+ * is a solid orange block — the sheet drew no divider rule at all — so `divider` has no
+ * frame and every scene keeps the rule it draws.
+ *
+ * `panel-edge-h`, `panel-edge-v`, `meter-frame`, `meter-fill`, `boss-bar-fill` and
+ * `progress-cap` are mapped but no scene draws them today: every one is a 64 px component
+ * and the only surfaces they would dress are the HUD's 6 px speed and boss bars, which
+ * would need fractional scaling.
+ */
+export const UI_CHROME_ART: Readonly<Record<UiChromeKind, readonly string[]>> = {
+  // Cell 0.
+  'panel-corner': ['ui-chrome/panel-corner'],
+  // Cell 1.
+  'panel-edge-h': ['ui-chrome/panel-edge-h'],
+  // Cell 2.
+  'panel-edge-v': ['ui-chrome/panel-edge-v'],
+  // Cell 3.
+  'panel-fill': ['ui-chrome/panel-fill'],
+  // Cell 4.
+  'meter-frame': ['ui-chrome/meter-frame'],
+  // Cell 6 — the green/black bar. The label on this cell says "boss bar frame".
+  'meter-fill': ['ui-chrome/boss-bar-frame'],
+  // Cell 7.
+  'boss-bar-fill': ['ui-chrome/boss-bar-fill'],
+  // Cell 12 is a flat orange plate, not a rule — there is no divider cell to wire.
+  divider: [],
+  // Cell 13.
+  banner: ['ui-chrome/banner'],
+  // Cell 14.
+  'progress-cap': ['ui-chrome/progress-cap'],
+  // Cell 15.
+  'corner-bracket': ['ui-chrome/corner-bracket'],
+};
+
+/**
+ * Chrome roles deliberately left on the primitive.
+ *
+ * Empty today: a role is either backed by a clean cell above or listed here, and never
+ * both. It exists so a test can tell "not drawn yet, on purpose" apart from "somebody
+ * forgot a role".
+ */
+export const UI_CHROME_PLACEHOLDER: readonly UiChromeKind[] = ['divider'];
+
+
+/** The civilian vehicles `art-08-civilians` supplies, one per content row. */
+export type CivilianArtKind =
+  | 'sedan'
+  | 'wagon'
+  | 'hatchback'
+  | 'coupe'
+  | 'taxi'
+  | 'pickup-truck'
+  | 'van'
+  | 'box-truck'
+  | 'small-lorry'
+  | 'city-bus'
+  | 'limousine'
+  | 'skiff'
+  | 'barge'
+  | 'boat';
+
+/**
+ * Civilian art → candidate frame ids, most specific first.
+ *
+ * art-08 attempt 2 replaces the six-cell attempt-1 sheet with a full 4 × 4, but the model
+ * drew the fourteen vehicles in a different order than the registry declared them. Every
+ * entry below was matched on `pipeline/work/art-08-civilians/attempt-2/cell-N.png` and
+ * names the cell by the label it carries, which is why several ids read as the neighbouring
+ * subject. Row-major the sheet draws:
+ *   0 dark sedan · 1 white estate wagon (front doors open) · 2 dark hatchback (front doors
+ *   open) · 3 red coupe · 4 yellow taxi · 5 teal pickup · 6 a second taxi (label `van`) ·
+ *   7 a third taxi (label `box truck`) · 8 olive lorry · 9 white box truck (label
+ *   `city bus`) · 10 white city bus (label `limousine`) · 11 grey van (label `skiff`) ·
+ *   12 grey limousine (label `barge`) · 13 skiff (label `boat`) · 14 river barge (the slot
+ *   left it unlabelled) · 15 pleasure boat (also unlabelled).
+ *
+ * Cells 6 and 7 are duplicate taxis nobody asked for, so nothing claims `civilians/van` or
+ * `civilians/box-truck` — the van is really in cell 11 and the box truck in cell 9. Cells 1
+ * and 2 carry open door flaps that reach past the body and cells 13–15 carry painted water;
+ * the current soft art bible accepts both, and `pipeline/registry/slots.ts` records it.
+ */
+export const CIVILIAN_ART: Readonly<Record<CivilianArtKind, readonly string[]>> = {
+  // Cell 0.
+  sedan: ['civilians/sedan'],
+  // Cell 1.
+  wagon: ['civilians/wagon'],
+  // Cell 2.
+  hatchback: ['civilians/hatchback'],
+  // Cell 3.
+  coupe: ['civilians/coupe'],
+  // Cell 4.
+  taxi: ['civilians/taxi'],
+  // Cell 5.
+  'pickup-truck': ['civilians/pickup-truck'],
+  // Cell 11 — a grey delivery van. The label on this cell says "skiff".
+  van: ['civilians/skiff'],
+  // Cell 9 — a white box truck. The label on this cell says "city bus".
+  'box-truck': ['civilians/city-bus'],
+  // Cell 8.
+  'small-lorry': ['civilians/small-lorry'],
+  // Cell 10 — a white city bus. The label on this cell says "limousine".
+  'city-bus': ['civilians/limousine'],
+  // Cell 12 — a grey limousine. The label on this cell says "barge".
+  limousine: ['civilians/barge'],
+  // Cell 13 — a skiff with painted water. The label on this cell says "boat".
+  skiff: ['civilians/boat'],
+  // Cell 14 — the river barge, in one of the two cells the slot left unlabelled.
+  barge: ['civilians/cell-14'],
+  // Cell 15 — the pleasure boat, in the other unlabelled cell.
+  boat: ['civilians/cell-15'],
+};
 
 /** The prop ids the level `propPool` rows place. */
 export type PropKind =

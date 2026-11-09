@@ -227,20 +227,12 @@ describe('civilian art ids', () => {
    * Every civilian has to be placed deliberately: either against a frame that actually
    * ships, or against a placeholder that is listed here by id. Adding a civilian, or
    * letting one lose its `art` id by accident, fails this test instead of silently
-   * degrading to procedural art.
+   * degrading to procedural art. The list is empty because art-08 attempt 2 covers all
+   * fourteen subjects.
    */
-  const PLACEHOLDER_CIVILIANS = [
-    'barge',
-    'boat',
-    'box-truck',
-    'coupe',
-    'hatchback',
-    'skiff',
-    'van',
-    'wagon',
-  ];
+  const PLACEHOLDER_CIVILIANS: readonly string[] = [];
 
-  it('draws the placeholder for exactly the civilians attempt 1 could not supply', () => {
+  it('declares art for every civilian, so none falls back to a placeholder', () => {
     const placeholders = CIVILIANS.flatMap((civilian) =>
       civilian.art === undefined ? [civilian.id] : [],
     ).sort();
@@ -249,30 +241,39 @@ describe('civilian art ids', () => {
   });
 
   /**
-   * `pipeline/registry/slots.ts` records ten attempt-1 rejects for `art-08-civilians` as
-   * `droppedCellsByAttempt`, not as permanent `droppedCells`: the attempt fused three
-   * vehicles into a cross in cells 1, 2 and 5, drew cells 3 and 6 side-on, put a sedan in
-   * the `skiff` cell, a motorboat in the sports-car cell, and ringed the three watercraft
-   * cells with model-drawn water. Only six cells passed the gate, so only six frames may
-   * reach the atlas. A retry draws a fresh 4 × 4 sheet and is judged on its own cells.
+   * art-08 attempt 2 redraws the whole 4 × 4 grid, so every one of its sixteen cells reaches
+   * the atlas — including the two cells the slot left unlabelled, which hold the river barge
+   * and the pleasure boat and are named `cell-14` and `cell-15`.
    */
-  it('ships only the six cells that passed the art-08 gate', () => {
+  it('ships all sixteen cells of the art-08 attempt-2 sheet', () => {
     const frames = Object.keys(manifest.sheets['art-08-civilians']?.frames ?? {}).sort();
     expect(frames).toEqual([
+      'civilians/barge',
+      'civilians/boat',
+      'civilians/box-truck',
+      'civilians/cell-14',
+      'civilians/cell-15',
       'civilians/city-bus',
+      'civilians/coupe',
+      'civilians/hatchback',
       'civilians/limousine',
       'civilians/pickup-truck',
       'civilians/sedan',
+      'civilians/skiff',
       'civilians/small-lorry',
       'civilians/taxi',
+      'civilians/van',
+      'civilians/wagon',
     ]);
   });
 
-  it('claims every shipped cell and nothing else', () => {
+  it('leaves exactly the two duplicate taxi cells unclaimed', () => {
     const frames = Object.keys(manifest.sheets['art-08-civilians']?.frames ?? {}).sort();
-    const arts = declared.map(({ art }) => art).sort();
+    const arts = declared.map(({ art }) => art);
+    const unclaimed = frames.filter((frame) => !arts.includes(frame));
 
-    expect(arts).toEqual(frames);
+    // Cells 6 and 7 are a second and third taxi the slot never asked for.
+    expect(unclaimed).toEqual(['civilians/box-truck', 'civilians/van']);
   });
 
   it('uses a distinct cell for every civilian', () => {

@@ -208,9 +208,20 @@
           "requestId": "01a1baef-93d8-7ca1-8a55-47116aeece21",
           "url": "https://v3b.fal.media/files/b/0ab1a302/Zx30bAWYRQce41fz6uMze_hZDdJLtp.png",
           "costUsd": 0.0084
+        },
+        {
+          "attempt": 2,
+          "seed": 1330862588,
+          "promptHash": "66644a84822f5dd2",
+          "state": "generated",
+          "claimedAt": "2026-11-09T01:30:50.381Z",
+          "requestId": "01a1bdee-0d89-7e02-a292-6058738c8ca9",
+          "url": "https://v3b.fal.media/files/b/0ab1b6a2/gW_xU-NECeZIFn6uArZFL_qyQ9cvi7.png",
+          "costUsd": 0.0084
         }
       ],
-      "status": "open"
+      "status": "approved",
+      "selected": 2
     },
     "art-09-weapons-pickups": {
       "id": "art-09-weapons-pickups",
@@ -384,13 +395,69 @@
     },
     "art-19-ui-icons": {
       "id": "art-19-ui-icons",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 2124839284,
+          "promptHash": "5bae193c523bfc8a",
+          "state": "released",
+          "claimedAt": "2026-11-09T01:29:31.018Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 2,
+          "seed": 2124839290,
+          "promptHash": "5bae193c523bfc8a",
+          "state": "released",
+          "claimedAt": "2026-11-09T01:29:52.983Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 3,
+          "seed": 424242,
+          "promptHash": "5bae193c523bfc8a",
+          "state": "generated",
+          "claimedAt": "2026-11-09T01:30:15.010Z",
+          "requestId": "01a1bded-7e8e-7fe3-9c3f-f9588efe652f",
+          "url": "https://v3b.fal.media/files/b/0ab1b69f/re_ZD-1XXhtrBlPD1fSka_uzVuI69U.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 3
     },
     "art-20-ui-chrome": {
       "id": "art-20-ui-chrome",
-      "attempts": [],
-      "status": "open"
+      "attempts": [
+        {
+          "attempt": 1,
+          "seed": 1328060305,
+          "promptHash": "44da708cfa83c9fc",
+          "state": "released",
+          "claimedAt": "2026-11-09T01:31:19.768Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 2,
+          "seed": 1328060399,
+          "promptHash": "44da708cfa83c9fc",
+          "state": "released",
+          "claimedAt": "2026-11-09T01:31:38.240Z",
+          "notes": "generation produced no image"
+        },
+        {
+          "attempt": 3,
+          "seed": 90210,
+          "promptHash": "44da708cfa83c9fc",
+          "state": "generated",
+          "claimedAt": "2026-11-09T01:31:59.451Z",
+          "requestId": "01a1bdef-1aaf-77b3-8c5b-91d73d0a22d7",
+          "url": "https://v3b.fal.media/files/b/0ab1b6a8/RSHhOGTeS-VPnq7Y-f0k-_9C6cg1cm.png",
+          "costUsd": 0.0084
+        }
+      ],
+      "status": "approved",
+      "selected": 3
     },
     "art-21-transporter": {
       "id": "art-21-transporter",

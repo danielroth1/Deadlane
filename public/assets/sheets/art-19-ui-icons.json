@@ -1,0 +1,106 @@
+{
+  "slot": "art-19-ui-icons",
+  "code": "ui-icons",
+  "cellSize": 16,
+  "cols": 4,
+  "rows": 4,
+  "image": "assets/sheets/art-19-ui-icons.png",
+  "frames": {
+    "ui-icons/gun": {
+      "x": 0,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/oil": {
+      "x": 16,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/smoke": {
+      "x": 32,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/rocket": {
+      "x": 48,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/flame": {
+      "x": 0,
+      "y": 16,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/armour": {
+      "x": 16,
+      "y": 16,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/life": {
+      "x": 32,
+      "y": 16,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/shield": {
+      "x": 48,
+      "y": 16,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/nitro": {
+      "x": 0,
+      "y": 32,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/speed": {
+      "x": 16,
+      "y": 32,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/boss": {
+      "x": 32,
+      "y": 32,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/warning": {
+      "x": 48,
+      "y": 32,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/reticle": {
+      "x": 0,
+      "y": 48,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/arrow-left": {
+      "x": 16,
+      "y": 48,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/arrow-right": {
+      "x": 32,
+      "y": 48,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/boat": {
+      "x": 48,
+      "y": 48,
+      "w": 16,
+      "h": 16
+    }
+  }
+}

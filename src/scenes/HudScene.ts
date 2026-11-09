@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { BOSS, GAME, MOTION } from '@/config';
 import { PALETTE } from '@/palette';
+import { Art } from '@/art';
+import { HUD_ICON_ART, UI_CHROME_ART, type HudIconKind } from '@/art/ids';
 import { PixelText } from '@/ui/pixel-text';
 import { toggleAudioMute } from '@/systems/audio-registry';
 import { buttonAt } from '@/systems/touch-input';
@@ -66,6 +68,8 @@ declare global {
  * key, the mute key and the pause card have to live in a scene that keeps running.
  */
 export class HudScene extends Phaser.Scene {
+  private art!: Art;
+  private warningIcon?: Phaser.GameObjects.Image;
   private gameScene!: GameScene;
   private scoreText!: PixelText;
   private sectorText!: PixelText;
@@ -93,6 +97,8 @@ export class HudScene extends Phaser.Scene {
 
   create(): void {
     const pad = 8;
+
+    this.art = new Art(this);
 
     // Backing strips so the HUD stays readable over grass, water and concrete alike.
     const bars = this.add.graphics();
@@ -162,6 +168,8 @@ export class HudScene extends Phaser.Scene {
     this.speedBar = this.add.graphics();
     this.bossBar = this.add.graphics();
 
+    this.buildIconBadges();
+
     // Everything in the HUD must sit above the world.
     for (const child of this.children.list) {
       (child as Phaser.GameObjects.GameObject & { setDepth: (n: number) => void }).setDepth(100);
@@ -208,6 +216,39 @@ export class HudScene extends Phaser.Scene {
     this.drawPips(state);
     this.drawSpeed(state);
     this.drawBoss(state);
+
+    // The off-road warning keeps its text as the fallback and gains a badge when the icon
+    // sheet shipped.
+    this.warningIcon?.setVisible(state.offRoad);
+  }
+
+  /**
+   * One 16 px generated icon per counter, on the bottom strip's top edge.
+   *
+   * art-19 is a 16 px sheet and the strip is 24 px with the pips already using the middle, so
+   * the badges sit directly above each counter they label. Every one of them is optional: a
+   * frame that is missing, text-bearing or was never pulled is simply not created, and the
+   * primitive pips beside it stay the only readout. The life pips, the speed bar and the boss
+   * bar keep primitives because art-19 has no clean cell for them (see `HUD_ICON_ART`).
+   */
+  private buildIconBadges(): void {
+    const bottom = GAME.height - 24;
+    const badges: readonly (readonly [HudIconKind, number])[] = [
+      ['armour', 8],
+      ['oil', 70],
+      ['smoke', 98],
+      ['rocket', 124],
+      ['flame', 170],
+    ];
+
+    for (const [kind, x] of badges) {
+      this.art.sprite(HUD_ICON_ART[kind][0] ?? '', x, bottom)?.setOrigin(0, 1);
+    }
+
+    this.warningIcon = this.art
+      .sprite(HUD_ICON_ART.warning[0] ?? '', GAME.width / 2 - 54, bottom)
+      ?.setOrigin(0, 1)
+      .setVisible(false);
   }
 
   private drawPips(state: HudState): void {
@@ -355,12 +396,22 @@ export class HudScene extends Phaser.Scene {
     const x = (GAME.width - width) / 2;
     const y = (GAME.height - height) / 2;
 
+    // The primitive plate is always drawn, and is the whole card when art-20 is absent.
     overlay.fillStyle(PALETTE.asphalt, 1);
     overlay.fillRect(x, y, width, height);
     overlay.fillStyle(PALETTE.hotPink, 1);
     overlay.fillRect(x, y, 2, height);
     overlay.fillStyle(PALETTE.steel, 1);
     overlay.fillRect(x + 2, y + height - 2, width - 2, 2);
+
+    // art-20's four captioned card plates are unusable, so the plate itself stays primitive
+    // and only the plain panel fill and the corner brackets are layered over it.
+    const plate = this.art.tile(UI_CHROME_ART['panel-fill'][0] ?? '', x, y, width, height);
+    const corner = UI_CHROME_ART['corner-bracket'][0] ?? '';
+    const corners: (Phaser.GameObjects.Image | null)[] = [
+      this.art.sprite(corner, x, y)?.setOrigin(0, 0) ?? null,
+      this.art.sprite(corner, x + width, y + height)?.setOrigin(1, 1).setFlip(true, true) ?? null,
+    ];
 
     const title = new PixelText(this, {
       x: GAME.width / 2,
@@ -379,7 +430,21 @@ export class HudScene extends Phaser.Scene {
     }).setText('ESC RESUME   M MUTE');
     this.pauseHint = hint;
 
-    this.pauseCard = this.add.container(0, 0, [overlay, title, hint]).setDepth(200).setVisible(false);
+    const children: (Phaser.GameObjects.GameObject | null)[] = [
+      overlay,
+      plate,
+      ...corners,
+      title,
+      hint,
+    ];
+    this.pauseCard = this.add
+      .container(
+        0,
+        0,
+        children.filter((child): child is Phaser.GameObjects.GameObject => child !== null),
+      )
+      .setDepth(200)
+      .setVisible(false);
   }
 
   private installPauseControl(): void {

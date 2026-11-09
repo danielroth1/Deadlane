@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-08T23:43:35.570Z",
+  "generatedAt": "2026-11-09T02:05:14.591Z",
   "sheets": {
     "art-01-style-anchor": {
       "slot": "art-01-style-anchor",
@@ -189,32 +189,92 @@
           "w": 64,
           "h": 64
         },
-        "civilians/pickup-truck": {
+        "civilians/wagon": {
+          "x": 64,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/hatchback": {
+          "x": 128,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/coupe": {
+          "x": 192,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/taxi": {
           "x": 0,
           "y": 64,
           "w": 64,
           "h": 64
         },
-        "civilians/taxi": {
+        "civilians/pickup-truck": {
+          "x": 64,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/van": {
+          "x": 128,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/box-truck": {
           "x": 192,
           "y": 64,
           "w": 64,
           "h": 64
         },
-        "civilians/city-bus": {
+        "civilians/small-lorry": {
           "x": 0,
           "y": 128,
           "w": 64,
           "h": 64
         },
-        "civilians/small-lorry": {
-          "x": 192,
+        "civilians/city-bus": {
+          "x": 64,
           "y": 128,
           "w": 64,
           "h": 64
         },
         "civilians/limousine": {
+          "x": 128,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/skiff": {
+          "x": 192,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/barge": {
           "x": 0,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/boat": {
+          "x": 64,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/cell-14": {
+          "x": 128,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "civilians/cell-15": {
+          "x": 192,
           "y": 192,
           "w": 64,
           "h": 64
@@ -1726,6 +1786,218 @@
           "h": 64
         }
       }
+    },
+    "art-19-ui-icons": {
+      "slot": "art-19-ui-icons",
+      "code": "ui-icons",
+      "cellSize": 16,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-19-ui-icons.png",
+      "frames": {
+        "ui-icons/gun": {
+          "x": 0,
+          "y": 0,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/oil": {
+          "x": 16,
+          "y": 0,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/smoke": {
+          "x": 32,
+          "y": 0,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/rocket": {
+          "x": 48,
+          "y": 0,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/flame": {
+          "x": 0,
+          "y": 16,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/armour": {
+          "x": 16,
+          "y": 16,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/life": {
+          "x": 32,
+          "y": 16,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/shield": {
+          "x": 48,
+          "y": 16,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/nitro": {
+          "x": 0,
+          "y": 32,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/speed": {
+          "x": 16,
+          "y": 32,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/boss": {
+          "x": 32,
+          "y": 32,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/warning": {
+          "x": 48,
+          "y": 32,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/reticle": {
+          "x": 0,
+          "y": 48,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/arrow-left": {
+          "x": 16,
+          "y": 48,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/arrow-right": {
+          "x": 32,
+          "y": 48,
+          "w": 16,
+          "h": 16
+        },
+        "ui-icons/boat": {
+          "x": 48,
+          "y": 48,
+          "w": 16,
+          "h": 16
+        }
+      }
+    },
+    "art-20-ui-chrome": {
+      "slot": "art-20-ui-chrome",
+      "code": "ui-chrome",
+      "cellSize": 64,
+      "cols": 4,
+      "rows": 4,
+      "image": "assets/sheets/art-20-ui-chrome.png",
+      "frames": {
+        "ui-chrome/panel-corner": {
+          "x": 0,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/panel-edge-h": {
+          "x": 64,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/panel-edge-v": {
+          "x": 128,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/panel-fill": {
+          "x": 192,
+          "y": 0,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/meter-frame": {
+          "x": 0,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/meter-fill": {
+          "x": 64,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/boss-bar-frame": {
+          "x": 128,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/boss-bar-fill": {
+          "x": 192,
+          "y": 64,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/pause-card": {
+          "x": 0,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/sector-card": {
+          "x": 64,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/title-card": {
+          "x": 128,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/game-over-card": {
+          "x": 192,
+          "y": 128,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/divider": {
+          "x": 0,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/banner": {
+          "x": 64,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/progress-cap": {
+          "x": 128,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        },
+        "ui-chrome/corner-bracket": {
+          "x": 192,
+          "y": 192,
+          "w": 64,
+          "h": 64
+        }
+      }
     }
   },
   "sprites": {
@@ -1869,37 +2141,107 @@
       "w": 64,
       "h": 64
     },
-    "civilians/pickup-truck": {
+    "civilians/wagon": {
+      "sheet": "art-08-civilians",
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/hatchback": {
+      "sheet": "art-08-civilians",
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/coupe": {
+      "sheet": "art-08-civilians",
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/taxi": {
       "sheet": "art-08-civilians",
       "x": 0,
       "y": 64,
       "w": 64,
       "h": 64
     },
-    "civilians/taxi": {
+    "civilians/pickup-truck": {
+      "sheet": "art-08-civilians",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/van": {
+      "sheet": "art-08-civilians",
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/box-truck": {
       "sheet": "art-08-civilians",
       "x": 192,
       "y": 64,
       "w": 64,
       "h": 64
     },
-    "civilians/city-bus": {
+    "civilians/small-lorry": {
       "sheet": "art-08-civilians",
       "x": 0,
       "y": 128,
       "w": 64,
       "h": 64
     },
-    "civilians/small-lorry": {
+    "civilians/city-bus": {
       "sheet": "art-08-civilians",
-      "x": 192,
+      "x": 64,
       "y": 128,
       "w": 64,
       "h": 64
     },
     "civilians/limousine": {
       "sheet": "art-08-civilians",
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/skiff": {
+      "sheet": "art-08-civilians",
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/barge": {
+      "sheet": "art-08-civilians",
       "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/boat": {
+      "sheet": "art-08-civilians",
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/cell-14": {
+      "sheet": "art-08-civilians",
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "civilians/cell-15": {
+      "sheet": "art-08-civilians",
+      "x": 192,
       "y": 192,
       "w": 64,
       "h": 64
@@ -3439,6 +3781,230 @@
     },
     "fx-expanded/sparks-burst": {
       "sheet": "art-25-fx-expanded",
+      "x": 192,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "ui-icons/gun": {
+      "sheet": "art-19-ui-icons",
+      "x": 0,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/oil": {
+      "sheet": "art-19-ui-icons",
+      "x": 16,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/smoke": {
+      "sheet": "art-19-ui-icons",
+      "x": 32,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/rocket": {
+      "sheet": "art-19-ui-icons",
+      "x": 48,
+      "y": 0,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/flame": {
+      "sheet": "art-19-ui-icons",
+      "x": 0,
+      "y": 16,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/armour": {
+      "sheet": "art-19-ui-icons",
+      "x": 16,
+      "y": 16,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/life": {
+      "sheet": "art-19-ui-icons",
+      "x": 32,
+      "y": 16,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/shield": {
+      "sheet": "art-19-ui-icons",
+      "x": 48,
+      "y": 16,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/nitro": {
+      "sheet": "art-19-ui-icons",
+      "x": 0,
+      "y": 32,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/speed": {
+      "sheet": "art-19-ui-icons",
+      "x": 16,
+      "y": 32,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/boss": {
+      "sheet": "art-19-ui-icons",
+      "x": 32,
+      "y": 32,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/warning": {
+      "sheet": "art-19-ui-icons",
+      "x": 48,
+      "y": 32,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/reticle": {
+      "sheet": "art-19-ui-icons",
+      "x": 0,
+      "y": 48,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/arrow-left": {
+      "sheet": "art-19-ui-icons",
+      "x": 16,
+      "y": 48,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/arrow-right": {
+      "sheet": "art-19-ui-icons",
+      "x": 32,
+      "y": 48,
+      "w": 16,
+      "h": 16
+    },
+    "ui-icons/boat": {
+      "sheet": "art-19-ui-icons",
+      "x": 48,
+      "y": 48,
+      "w": 16,
+      "h": 16
+    },
+    "ui-chrome/panel-corner": {
+      "sheet": "art-20-ui-chrome",
+      "x": 0,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/panel-edge-h": {
+      "sheet": "art-20-ui-chrome",
+      "x": 64,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/panel-edge-v": {
+      "sheet": "art-20-ui-chrome",
+      "x": 128,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/panel-fill": {
+      "sheet": "art-20-ui-chrome",
+      "x": 192,
+      "y": 0,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/meter-frame": {
+      "sheet": "art-20-ui-chrome",
+      "x": 0,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/meter-fill": {
+      "sheet": "art-20-ui-chrome",
+      "x": 64,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/boss-bar-frame": {
+      "sheet": "art-20-ui-chrome",
+      "x": 128,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/boss-bar-fill": {
+      "sheet": "art-20-ui-chrome",
+      "x": 192,
+      "y": 64,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/pause-card": {
+      "sheet": "art-20-ui-chrome",
+      "x": 0,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/sector-card": {
+      "sheet": "art-20-ui-chrome",
+      "x": 64,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/title-card": {
+      "sheet": "art-20-ui-chrome",
+      "x": 128,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/game-over-card": {
+      "sheet": "art-20-ui-chrome",
+      "x": 192,
+      "y": 128,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/divider": {
+      "sheet": "art-20-ui-chrome",
+      "x": 0,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/banner": {
+      "sheet": "art-20-ui-chrome",
+      "x": 64,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/progress-cap": {
+      "sheet": "art-20-ui-chrome",
+      "x": 128,
+      "y": 192,
+      "w": 64,
+      "h": 64
+    },
+    "ui-chrome/corner-bracket": {
+      "sheet": "art-20-ui-chrome",
       "x": 192,
       "y": 192,
       "w": 64,

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { GAME, LEVEL } from '@/config';
 import { PALETTE } from '@/palette';
+import { Art } from '@/art';
+import { UI_CHROME_ART } from '@/art/ids';
 import { LEVEL_PROFILES, type LevelType } from '@/levels/types';
 import { PixelText } from '@/ui/pixel-text';
 
@@ -22,6 +24,7 @@ export interface LevelIntroData {
  * card is up, and a frozen scene cannot update its own tweens or timers.
  */
 export class LevelIntroScene extends Phaser.Scene {
+  private art!: Art;
   private targetScene = 'Game';
   private levelIndex = 1;
   private type: LevelType = 'highway';
@@ -43,6 +46,8 @@ export class LevelIntroScene extends Phaser.Scene {
     const profile = LEVEL_PROFILES[this.type];
     const centerX = GAME.width / 2;
 
+    this.art = new Art(this);
+
     const overlay = this.add.graphics();
     overlay.fillStyle(PALETTE.void, 0.86);
     overlay.fillRect(0, 0, GAME.width, GAME.height);
@@ -58,6 +63,15 @@ export class LevelIntroScene extends Phaser.Scene {
     overlay.fillRect(x, y, 2, height);
     overlay.fillStyle(PALETTE.steel, 1);
     overlay.fillRect(x + 2, y + height - 2, width - 2, 2);
+
+    // art-20's captioned `sector card` plate is unusable and the sheet has no divider cell,
+    // so the primitive card stays and only the plain panel fill is layered over it — as a
+    // header band, because the steel type under it reads better on the dark plate than on a
+    // mid-tone one.
+    const plate =
+      this.art
+        .tile(UI_CHROME_ART['panel-fill'][0] ?? '', x, y, width, 68)
+        ?.setAlpha(0.6) ?? null;
 
     const sector = new PixelText(this, {
       x: centerX,
@@ -91,8 +105,21 @@ export class LevelIntroScene extends Phaser.Scene {
       align: 'center',
     }).setText('SPACE TO CONTINUE');
 
+    const children: (Phaser.GameObjects.GameObject | null)[] = [
+      overlay,
+      plate,
+      sector,
+      label,
+      typeLine,
+      hint,
+    ];
+
     const card = this.add
-      .container(0, 0, [overlay, sector, label, typeLine, hint])
+      .container(
+        0,
+        0,
+        children.filter((child): child is Phaser.GameObjects.GameObject => child !== null),
+      )
       .setDepth(300)
       .setAlpha(0);
 

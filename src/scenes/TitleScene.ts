@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME } from '@/config';
 import { PALETTE } from '@/palette';
 import { Art } from '@/art';
+import { UI_CHROME_ART } from '@/art/ids';
 import { acquireAudio, toggleAudioMute } from '@/systems/audio-registry';
 import { PixelText } from '@/ui/pixel-text';
 import { formatSeed } from '@/rng';
@@ -155,6 +156,22 @@ export class TitleScene extends Phaser.Scene {
     const g = this.add.graphics();
     g.fillStyle(PALETTE.void, 0.78);
     g.fillRect(0, 40, GAME.width, 296);
+
+    // art-20 chrome, layered over the primitive plate — the plate is what a missing or
+    // unpulled sheet leaves behind. Its four captioned card cells are unusable, so the
+    // corners, the fill and the rules are all plain components.
+    this.art
+      .tile(UI_CHROME_ART['panel-fill'][0] ?? '', 0, 40, GAME.width, 296)
+      ?.setAlpha(0.5);
+
+    const corner = UI_CHROME_ART['panel-corner'][0] ?? '';
+    this.art.sprite(corner, 0, 40)?.setOrigin(0, 0);
+    this.art.sprite(corner, GAME.width, 40)?.setOrigin(1, 0).setFlip(true, false);
+    this.art.sprite(corner, 0, 336)?.setOrigin(0, 1).setFlip(false, true);
+    this.art.sprite(corner, GAME.width, 336)?.setOrigin(1, 1).setFlip(true, true);
+
+    // The two rules under the title and above the footer. art-20 drew no divider cell, so
+    // these stay drawn.
     g.fillStyle(PALETTE.hotPink, 0.8);
     g.fillRect(GAME.width / 2 - 40, 64, 80, 2);
     g.fillRect(GAME.width / 2 - 40, 330, 80, 2);
