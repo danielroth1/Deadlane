@@ -136,7 +136,12 @@ export interface ContactFacts {
 export interface ContactCost {
   /** Spend one armour hit on the player. */
   readonly armour: boolean;
-  /** The hostile car that was rammed takes `COLLISION.impactDamage`. */
+  /**
+   * True when the hostile car that was rammed takes impact damage.
+   *
+   * Always false: since WO-58 a contact costs through the hostile's signature side weapon
+   * (a push and a steering lock), never by deleting the car that was touched.
+   */
   readonly damageOther: boolean;
   /** Score the neutral-traffic penalty and wreck the neutral car. */
   readonly trafficPenalty: boolean;
@@ -160,7 +165,8 @@ const NO_COST: ContactCost = {
  *
  * - **A hostile ram is armour.** It is the only cost the i-frame window buys, so a ram that
  *   lands inside the window parts the cars and spends nothing — and wrecks nothing either,
- *   because nothing hit.
+ *   because nothing hit. The hostile itself is never damaged by the contact: its signature
+ *   side weapon applies the push and the steering lock (`systems/contact-weapons.ts`).
  * - **Traffic is never armour.** Hitting a civilian costs score and wrecks it; it never
  *   costs armour, and that includes while the window is open and while the run is ending.
  *   The penalty belongs to the contact, so the window cannot swallow it.
@@ -180,7 +186,7 @@ export function contactCost(facts: ContactFacts): ContactCost {
 
   if (facts.runEnded || facts.invulnerable) return NO_COST;
 
-  return { armour: true, damageOther: true, trafficPenalty: false, jolt: true };
+  return { armour: true, damageOther: false, trafficPenalty: false, jolt: true };
 }
 
 /**

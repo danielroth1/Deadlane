@@ -20,10 +20,46 @@ export type BehaviorId = 'weave' | 'charge' | 'ram' | 'hold' | 'turret';
 
 export const BEHAVIORS: readonly BehaviorId[] = ['weave', 'charge', 'ram', 'hold', 'turret'];
 
+/**
+ * What an enemy does to the car when it touches it.
+ *
+ * This is the signature weapon, not the behaviour: two units may weave and still carry a
+ * different side weapon, and every content row names its own so touching two hostiles never
+ * feels the same. The ids are a closed set; the effects live in `src/systems/contact-weapons.ts`.
+ */
+export type EnemyWeaponId =
+  | 'spikes'
+  | 'ram-plate'
+  | 'bull-bar'
+  | 'mine-rack'
+  | 'autocannon'
+  | 'rotor-blades'
+  | 'emp'
+  | 'broadside'
+  | 'torpedo-rack'
+  | 'harpoon'
+  | 'drill';
+
+export const ENEMY_WEAPON_IDS: readonly EnemyWeaponId[] = [
+  'spikes',
+  'ram-plate',
+  'bull-bar',
+  'mine-rack',
+  'autocannon',
+  'rotor-blades',
+  'emp',
+  'broadside',
+  'torpedo-rack',
+  'harpoon',
+  'drill',
+];
+
 export interface EnemyDef {
   id: string;
   label: string;
   behavior: BehaviorId;
+  /** The signature contact weapon this unit carries. Unique per enemy id. */
+  weapon: EnemyWeaponId;
   speed: number;
   hp: number;
   shape: VehicleShape;
@@ -52,6 +88,13 @@ export interface CivilianDef {
   size: number;
   speed: number;
   weight: number;
+  /**
+   * Shots this car survives before it is wrecked.
+   *
+   * Optional so a row written before durable traffic still loads; a row without it takes one
+   * shell. With it, a stray round damages the car instead of erasing it on the first hit.
+   */
+  hp?: number;
   /**
    * Full manifest sprite id of the form `<sheet-code>/<cell-slug>`, as keyed in
    * `public/assets/assets.json` → `.sprites`. This is **not** a civilian id: sheet cells
@@ -134,7 +177,13 @@ export type BossAttackPatternId =
   | 'broadside'
   | 'depth-charge'
   | 'drill-punch'
-  | 'rubble-burst';
+  | 'rubble-burst'
+  | 'flame-wall'
+  | 'minefield'
+  | 'laser-sweep'
+  | 'ram-charge'
+  | 'missile-barrage'
+  | 'sonic-pulse';
 
 export const BOSS_ATTACK_PATTERN_IDS: readonly BossAttackPatternId[] = [
   'turret-burst',
@@ -145,6 +194,12 @@ export const BOSS_ATTACK_PATTERN_IDS: readonly BossAttackPatternId[] = [
   'depth-charge',
   'drill-punch',
   'rubble-burst',
+  'flame-wall',
+  'minefield',
+  'laser-sweep',
+  'ram-charge',
+  'missile-barrage',
+  'sonic-pulse',
 ];
 
 export interface BossDef {

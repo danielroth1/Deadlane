@@ -11,6 +11,7 @@ import {
   roadWidthAt,
   type LevelBlueprint,
   type LevelEvent,
+  type LevelType,
   type RoadShape,
 } from './types';
 import { validateBlueprint } from './validate';
@@ -109,6 +110,51 @@ describe('level generation', () => {
       for (const challenge of levelForSeed(7, index).challenges) {
         const template = CHALLENGE_TEMPLATES.find((entry) => entry.kind === challenge.kind);
         expect(challenge.reward).toBe(template?.reward);
+      }
+    }
+  });
+});
+
+/**
+ * Combat density.
+ *
+ * WO-58 made every hostile durable enough to survive a gun volley, so the road fields fewer
+ * of them. These ceilings are the regression fence: same seeds, materially fewer events
+ * than the crowded baseline, and a screen cap low enough that a durable car never becomes a
+ * shooting gallery.
+ */
+describe('combat density', () => {
+  const SEEDS = [7, 101, 4242, 90210, 31337, 555];
+
+  /** Per-type ceilings for a first-sector blueprint (length ~24 000–28 000 px). */
+  const CEILINGS: Readonly<Record<LevelType, { readonly enemies: number; readonly traffic: number }>> = {
+    highway: { enemies: 50, traffic: 175 },
+    canyon: { enemies: 54, traffic: 100 },
+    river: { enemies: 58, traffic: 68 },
+    city: { enemies: 50, traffic: 300 },
+    tunnel: { enemies: 70, traffic: 135 },
+  };
+
+  it('caps the hostile streams low, because every car is now durable', () => {
+    expect(SPAWN.maxEnemiesOnScreen).toBeLessThanOrEqual(5);
+    expect(SPAWN.maxTrafficOnScreen).toBeLessThanOrEqual(8);
+  });
+
+  it('spaces the same seed into materially fewer events', () => {
+    for (const type of LEVEL_TYPES) {
+      const ceiling = CEILINGS[type];
+
+      for (const seed of SEEDS) {
+        const blueprint = generateLevel({ type, seed, index: 1 });
+        const enemies = blueprint.events.filter((event) => event.kind === 'enemy').length;
+        const traffic = blueprint.events.filter((event) => event.kind === 'traffic').length;
+
+        expect(enemies, `${type} seed ${seed} fields too many hostiles`).toBeLessThanOrEqual(
+          ceiling.enemies,
+        );
+        expect(traffic, `${type} seed ${seed} fields too much traffic`).toBeLessThanOrEqual(
+          ceiling.traffic,
+        );
       }
     }
   });

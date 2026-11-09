@@ -669,10 +669,12 @@
       "title": "Combat roster: fewer/tougher vehicles, signature enemy weapons, new boss patterns",
       "file": "gauntlet/work-orders/WO-58-combat-roster.md",
       "status": "pending",
-      "round": 0,
+      "round": 1,
       "dependsOn": [
         "WO-55"
-      ]
+      ],
+      "lastVerdict": "fail",
+      "note": "hostile contact damage deleted and WO-55 expectation rewritten; restore clamped ram damage"
     },
     {
       "id": "WO-59",

@@ -35,8 +35,9 @@ import { PlayerVehicle, displayScale } from '@/entities/player';
 import { EnemyVehicle } from '@/entities/enemy';
 import { CivilianVehicle } from '@/entities/civilian';
 import { BossVehicle } from '@/entities/boss';
-import { findProp, getCivilian, getEnemy, getWeapon, type PropCollision } from '@/content';
-import { bossForLevel, type BossAttackPattern } from '@/systems/boss';
+import { findProp, getCivilian, getEnemy, getWeapon, type EnemyDef, type PropCollision } from '@/content';
+import { bossForLevel, bossVolley, type BossAttackPattern } from '@/systems/boss';
+import { contactWeaponFor } from '@/systems/contact-weapons';
 import {
   flameCatches,
   forwardShot,
@@ -52,7 +53,7 @@ import { levelForSeed, levelLabelFor, type LevelBlueprint } from '@/levels';
 import { decorX, laneCenter, laneCenterAt, roadAt, type LevelEvent, type RoadProfile } from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
-import { weaponCue, type AudioSystem } from '@/systems/audio';
+import { weaponCue, bossCue, type AudioSystem } from '@/systems/audio';
 import { speedRatio, stepSpeed } from '@/systems/motion';
 import {
   contactBetween,
@@ -230,6 +231,15 @@ export interface VehicleDebugState {
   readonly vx: number;
   /** Velocity down-screen, world px/s. Zero for the car, which holds its station. */
   readonly vy: number;
+  /**
+   * Shots (or armour, for the car) left before this vehicle is wrecked.
+   *
+   * Exposed so a spec can prove durability on the real collision path instead of counting
+   * explosions: one volley must reduce it, and it must not reach zero in that volley.
+   */
+  readonly hp: number;
+  /** True while a contact weapon holds this vehicle's wheel. Always false but on the car. */
+  readonly steerLocked: boolean;
   readonly wrecked: boolean;
   /** True while the car is off the ground after a ramp. Always false for other cars. */
   readonly airborne: boolean;
@@ -254,6 +264,8 @@ export interface ContactDebugState {
   readonly playerVx: number;
   /** Lateral velocity it gave the other car, world px/s. Opposite in sign. */
   readonly otherVx: number;
+  /** The hostile's signature side weapon, or null for neutral traffic. */
+  readonly weapon: string | null;
 }
 
 /** One ground-prop contact the run resolved, as the debug surface reports it. */
@@ -647,6 +659,8 @@ export class GameScene extends Phaser.Scene {
         halfHeight: this.player.halfHeight,
         vx: this.player.vx,
         vy: this.player.vy,
+        hp: this.player.armor,
+        steerLocked: this.player.isSteerLocked,
         wrecked: this.player.isDestroyed,
         airborne: this.player.isAirborne,
         spinning: false,
@@ -661,6 +675,8 @@ export class GameScene extends Phaser.Scene {
           halfHeight: enemy.halfHeight,
           vx: enemy.vx,
           vy: enemy.vy,
+          hp: enemy.hp,
+          steerLocked: false,
           wrecked: false,
           airborne: false,
           spinning: enemy.isSpinning,
@@ -674,6 +690,8 @@ export class GameScene extends Phaser.Scene {
           halfHeight: civilian.halfHeight,
           vx: civilian.vx,
           vy: civilian.vy,
+          hp: civilian.hp,
+          steerLocked: false,
           wrecked: civilian.wrecked,
           airborne: false,
           spinning: false,
@@ -905,13 +923,34 @@ export class GameScene extends Phaser.Scene {
    * whatever lane the player happens to be in.
    */
   private stageHostile(at: number): void {
-    const def = safeEnemy('hauler');
+    // `gunboat` holds its lane and is light enough for one rocket (4 damage) or one flame
+    // burst (six ticks of 1) to finish, which is what the special-weapon stages prove.
+    const def = safeEnemy('gunboat');
     if (!def) return;
+    this.stageEnemyAt(def, at);
+  }
 
+  /** Build one hostile of `def` at `at`, pinned to the car's lateral position. */
+  private stageEnemyAt(def: EnemyDef, at: number): void {
     const road = roadAt(this.blueprint.road, this.distance);
     const hostile = new EnemyVehicle(this, this.art, def, at, 0, road, 0);
     hostile.pinTo(this.player.x, at, this.distance, road);
     this.enemies.push(hostile);
+  }
+
+  /**
+   * Debug-only: clear the road and stage a single hostile of `id` in the gun line.
+   *
+   * The durability contract — one volley cannot kill an ordinary enemy — is proved against
+   * this stage on the shipped collision path. Playwright reaches it through
+   * `window.__deadlaneControl` at `?debug=1`; nothing in the run calls it.
+   */
+  debugStageEnemy(id = 'turret'): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+    const def = safeEnemy(id);
+    if (!def) return;
+    this.clearStagedGround();
+    this.stageEnemyAt(def, this.distance + 180);
   }
 
   /** The lane index the car is standing in right now. */
@@ -1338,6 +1377,7 @@ export class GameScene extends Phaser.Scene {
       roadAt(this.blueprint.road, this.distance),
     );
 
+    if (action?.kind === 'telegraph') this.audio.play(bossCue('bossTelegraph'));
     if (action?.kind === 'fire') this.bossFire(boss, action.pattern);
   }
 
@@ -1360,23 +1400,31 @@ export class GameScene extends Phaser.Scene {
 
   private bossFire(boss: BossVehicle, pattern: BossAttackPattern): void {
     // Boss shells reuse the hostile-shell path, so one `returnShot` still decides the lead
-    // and the existing enemy-bullet collision still does the damage.
+    // and the existing enemy-bullet collision still does the damage. The pattern's shape
+    // decides where each shell is laid: `bossVolley()` is the only place that differs.
     const key = flatTexture(this, 'boss-bullet', 'amber', 9);
-    const half = (pattern.shots - 1) / 2;
+    const road = roadAt(this.blueprint.road, this.distance);
+    const shots = bossVolley(pattern, {
+      bossX: boss.sprite.x,
+      roadLeft: road.left,
+      roadWidth: road.width,
+      playerX: this.player.x,
+    });
 
-    for (let i = 0; i < pattern.shots; i += 1) {
-      const x = boss.sprite.x + (i - half) * pattern.spreadPx;
-      const sprite = this.add.image(x, boss.sprite.y, key).setDepth(45);
+    for (const shot of shots) {
+      const sprite = this.add.image(shot.x, boss.sprite.y, key).setDepth(45);
       this.bullets.push({
         sprite,
         ...returnShot({
-          enemyX: x,
+          enemyX: shot.x,
           enemyY: boss.sprite.y,
-          playerX: this.player.x,
+          // A wall or a mine travels straight down its own lane; an aimed shell leads the
+          // car. Passing the shell's own x as the target is what makes that distinction.
+          playerX: shot.aimAtPlayer ? this.player.x : shot.x,
           playerY: this.player.y,
           distance: this.distance,
           scroll: this.worldSpeed,
-          projectileSpeed: pattern.projectileSpeed,
+          projectileSpeed: pattern.projectileSpeed * shot.speedScale,
           maxDrift: WEAPON_FX.maxShotDrift,
         }),
         from: 'enemy',
@@ -1384,7 +1432,7 @@ export class GameScene extends Phaser.Scene {
       });
     }
 
-    this.audio.play('gun');
+    this.audio.play(bossCue(pattern.cue));
   }
 
   private defeatBoss(time: number): void {
@@ -2053,6 +2101,9 @@ export class GameScene extends Phaser.Scene {
 
       bullet.sprite.destroy();
       bullet.at = Number.NEGATIVE_INFINITY;
+      // Traffic is durable now: a stray round marks the car, and only the round that takes
+      // its last hit wrecks it and pays the penalty.
+      if (!civilian.hit(bullet.damage)) continue;
       this.applyScore('civilianDestroyed');
       this.wreckCivilian(civilian, 'CIVILIAN DOWN');
     }
@@ -2252,9 +2303,9 @@ export class GameScene extends Phaser.Scene {
    * - a hostile ram spends one armour hit through `damagePlayer`, which owns the i-frame
    *   window, so a contact cannot spend armour twice in one frame or at all while
    *   invulnerable; the hit that landed leaves the wheel wobbling and the camera kicked;
-   *   and the car that was rammed takes `COLLISION.impactDamage`, which wrecks a light one
-   *   and only marks a heavy one — a hard hit *may* wreck the car it lands on, it does not
-   *   erase it;
+   * - every hostile also carries a signature side weapon. Touching it shoves the car away
+   *   along the contact normal and holds the wheel for the weapon's window, and it never
+   *   damages or deletes the hostile: the car that touched it is still there to be shot;
    * - traffic never costs armour, and its penalty is paid by the contact rather than by the
    *   damage window, so an i-frame cannot swallow it; see `content/civilians.json`.
    *
@@ -2273,6 +2324,7 @@ export class GameScene extends Phaser.Scene {
     other.applyImpulse(hit.deltaBX, hit.deltaBY);
 
     const hostile = other instanceof EnemyVehicle;
+    const weapon = other instanceof EnemyVehicle ? other.def.weapon : null;
     this.contactCount += 1;
     this.lastContact = {
       index: this.contactCount,
@@ -2284,7 +2336,18 @@ export class GameScene extends Phaser.Scene {
       hard: hit.hard,
       playerVx: hit.deltaAX,
       otherVx: hit.deltaBX,
+      weapon,
     };
+
+    // The side weapon: a shove away from the hostile and a window with no wheel. It runs
+    // for every hostile contact, hard or glance, because touching a weapon is what the
+    // weapon does; armour is a separate question decided below.
+    if (weapon && !this.runEnded) {
+      const spec = contactWeaponFor(weapon);
+      const away = this.player.x >= other.x ? 1 : -1;
+      this.player.addImpulse(away * spec.pushPx);
+      this.player.lockSteering(time, spec.lockMs);
+    }
 
     const cost = contactCost({
       hard: hit.hard,
@@ -2308,15 +2371,9 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Armour, and only armour, is what the window buys: `damagePlayer` owns it and answers
-    // whether the hit landed, so a hard ram cannot spend twice in one frame.
-    if (!cost.armour || !this.damagePlayer(time)) return;
-
-    // A wreck at zero armour respawns and sweeps the road around the car, so the car that
-    // was just hit may already be gone.
-    if (!cost.damageOther || !(other instanceof EnemyVehicle)) return;
-    if (!other.sprite.active) return;
-
-    if (other.hit(COLLISION.impactDamage)) this.killEnemy(other);
+    // whether the hit landed, so a hard ram cannot spend twice in one frame. The hostile is
+    // deliberately untouched: the weapon already answered the contact.
+    if (cost.armour) this.damagePlayer(time);
   }
 
   /**

@@ -22,7 +22,12 @@ type Sound =
   | 'flame'
   | 'flameLoop'
   | 'oil'
-  | 'smoke';
+  | 'smoke'
+  | 'bossTelegraph'
+  | 'bossVolley'
+  | 'bossCharge'
+  | 'bossPulse'
+  | 'bossDrop';
 
 /** Supplies the `AudioContext`; injecting it is what makes the system unit-testable. */
 export type AudioContextFactory = () => AudioContext | null;
@@ -62,6 +67,35 @@ const WEAPON_CUES: Readonly<Record<WeaponCueEvent, Sound>> = {
 /** The cue one special-weapon event plays. */
 export function weaponCue(event: WeaponCueEvent): Sound {
   return WEAPON_CUES[event];
+}
+
+/**
+ * Every boss-attack event the run can raise.
+ *
+ * Same contract as the weapon cues: the attack pattern names the event, the registry owns
+ * the sound, so no two attacks share a cue by accident and a test can prove each one fires.
+ */
+export type BossCueEvent = 'bossTelegraph' | 'bossVolley' | 'bossCharge' | 'bossPulse' | 'bossDrop';
+
+export const BOSS_CUE_EVENTS: readonly BossCueEvent[] = [
+  'bossTelegraph',
+  'bossVolley',
+  'bossCharge',
+  'bossPulse',
+  'bossDrop',
+];
+
+const BOSS_CUES: Readonly<Record<BossCueEvent, Sound>> = {
+  bossTelegraph: 'bossTelegraph',
+  bossVolley: 'bossVolley',
+  bossCharge: 'bossCharge',
+  bossPulse: 'bossPulse',
+  bossDrop: 'bossDrop',
+};
+
+/** The cue one boss-attack event plays. */
+export function bossCue(event: BossCueEvent): Sound {
+  return BOSS_CUES[event];
 }
 
 /** The browser's own context, or null where Web Audio does not exist. */
@@ -183,6 +217,29 @@ export class AudioSystem {
         break;
       case 'smoke':
         this.noiseBurst(now, 0.3, 900, 0.34);
+        break;
+      case 'bossTelegraph':
+        // A rising warning: pitch climbs while the bar fills, so the cue points at the hit.
+        this.tone(now, 150, 420, 0.32, 'square', 0.16);
+        break;
+      case 'bossVolley':
+        // A heavy, layered discharge: noise over a falling tone.
+        this.noiseBurst(now, 0.34, 420, 0.4);
+        this.tone(now, 190, 55, 0.34, 'square', 0.24);
+        break;
+      case 'bossCharge':
+        // An engine winding up for a ram.
+        this.tone(now, 90, 240, 0.42, 'sawtooth', 0.26);
+        this.noiseBurst(now, 0.2, 520, 0.2);
+        break;
+      case 'bossPulse':
+        // A thin sweep: high, clean and clearly not a gunshot.
+        this.tone(now, 320, 1100, 0.5, 'sine', 0.2);
+        break;
+      case 'bossDrop':
+        // A pair of heavy thumps, one under the other.
+        this.tone(now, 110, 40, 0.4, 'sine', 0.28);
+        this.noiseBurst(now, 0.28, 260, 0.24);
         break;
       default:
         break;

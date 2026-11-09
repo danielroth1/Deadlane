@@ -18,6 +18,8 @@ export interface DebugSnapshot extends RunDebugState {
 export interface DebugControl {
   /** Put a lone civilian directly in the gun line, a short way ahead of the car. */
   stageCivilianAhead(): void;
+  /** Put one hostile in the car's lane, pinned in the gun line, to test durability. */
+  stageEnemy(id?: string): void;
   /**
    * Put a hostile on the car's flank, already overlapping it.
    *
@@ -428,6 +430,7 @@ export class HudScene extends Phaser.Scene {
 
     window.__deadlaneControl = {
       stageCivilianAhead: () => this.gameScene.debugStageCivilianAhead(),
+      stageEnemy: (id?: string) => this.gameScene.debugStageEnemy(id),
       stageCollision: (approachSpeed?: number) =>
         this.gameScene.debugStageCollision(approachSpeed),
       stageBarrier: () => this.gameScene.debugStageBarrier(),

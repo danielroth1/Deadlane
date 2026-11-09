@@ -25,6 +25,8 @@ export class CivilianVehicle {
    * a frozen diorama.
    */
   readonly speed: number;
+  /** Shots this car survives before it is wrecked. One shell when the row omits it. */
+  hp: number;
   wrecked = false;
   /** True once the car has been drawn inside the aperture. */
   private entered = false;
@@ -58,6 +60,7 @@ export class CivilianVehicle {
     this.at = at;
     this.lane = lane;
     this.speed = speed;
+    this.hp = Math.max(1, def.hp ?? 1);
     this.lastRoad = road;
 
     const x = laneCenter(road, lane);
@@ -109,7 +112,6 @@ export class CivilianVehicle {
   get x(): number {
     return this.sprite.x;
   }
-
   /** Box centre on the road axis, world px. */
   get y(): number {
     return this.sprite.y;
@@ -183,6 +185,25 @@ export class CivilianVehicle {
     this.impulseAt = easeTowards(this.impulseAt, 0, COLLISION.impulseDrag * dt);
     this.sprite.y = PLAYER.y + distance - this.at;
     if (this.sprite.y >= 0 && this.sprite.y <= WORLD.height) this.entered = true;
+  }
+
+  /**
+   * Take a shot. Returns true when this hit wrecked the car.
+   *
+   * Durable traffic is the point: one stray round on a two-hit sedan is a mistake the player
+   * can see, not a car that vanishes from a single bullet. The wreck itself is the scene's
+   * call, because the scoring penalty and the banner belong there.
+   */
+  hit(damage: number): boolean {
+    if (this.wrecked) return false;
+    this.hp -= damage;
+    if (this.hp <= 0) return true;
+
+    this.sprite.setTint(0xffffff);
+    this.scene.time.delayedCall(60, () => {
+      if (this.sprite.active && !this.wrecked) this.sprite.clearTint();
+    });
+    return false;
   }
 
   wreck(distance: number): void {

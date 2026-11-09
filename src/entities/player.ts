@@ -81,6 +81,13 @@ export class PlayerVehicle {
   /** When the control wobble of the last hard hit starts, and when it ends. */
   private wobbleFrom = 0;
   private wobbleUntil = 0;
+  /**
+   * Scene-clock time a contact weapon holds the wheel until.
+   *
+   * Separate from the wobble: a wobble adds a decaying steer, a lock removes the player's
+   * steer entirely. Both are clock-derived, so a seeded run loses the wheel the same way.
+   */
+  private steerLockUntil = 0;
   /** When each weapon last fired, so its content cooldown can be enforced. */
   private readonly lastUsedAt: Record<WeaponId, number> = {
     gun: Number.NEGATIVE_INFINITY,
@@ -224,6 +231,11 @@ export class PlayerVehicle {
     return true;
   }
 
+  /** True while a contact weapon is holding the wheel. Read by the debug surface. */
+  get isSteerLocked(): boolean {
+    return this.scene.time.now < this.steerLockUntil;
+  }
+
   /**
    * Take a contact's positional correction, world px.
    *
@@ -242,6 +254,28 @@ export class PlayerVehicle {
    */
   applyImpulse(vx: number): void {
     this.impulseX = vx;
+  }
+
+  /**
+   * Add a lateral kick to the live impulse.
+   *
+   * Used by the signature side weapons: their shove arrives after the contact resolver has
+   * already given the car a parting impulse, and the two have to be felt together rather
+   * than the later one replacing the earlier.
+   */
+  addImpulse(vx: number): void {
+    this.impulseX += vx;
+  }
+
+  /**
+   * Hold the wheel for `ms` after a side weapon lands.
+   *
+   * A longer lock replaces a shorter one, so an EMP that catches an already-harpooned car
+   * cannot shorten its blackout. Nothing here touches the car's velocity: the shove and the
+   * lock are separate, which is what lets the car be thrown sideways while it is unsteerable.
+   */
+  lockSteering(time: number, ms: number): void {
+    this.steerLockUntil = Math.max(this.steerLockUntil, time + Math.max(0, ms));
   }
 
   /**
@@ -291,8 +325,10 @@ export class PlayerVehicle {
 
     // A hard hit takes the wheel for a moment: the wobble is added to whatever the player
     // asked for, and the sum stays inside one full lock so the car cannot outrun its own
-    // lateral speed.
-    const steering = clamp(steer + this.wobbleAt(time), -1, 1);
+    // lateral speed. A side weapon's lock removes the player's input entirely; the wobble
+    // still applies once the lock expires.
+    const locked = time < this.steerLockUntil;
+    const steering = locked ? 0 : clamp(steer + this.wobbleAt(time), -1, 1);
     this.steerVelocity = steering * PLAYER.lateralSpeed;
 
     const dx = (this.steerVelocity + this.impulseX) * dt;
@@ -422,6 +458,8 @@ export class PlayerVehicle {
     this.impulseX = 0;
     this.steerVelocity = 0;
     this.wobbleUntil = 0;
+    // Nor does a contact weapon's lock: the replacement car has a working wheel.
+    this.steerLockUntil = 0;
     // Nor does a jump: the replacement car is on the road, not in the air.
     this.jumpState = null;
     if (road) this.sprite.x = road.left + road.width / 2;

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AUDIO } from '@/config';
-import { AudioSystem, WEAPON_CUE_EVENTS, weaponCue } from './audio';
+import { AudioSystem, BOSS_CUE_EVENTS, WEAPON_CUE_EVENTS, bossCue, weaponCue } from './audio';
 import {
   AUDIO_KEY,
   MUTE_KEY,
@@ -332,6 +332,40 @@ describe('special weapon cues', () => {
 
     const before = ctx.gains.length;
     for (const event of WEAPON_CUE_EVENTS) audio.play(weaponCue(event));
+
+    expect(ctx.gains.length).toBe(before);
+  });
+});
+
+describe('boss attack cues', () => {
+  it('gives every boss attack event its own cue', () => {
+    const cues = BOSS_CUE_EVENTS.map((event) => bossCue(event));
+
+    expect(new Set(cues).size, 'two boss events resolve to the same sound').toBe(cues.length);
+  });
+
+  it('emits audio for every boss cue instead of falling through the switch', () => {
+    for (const event of BOSS_CUE_EVENTS) {
+      const ctx = fakeContext();
+      const audio = systemOn(ctx);
+      audio.unlock();
+
+      const before = ctx.gains.length;
+      audio.play(bossCue(event));
+
+      expect(ctx.gains.length, `${event} made no sound`).toBeGreaterThan(before);
+      audio.destroy();
+    }
+  });
+
+  it('stays silent for a boss cue while muted', () => {
+    const ctx = fakeContext();
+    const audio = systemOn(ctx);
+    audio.unlock();
+    audio.setMuted(true);
+
+    const before = ctx.gains.length;
+    for (const event of BOSS_CUE_EVENTS) audio.play(bossCue(event));
 
     expect(ctx.gains.length).toBe(before);
   });

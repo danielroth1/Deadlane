@@ -9,12 +9,14 @@ import {
   CHALLENGE_TEMPLATES,
   CIVILIANS,
   ENEMIES,
+  ENEMY_WEAPON_IDS,
   PROP_COLLISIONS,
   PROPS,
   getProp,
   getWeapon,
   WEAPONS,
 } from './index';
+import { CONTACT_WEAPONS } from '@/systems/contact-weapons';
 import { PALETTE } from '@/palette';
 import { LEVEL_PROFILES, LEVEL_TYPES } from '@/levels/types';
 
@@ -70,6 +72,35 @@ describe('enemy content', () => {
       if (enemy.behavior === 'turret') {
         expect(enemy.fireRate, `${enemy.id} needs fireRate`).toBeDefined();
       }
+    }
+  });
+
+  it('gives every enemy a distinct signature contact weapon', () => {
+    const weapons = ENEMIES.map((enemy) => enemy.weapon);
+
+    for (const enemy of ENEMIES) {
+      expect(ENEMY_WEAPON_IDS, `${enemy.id}.weapon=${enemy.weapon}`).toContain(enemy.weapon);
+    }
+    expect(new Set(weapons).size, 'two enemies share a signature weapon').toBe(weapons.length);
+  });
+
+  it('implements every signature weapon the table can name', () => {
+    for (const id of ENEMY_WEAPON_IDS) {
+      const spec = CONTACT_WEAPONS[id];
+      expect(spec.pushPx, `${id} does not push`).toBeGreaterThan(0);
+      expect(spec.lockMs, `${id} does not take the wheel`).toBeGreaterThan(0);
+    }
+  });
+
+  it('makes an ordinary enemy survive one gun volley and die in two to four', () => {
+    // The gun fires two barrels on one trigger pull, so one volley is two points.
+    const volley = getWeapon('gun').damage * 2;
+
+    for (const enemy of ENEMIES) {
+      const volleys = Math.ceil(enemy.hp / volley);
+      expect(enemy.hp, `${enemy.id} dies in one volley`).toBeGreaterThan(volley);
+      expect(volleys, `${enemy.id} takes ${volleys} volleys`).toBeGreaterThanOrEqual(2);
+      expect(volleys, `${enemy.id} takes ${volleys} volleys`).toBeLessThanOrEqual(4);
     }
   });
 });
@@ -147,6 +178,16 @@ describe('civilian content', () => {
       expect(civilian.weight).toBeGreaterThan(0);
       expect(civilian.speed).toBeGreaterThan(0);
       expect(civilian.speed).toBeLessThan(0.6);
+    }
+  });
+
+  it('gives every civilian enough hp to survive one stray bullet', () => {
+    const gun = getWeapon('gun');
+
+    for (const civilian of CIVILIANS) {
+      // Rows may omit `hp`; the runtime then gives the car a single hit. No row may leave a
+      // car that a stray round still erases outright.
+      expect(civilian.hp ?? 1, `${civilian.id}.hp`).toBeGreaterThan(gun.damage);
     }
   });
 });

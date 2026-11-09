@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { BOSS } from '@/config';
-import { BOSSES, ENEMIES, getBoss } from '@/content';
+import { BOSSES, BOSS_ATTACK_PATTERN_IDS, ENEMIES, getBoss } from '@/content';
 import { LEVEL_TYPES } from '@/levels/types';
 import {
   BOSS_ATTACKS,
   bossAction,
   bossForLevel,
   bossHealthRatio,
+  bossVolley,
   createBossFight,
   damageBoss,
 } from './boss';
@@ -165,5 +166,83 @@ describe('boss fight state machine', () => {
         expect(BOSS_ATTACKS[attack].shots).toBeGreaterThan(0);
       }
     }
+  });
+});
+
+/**
+ * The pattern table itself.
+ *
+ * Every id the content table can name has to be implemented here, every telegraph has to
+ * clear the fairness floor, and a volley has to land inside the road it was aimed at.
+ */
+describe('boss attack patterns', () => {
+  const origin = { bossX: 320, roadLeft: 176, roadWidth: 384, playerX: 240 };
+
+  it('implements every attack pattern id the content table declares', () => {
+    for (const id of BOSS_ATTACK_PATTERN_IDS) {
+      const pattern = BOSS_ATTACKS[id];
+      expect(pattern, `${id} is not implemented`).toBeDefined();
+      expect(pattern.shots).toBeGreaterThan(0);
+      expect(pattern.recoverMs).toBeGreaterThan(0);
+      expect(pattern.projectileSpeed).toBeGreaterThan(0);
+      expect(pattern.cue.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('fields every declared pattern on at least one boss', () => {
+    const bossUsed = new Set(BOSSES.flatMap((boss) => boss.attacks));
+    for (const id of BOSS_ATTACK_PATTERN_IDS) {
+      expect(bossUsed.has(id), `${id} is implemented but no boss fields it`).toBe(true);
+    }
+  });
+
+  it('gives every attack a telegraph no shorter than the fairness floor', () => {
+    for (const id of BOSS_ATTACK_PATTERN_IDS) {
+      expect(
+        BOSS_ATTACKS[id].telegraphMs,
+        `${id} telegraphs faster than ${BOSS.minTelegraphMs} ms`,
+      ).toBeGreaterThanOrEqual(BOSS.minTelegraphMs);
+    }
+  });
+
+  it('lays every shell inside the drivable surface', () => {
+    for (const id of BOSS_ATTACK_PATTERN_IDS) {
+      const shots = bossVolley(BOSS_ATTACKS[id], origin);
+      expect(shots).toHaveLength(BOSS_ATTACKS[id].shots);
+      for (const shot of shots) {
+        expect(shot.x, `${id} fires off the road`).toBeGreaterThanOrEqual(origin.roadLeft);
+        expect(shot.x, `${id} fires off the road`).toBeLessThanOrEqual(
+          origin.roadLeft + origin.roadWidth,
+        );
+        expect(shot.speedScale).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('makes a sweep arrive in sequence and a wall travel straight down', () => {
+    const sweep = bossVolley(BOSS_ATTACKS['laser-sweep'], origin);
+    expect(new Set(sweep.map((shot) => shot.speedScale)).size).toBe(sweep.length);
+    expect(sweep.every((shot) => !shot.aimAtPlayer)).toBe(true);
+
+    for (const id of ['flame-wall', 'minefield', 'sonic-pulse'] as const) {
+      const shots = bossVolley(BOSS_ATTACKS[id], origin);
+      expect(shots.every((shot) => !shot.aimAtPlayer), `${id} should not lead the car`).toBe(true);
+    }
+  });
+
+  it('leads the car with an aimed volley', () => {
+    for (const id of ['turret-burst', 'rocket-fan', 'ram-charge', 'missile-barrage'] as const) {
+      const shots = bossVolley(BOSS_ATTACKS[id], origin);
+      expect(shots.every((shot) => shot.aimAtPlayer), `${id} should lead the car`).toBe(true);
+      // Only the charge is fired faster than the row's base speed.
+      const charged = shots.some((shot) => shot.speedScale !== 1);
+      expect(charged, `${id} speed scale`).toBe(id === 'ram-charge');
+    }
+  });
+
+  it('is pure and deterministic', () => {
+    const a = bossVolley(BOSS_ATTACKS['sonic-pulse'], origin);
+    const b = bossVolley(BOSS_ATTACKS['sonic-pulse'], origin);
+    expect(a).toEqual(b);
   });
 });

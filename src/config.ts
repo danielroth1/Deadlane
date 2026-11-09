@@ -296,10 +296,10 @@ export const COLLISION = {
    * slower car from cruise is a scrape and needs the throttle to hurt.
    */
   hardImpactSpeed: 130,
-  /** How fast an impact impulse bleeds off, px/s². */
+  /**
+   * How fast an impact impulse bleeds off, px/s².
+   */
   impulseDrag: 320,
-  /** Damage a hard contact does to the other car. */
-  impactDamage: 2,
   /** Steering wobble after a hard hit: peak additive steer (−1–1), length, rate. */
   wobbleSteer: 0.55,
   wobbleMs: 340,
@@ -400,8 +400,15 @@ export const TOUCH = {
 } as const;
 
 export const SPAWN = {
-  maxEnemiesOnScreen: 9,
-  maxTrafficOnScreen: 14,
+  /**
+   * On-screen ceilings for the two hostile streams.
+   *
+   * Deliberately low: a durable car is worth several volleys, so a screen of nine of them
+   * is a shooting gallery rather than a highway. The generator's spacing is what makes a
+   * seed produce fewer events; these ceilings keep a burst from stacking on screen.
+   */
+  maxEnemiesOnScreen: 5,
+  maxTrafficOnScreen: 8,
   /** Nothing spawns in the first stretch, so the player is never ambushed at spawn. */
   safeStartPixels: 900,
   /**
@@ -450,6 +457,13 @@ export const BOSS = {
   weavePeriod: 5.6,
   /** Damage one boss shell does to the car. */
   shotDamage: 1,
+  /**
+   * Shortest warning a telegraphed attack may give, ms.
+   *
+   * The fairness floor: `boss.test.ts` fails if any pattern winds up faster than this, so a
+   * new row cannot quietly become an unavoidable hit.
+   */
+  minTelegraphMs: 360,
   /** HUD health bar, px. */
   healthBarWidth: 220,
   healthBarHeight: 6,

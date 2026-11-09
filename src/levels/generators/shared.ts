@@ -177,9 +177,10 @@ function placeTraffic(
   pool: readonly string[],
 ): LevelEvent[] {
   const out: LevelEvent[] = [];
-  // A 640x360 view shows a 360px slice of world. To read as traffic rather than scenery,
-  // a row has to pass about every 110px at density 1.
-  const spacing = Math.max(90, Math.round(150 / Math.max(0.2, density)));
+  // Fewer, more deliberate rows: durable cars make every hostile worth fighting, so a seed
+  // that used to field a shooting gallery now fields a sequence of encounters. A row still
+  // passes about every 230 px at density 1, which keeps the road alive without crowding it.
+  const spacing = Math.max(130, Math.round(230 / Math.max(0.2, density)));
   let at = SPAWN.safeStartPixels + rng.int(0, spacing);
 
   while (at < length) {
@@ -221,11 +222,13 @@ function placeEnemies(
   const out: LevelEvent[] = [];
   const names = Object.keys(weights);
   const values = names.map((n) => weights[n] ?? 1);
-  const spacing = Math.max(240, Math.round(420 / Math.max(0.2, density)));
+  // Waking a durable car is worth more than waking six light ones, so hostiles arrive on a
+  // wider beat and rarely in pairs.
+  const spacing = Math.max(360, Math.round(620 / Math.max(0.2, density)));
   let at = SPAWN.safeStartPixels + 600;
 
   while (at < length) {
-    const wave = rng.chance(0.25) ? 2 : 1;
+    const wave = rng.chance(0.2) ? 2 : 1;
     for (let i = 0; i < wave; i += 1) {
       out.push({
         kind: 'enemy',

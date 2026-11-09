@@ -221,9 +221,9 @@ describe('contactCost', () => {
     expect(contactCost({ ...HARD_TRAFFIC, runEnded: true }).armour).toBe(false);
   });
 
-  it('marks the rammed car only on a hostile hit, never on traffic', () => {
+  it('never marks the rammed car: a contact answers with its side weapon', () => {
     expect(contactCost(HARD_TRAFFIC).damageOther).toBe(false);
-    expect(contactCost(HARD_RAM).damageOther).toBe(true);
+    expect(contactCost(HARD_RAM).damageOther).toBe(false);
   });
 
   it('pays the traffic penalty during i-frames and after the run has ended', () => {
@@ -252,7 +252,7 @@ describe('contactCost', () => {
   it('spends exactly one armour hit on a hard ram', () => {
     expect(contactCost(HARD_RAM)).toEqual({
       armour: true,
-      damageOther: true,
+      damageOther: false,
       trafficPenalty: false,
       jolt: true,
     });
