@@ -680,15 +680,17 @@
       "id": "WO-59",
       "title": "Motion and combat FX: skid marks, varied explosions, rotors, sparks/debris",
       "file": "gauntlet/work-orders/WO-59-combat-fx.md",
-      "status": "pending",
-      "round": 0,
+      "status": "done",
+      "round": 1,
       "dependsOn": [
         "WO-52",
         "WO-55",
         "WO-56",
         "WO-57",
         "WO-58"
-      ]
+      ],
+      "lastVerdict": "pass",
+      "note": "deterministic FX variants, capped world-static tyre decals, 4 blast packages, crisp rotor"
     },
     {
       "id": "WO-60",

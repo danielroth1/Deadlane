@@ -377,6 +377,47 @@ export const PROP_IMPACT = {
 } as const;
 
 /**
+ * Combat and motion effects.
+ *
+ * Cosmetic only: nothing here can damage, block or score. Every animation is driven by the
+ * scene clock or by the effect counter, never by `Math.random()`, so a seeded run replays
+ * its tyre lines, rotors and explosions identically.
+ */
+export const FX = {
+  /** Lateral speed, px/s, at which the tyres start to leave a line. */
+  skidMinLateral: 150,
+  /** Forward speed, px/s, a brake must still be carrying for a stop to mark the road. */
+  skidBrakeSpeed: 200,
+  /** Minimum gap between two marks, ms. The trigger is the event, not the frame. */
+  skidIntervalMs: 55,
+  /** How long a mark stays on the road before it has faded out, ms. */
+  skidMarkLifeMs: 2600,
+  /** Hard cap on live marks, so a long drift cannot grow the decal layer without bound. */
+  skidMarkMax: 64,
+  /** Half-width and length of one tyre line segment, px. */
+  skidMarkHalfWidth: 2,
+  skidMarkLength: 10,
+  /** Distance each tyre sits from the car's centre, px. */
+  skidTrackHalfWidth: 14,
+  /** Peak opacity of a fresh mark. */
+  skidMarkAlpha: 0.55,
+  /** Gap between drift-smoke puffs while the tyres are lit, ms. */
+  driftSmokeIntervalMs: 160,
+  /** One rotor quarter turn, ms. 70 ms is a little over three and a half turns a second. */
+  rotorStepMs: 70,
+  /** Rotor blade length as a share of the aircraft's displayed width. */
+  rotorSpanRatio: 0.92,
+  /** Rotor blade thickness, px. */
+  rotorBladeThickness: 3,
+  /** Depth of the rotor overlay: above every aircraft sprite, below the cards. */
+  rotorDepth: 45,
+  /** How long an impact spark, arc or dust puff lives, ms. */
+  impactLifeMs: 180,
+  /** How far from the car's centre the second landing puff is thrown, px. */
+  landingSpread: 12,
+} as const;
+
+/**
  * Touch pad geometry and feel.
  *
  * The pad is drawn inside the letterboxed 640×360 canvas, so its numbers are authored in

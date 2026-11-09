@@ -36,30 +36,60 @@ export const PICKUP_ART: Record<PickupKind, readonly string[]> = {
   nitro: ['weapons-pickups/armour-plate'],
 };
 
-/** The effects the scene draws from the art-10 sheet. */
-export type EffectKind = 'explosion' | 'muzzle' | 'smoke' | 'oil' | 'dust' | 'splash';
+/** The single-frame effects the scene draws from the art-10 and art-25 sheets. */
+export type EffectKind =
+  | 'explosion'
+  | 'muzzle'
+  | 'smoke'
+  | 'oil'
+  | 'dust'
+  | 'splash'
+  | 'fire'
+  | 'sparks'
+  | 'debris'
+  | 'shockwave'
+  | 'arc';
 
 /**
  * Effect → candidate frame ids, most specific first.
  *
- * art-10 attempt 1 is shifted from its labels from row 2 onward: cells 4–7 are four smoke
- * clouds, cell 8 is the tyre with skid streaks, cell 9 is the water splash, cell 10 is the
- * rubble pile and cells 11–12 are two electric arcs. The sheet has no dedicated muzzle
- * flash, so the bright radial burst in cell 0 carries the muzzle bloom.
+ * art-10 attempt 1 is shifted from its labels from row 2 onward, checked cell by cell on
+ * the shipped PNG: cells 4–7 are four smoke clouds, cell 8 is the tyre with skid streaks,
+ * cell 9 is the water splash, cell 10 is the orange rubble pile, cell 11 is a dark blob (its
+ * label says `dust cloud`, which is why the landing dust moved to the art-25 clouds below),
+ * cell 12 is a spark-trailed projectile, cell 13 is a real concentric shockwave ring and
+ * cell 14 is the black oil splat. The sheet has no dedicated muzzle flash, so the bright
+ * radial burst in cell 0 carries the muzzle bloom.
+ *
+ * art-25 attempt 7 supplies the four explosion packages: cells 4–6 are the small, medium
+ * and large smoke clouds, cell 7 is the sheet's only explosion, cells 8 and 9 are flung
+ * chunks and the rock cluster, and cell 15 is a spark burst with rays.
  */
 export const EFFECT_ART: Record<EffectKind, readonly string[]> = {
-  // Cells 2, 1 and 0 — large, medium and small bursts.
+  // art-10 cells 2, 1 and 0 — large, medium and small bursts.
   explosion: ['fx/explosion-large', 'fx/explosion-medium', 'fx/explosion-small'],
-  // Cell 0 — a radial burst reads as a muzzle bloom at 20 px.
+  // art-10 cell 0 — a radial burst reads as a muzzle bloom at 20 px.
   muzzle: ['fx/explosion-small'],
-  // Cells 4 and 5 — the two plain smoke clouds.
-  smoke: ['fx/smoke-puff', 'fx/thick-smoke'],
-  // Cell 14 — the black splat.
+  // art-10 cells 4 and 5 — the two plain smoke clouds; art-25 cell 6 is the biggest cloud.
+  smoke: ['fx/smoke-puff', 'fx/thick-smoke', 'fx-expanded/smoke-puff'],
+  // art-10 cell 14 — the black splat.
   oil: ['fx/oil-splatter'],
-  // Cell 12 — the dust cloud, used for a ramp landing on dry road.
-  dust: ['fx/dust-cloud'],
-  // Cell 9 — the water splash, used for a ramp landing on the delta.
+  // art-25 cells 4 and 6 — grey puffs. art-10's `fx/dust-cloud` is not a cloud at all.
+  dust: ['fx-expanded/explosion-medium', 'fx-expanded/smoke-puff', 'fx/smoke-puff'],
+  // Cell 10 — kept as shipped. Inspecting the PNGs shows the cyan splash is the cell the
+  // label calls `muzzle flash` (cell 9) and cell 10 is the rubble pile, but water splash is
+  // WO-61's scope and this order does not re-point it.
   splash: ['fx/water-splash'],
+  // art-10 cell 3 — the teardrop flame, with the medium burst behind it.
+  fire: ['fx/fireball', 'fx/explosion-medium'],
+  // art-25 cell 15 — the spark burst, then art-10's small radial burst.
+  sparks: ['fx-expanded/sparks-burst', 'fx/explosion-small'],
+  // art-25 cells 9 and 8 — the rock cluster, then the scattered chunks.
+  debris: ['fx-expanded/debris-burst', 'fx-expanded/smoke-ring'],
+  // art-10 cell 13 — the concentric ring, then art-25's ring of chunks and white arc.
+  shockwave: ['fx/shockwave-ring', 'fx-expanded/debris-chunk', 'fx-expanded/shockwave-ring'],
+  // art-10 cell 12 — the spark-trailed arc; art-25 cell 15 is the fallback burst.
+  arc: ['fx/electric-arc', 'fx-expanded/sparks-burst'],
 };
 
 /** The effects the special weapons draw from `art-25-fx-expanded`. */

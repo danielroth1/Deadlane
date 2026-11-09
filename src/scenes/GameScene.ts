@@ -4,6 +4,7 @@ import {
   CAMERA,
   COLLISION,
   DIFFICULTY,
+  FX,
   GAME,
   JUMP,
   LEVEL,
@@ -23,7 +24,6 @@ import {
   EFFECT_ART,
   FLAME_STREAM_ART,
   ROCKET_ART,
-  WEAPON_EFFECT_ART,
   pickSceneryVariant,
   pickupArtIds,
   propArtIds,
@@ -55,6 +55,15 @@ import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
 import { weaponCue, bossCue, type AudioSystem } from '@/systems/audio';
 import { speedRatio, stepSpeed } from '@/systems/motion';
+import {
+  BOSS_EXPLOSION_LAYERS,
+  explosionPackageFor,
+  rotorQuarter,
+  skidFade,
+  skidTriggered,
+  type EffectLayer,
+  type ExplosionVariant,
+} from '@/systems/effects';
 import {
   contactBetween,
   contactCost,
@@ -146,11 +155,35 @@ interface RampInstance {
   readonly lane: number;
 }
 
+/** One tyre line on the road. World-static: it is laid at an `at` and never moves again. */
+interface SkidMark {
+  readonly x: number;
+  readonly at: number;
+  readonly bornAt: number;
+}
+
+/** One rotor overlay tracking an aircraft sprite. */
+interface Rotor {
+  readonly sprite: Phaser.GameObjects.Image;
+  readonly gfx: Phaser.GameObjects.Graphics;
+  /** The last quarter turn applied, so the debug counter can step once per quarter. */
+  quarter: number;
+}
+
 /** What the car landed on: dust on a road, a splash on the river. */
 export type LandingKind = 'dust' | 'splash';
 
 /** Which special weapon landed the most recent kill. Observation for the debug surface. */
 export type WeaponKillKind = 'rocket' | 'flame';
+
+/**
+ * The last explosion package this run played.
+ *
+ * Explosions are the only effect with a variant table, so this is the one label a spec can
+ * compare across two kills to prove the table is cycling. `boss` is the act-ending blast,
+ * which is deliberately outside the four ordinary packages.
+ */
+export type FxVariant = ExplosionVariant | 'boss';
 
 export interface HudState {
   score: number;
@@ -318,6 +351,12 @@ export interface RunDebugState {
   readonly lastLanding: LandingKind | null;
   /** Which special weapon landed the last kill, or null before one has. */
   readonly lastWeaponKill: WeaponKillKind | null;
+  /** The last explosion package played, or null before the first blast. */
+  readonly lastFx: FxVariant | null;
+  /** Live tyre lines on the road; zero once they have all faded. */
+  readonly skidMarks: number;
+  /** Quarter turns the aircraft rotors have stepped through this run. */
+  readonly rotorTicks: number;
   /**
    * The road cross-section at the car's own `at`, in world pixels.
    *
@@ -473,6 +512,26 @@ export class GameScene extends Phaser.Scene {
   private shakeUntil = 0;
   private cameraHome: { readonly x: number; readonly y: number } | null = null;
 
+  /**
+   * The decal layer: tyre lines drawn into one graphics object.
+   *
+   * Marks are world-static and capped (`FX.skidMarkMax`), and the object is cleared and
+   * redrawn from the list every frame, so a long drift costs rectangles rather than game
+   * objects and the layer can never grow without bound.
+   */
+  private skidGraphics!: Phaser.GameObjects.Graphics;
+  private skidMarks: SkidMark[] = [];
+  /** Scene-clock time the last mark and the last drift puff were laid, ms. */
+  private lastSkidAt = Number.NEGATIVE_INFINITY;
+  private lastDriftSmokeAt = Number.NEGATIVE_INFINITY;
+  /** Rotors drawn over every aircraft on the road. */
+  private rotors: Rotor[] = [];
+  /** Quarter turns the rotors have stepped, and explosions the table has played. */
+  private rotorTicks = 0;
+  private fxCount = 0;
+  /** The last explosion package played. Observation for the debug surface. */
+  private lastFx: FxVariant | null = null;
+
   constructor() {
     super('Game');
   }
@@ -527,6 +586,13 @@ export class GameScene extends Phaser.Scene {
     this.shakeFrom = 0;
     this.shakeUntil = 0;
     this.cameraHome = null;
+    this.skidMarks = [];
+    this.lastSkidAt = Number.NEGATIVE_INFINITY;
+    this.lastDriftSmokeAt = Number.NEGATIVE_INFINITY;
+    this.rotors = [];
+    this.rotorTicks = 0;
+    this.fxCount = 0;
+    this.lastFx = null;
   }
 
   create(): void {
@@ -550,6 +616,10 @@ export class GameScene extends Phaser.Scene {
       )
       .setDepth(40)
       .setVisible(false);
+
+    // The decal layer sits just above the road and under every prop. One object, redrawn
+    // from the capped mark list each frame.
+    this.skidGraphics = this.add.graphics().setDepth(14);
 
     this.challenges = this.createChallengeSystem();
 
@@ -702,6 +772,9 @@ export class GameScene extends Phaser.Scene {
       lastPropContact: this.lastPropContact,
       lastLanding: this.lastLanding,
       lastWeaponKill: this.lastWeaponKill,
+      lastFx: this.lastFx,
+      skidMarks: this.skidMarks.length,
+      rotorTicks: this.rotorTicks,
       road: this.roadDebugState(),
       hud: this.hudState,
     };
@@ -1113,6 +1186,8 @@ export class GameScene extends Phaser.Scene {
     this.updatePickups(dt);
     this.updateProps();
     this.updateDecor();
+    this.updateSkids(time);
+    this.updateRotors(time);
 
     this.resolveCollisions(time);
     this.updateChallenge();
@@ -1434,6 +1509,8 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.audio.play(bossCue(pattern.cue));
+    // One arc on the boss for the whole volley, so a wall of shells has a single source.
+    this.spawnArc(boss.sprite.x, boss.sprite.y);
   }
 
   private defeatBoss(time: number): void {
@@ -1451,18 +1528,10 @@ export class GameScene extends Phaser.Scene {
     this.audio.play('explosion');
     this.cameras.main.shake(320, 0.014);
 
-    const boom = this.art
-      .imageFrom(EFFECT_ART.explosion, x, y, () =>
-        flatTexture(this, 'explosion', 'amber', 34, 'white'),
-      )
-      .setDepth(60);
-    this.tweens.add({
-      targets: boom,
-      scale: { from: 1.2, to: 3 },
-      alpha: { from: 1, to: 0 },
-      duration: 520,
-      onComplete: () => boom.destroy(),
-    });
+    // The act-ending blast: every layer of the explosion table at once, at boss scale. It
+    // is deliberately not one of the four ordinary packages, so a kill and a boss going up
+    // are different events on screen, not just different sizes.
+    this.playExplosion(x, y, 'boss');
 
     this.showBanner(`ACT ${this.levelIndex} CLEARED · +${reward}`);
     // The victory beat: the road keeps running for a moment, then the next act's card.
@@ -1659,6 +1728,245 @@ export class GameScene extends Phaser.Scene {
       duration: 320,
       onComplete: () => cloud.destroy(),
     });
+
+    // A second, smaller puff thrown to one side, so the landing is not one flat disc. The
+    // side is a stable function of the landing's own road station, never a random draw.
+    const side = Math.floor(this.distance) % 2 === 0 ? -1 : 1;
+    this.spawnOneShot(
+      splash ? EFFECT_ART.splash : EFFECT_ART.dust,
+      this.player.x + side * FX.landingSpread,
+      PLAYER.y + JUMP.shadowOffsetY,
+      28,
+      1.6,
+      300,
+      0.6,
+      30,
+    );
+  }
+
+  /* -------------------------------- effects -------------------------------- */
+
+  /**
+   * Play one explosion package.
+   *
+   * The ordinal is the run's own explosion counter, so the table cycles deterministically:
+   * the same seed replays the same sequence of packages, and a spec can prove two kills
+   * differ by reading `lastFx`. The boss gets its own larger table and is never counted as
+   * one of the four.
+   */
+  private playExplosion(x: number, y: number, variant: FxVariant): void {
+    this.lastFx = variant;
+    const layers =
+      variant === 'boss' ? BOSS_EXPLOSION_LAYERS : explosionPackageFor(this.fxCount).layers;
+    this.spawnLayers(layers, x, y);
+    this.fxCount += 1;
+  }
+
+  /** The package the next ordinary explosion will wear. */
+  private nextExplosionVariant(): ExplosionVariant {
+    return explosionPackageFor(this.fxCount).variant;
+  }
+
+  /** Draw every layer of a package around one blast centre. */
+  private spawnLayers(layers: readonly EffectLayer[], x: number, y: number): void {
+    layers.forEach((layer, index) => {
+      // Offsets are a stable hash of the explosion ordinal and the layer index — the same
+      // run scatters its debris the same way twice, and no two layers sit exactly on top of
+      // each other.
+      const jitterX = ((this.fxCount * 7 + index * 13) % 17) - 8;
+      const jitterY = ((this.fxCount * 5 + index * 11) % 15) - 7;
+      this.spawnOneShot(
+        layer.ids,
+        x + (layer.offsetX ?? 0) + jitterX,
+        y + (layer.offsetY ?? 0) + jitterY,
+        layer.footprint,
+        layer.grow,
+        layer.durationMs,
+        layer.alpha ?? 1,
+        58,
+      );
+    });
+  }
+
+  /**
+   * One effect sprite that grows and fades, then destroys itself.
+   *
+   * `fitEffect` keeps the scale a whole multiple of the native frame, so an effect never
+   * blurs; the grow multiplies that whole scale rather than replacing it.
+   */
+  private spawnOneShot(
+    ids: readonly string[],
+    x: number,
+    y: number,
+    footprint: number,
+    grow: number,
+    durationMs: number,
+    alpha: number,
+    depth: number,
+  ): void {
+    const sprite = this.fitEffect(
+      this.art.imageFrom(ids, x, y, () =>
+        flatTexture(this, `fx-${footprint}`, 'amber', footprint),
+      ),
+      footprint,
+    )
+      .setDepth(depth)
+      .setAlpha(alpha);
+
+    this.tweens.add({
+      targets: sprite,
+      scale: sprite.scale * grow,
+      alpha: 0,
+      duration: durationMs,
+      onComplete: () => sprite.destroy(),
+    });
+  }
+
+  /** A short spark spray where a shell or a bumper lands. */
+  private spawnSparks(x: number, y: number): void {
+    this.spawnOneShot(EFFECT_ART.sparks, x, y, 24, 1.6, FX.impactLifeMs, 1, 59);
+  }
+
+  /** Chunks thrown off a prop or a car. */
+  private spawnDebris(x: number, y: number): void {
+    this.spawnOneShot(EFFECT_ART.debris, x, y, 28, 1.5, 260, 0.9, 59);
+  }
+
+  /** Dust kicked up by rough ground, a landing or a drifted tyre. */
+  private spawnDust(x: number, y: number): void {
+    this.spawnOneShot(EFFECT_ART.dust, x, y, 20, 1.7, 320, 0.65, 30);
+  }
+
+  /** A black splat where a slick catches a car. */
+  private spawnOilSplat(x: number, y: number): void {
+    this.spawnOneShot(EFFECT_ART.oil, x, y, 40, 1.5, 420, 0.85, 16);
+  }
+
+  /** A short electric arc at a muzzle, so a hostile shot is announced. */
+  private spawnArc(x: number, y: number): void {
+    this.spawnOneShot(EFFECT_ART.arc, x, y, 18, 1.4, 140, 1, 59);
+  }
+
+  /**
+   * A struck vehicle catches: flame first, smoke behind it.
+   *
+   * Called on a kill and on a wrecked civilian, so a car burns before it comes apart instead
+   * of turning straight into a burst.
+   */
+  private burnVehicle(x: number, y: number): void {
+    this.spawnOneShot(EFFECT_ART.fire, x, y - 6, 28, 1.5, 300, 0.95, 59);
+    this.spawnOneShot(EFFECT_ART.smoke, x + 6, y, 24, 1.6, 480, 0.55, 36);
+  }
+
+  /**
+   * Tyre lines and drift smoke.
+   *
+   * A mark is laid only on the event — a hard steer or a hard brake — once per
+   * `FX.skidIntervalMs`, at the car's own world station. It never moves again, so the road
+   * scrolls away from it. The list is capped at `FX.skidMarkMax`, oldest first, and the
+   * graphics object is cleared and redrawn from it each frame; marks fade out and are swept
+   * once `FX.skidMarkLifeMs` has passed.
+   */
+  private updateSkids(time: number): void {
+    const lateral = Math.abs(this.player.vx);
+    // An airborne car has no tyres on the road: a ramp jump must not paint lines under it.
+    const lighting = !this.player.isAirborne && skidTriggered(lateral, this.speed, this.brakeHeld);
+
+    if (lighting && time - this.lastSkidAt >= FX.skidIntervalMs) {
+      this.lastSkidAt = time;
+      // Two lines, one under each wheel, so a drift reads as a car and not a single smear.
+      for (const side of [-1, 1]) {
+        this.skidMarks.push({
+          x: this.player.x + side * FX.skidTrackHalfWidth,
+          at: this.distance,
+          bornAt: time,
+        });
+      }
+      while (this.skidMarks.length > FX.skidMarkMax) this.skidMarks.shift();
+    }
+
+    if (lighting && time - this.lastDriftSmokeAt >= FX.driftSmokeIntervalMs) {
+      this.lastDriftSmokeAt = time;
+      this.spawnDust(this.player.x, PLAYER.y + 6);
+    }
+
+    const graphics = this.skidGraphics;
+    graphics.clear();
+    for (const mark of this.skidMarks) {
+      const fade = skidFade(time - mark.bornAt);
+      const y = PLAYER.y + this.distance - mark.at;
+      if (fade <= 0 || y < -32 || y > WORLD.height + 32) continue;
+      graphics.fillStyle(PALETTE.void, FX.skidMarkAlpha * fade);
+      graphics.fillRect(
+        Math.round(mark.x - FX.skidMarkHalfWidth),
+        Math.round(y),
+        FX.skidMarkHalfWidth * 2,
+        FX.skidMarkLength,
+      );
+    }
+    this.skidMarks = this.skidMarks.filter(
+      (mark) => time - mark.bornAt < FX.skidMarkLifeMs,
+    );
+  }
+
+  /**
+   * Keep a rotor over every aircraft.
+   *
+   * A rotor is a cross with unequal arms, drawn once at the aircraft's displayed size, so a
+   * 90-degree step changes the silhouette instead of rotating a symmetric plus into itself.
+   * Steps are whole quarter turns of the scene clock: every blade edge stays on the pixel
+   * grid, which is what keeps it crisp instead of a blurred disc. The overlay is re-seated
+   * on its sprite every frame, so a weaving helicopter never leaves its rotor behind.
+   */
+  private updateRotors(time: number): void {
+    const aircraft: Phaser.GameObjects.Image[] = [];
+    for (const enemy of this.enemies) {
+      if (enemy.def.shape === 'heli' && enemy.sprite.active) aircraft.push(enemy.sprite);
+    }
+    if (this.boss?.def.kind === 'gunship' && this.boss.sprite.active) {
+      aircraft.push(this.boss.sprite);
+    }
+
+    this.rotors = this.rotors.filter((rotor) => {
+      if (aircraft.includes(rotor.sprite)) return true;
+      rotor.gfx.destroy();
+      return false;
+    });
+
+    const quarter = rotorQuarter(time);
+    for (const sprite of aircraft) {
+      let rotor = this.rotors.find((candidate) => candidate.sprite === sprite);
+      if (!rotor) {
+        rotor = { sprite, gfx: this.drawRotor(sprite), quarter: -1 };
+        this.rotors.push(rotor);
+      }
+      rotor.gfx.setPosition(sprite.x, sprite.y);
+      rotor.gfx.setVisible(sprite.y > -80 && sprite.y < WORLD.height + 80);
+      if (rotor.quarter !== quarter) {
+        rotor.quarter = quarter;
+        this.rotorTicks += 1;
+      }
+      rotor.gfx.setRotation((quarter * Math.PI) / 2);
+    }
+  }
+
+  /** Draw one rotor cross, centred on its own origin, at the aircraft's size. */
+  private drawRotor(sprite: Phaser.GameObjects.Image): Phaser.GameObjects.Graphics {
+    const graphics = this.add.graphics().setDepth(FX.rotorDepth);
+    const span = Math.max(24, Math.round(sprite.displayWidth * FX.rotorSpanRatio));
+    const thickness = FX.rotorBladeThickness;
+    const short = Math.round(span * 0.45);
+
+    // Long arm up and right, short arm down and left: rotation is visible, and the cross
+    // still reads as four blades from above.
+    graphics.fillStyle(PALETTE.steelLight, 0.9);
+    graphics.fillRect(0, -span, thickness, span);
+    graphics.fillRect(0, 0, span, thickness);
+    graphics.fillRect(0, 0, thickness, short);
+    graphics.fillRect(-short, 0, short, thickness);
+    graphics.fillStyle(PALETTE.bone, 1);
+    graphics.fillRect(-2, -2, 4, 4);
+    return graphics;
   }
 
   /* -------------------------------- weapons -------------------------------- */
@@ -1691,6 +1999,9 @@ export class GameScene extends Phaser.Scene {
   private enemyFire(enemy: EnemyVehicle): void {
     const key = flatTexture(this, 'enemy-bullet', 'signalRed', 7);
     const sprite = this.add.image(enemy.sprite.x, enemy.sprite.y, key).setDepth(45);
+    // The muzzle arc is the shot's warning: it sits on the hostile for one beat before the
+    // shell has crossed the gap.
+    this.spawnArc(enemy.sprite.x, enemy.sprite.y);
 
     this.bullets.push({
       sprite,
@@ -1893,32 +2204,15 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** The rocket's blast: a burst, a shockwave and a scatter of sparks. Cosmetic only. */
+  /**
+   * The rocket's blast.
+   *
+   * Drawn from the same deterministic table as a kill, so the detonation of the round and
+   * the destruction of what it hit are two distinct packages rather than one flattened
+   * composite: the round goes off, then the target comes apart.
+   */
   private showBurst(centre: { readonly x: number; readonly y: number }): void {
-    const layers: readonly { readonly ids: readonly string[]; readonly size: number; readonly to: number }[] = [
-      { ids: WEAPON_EFFECT_ART.blast, size: 64, to: 1.9 },
-      { ids: WEAPON_EFFECT_ART.shockwave, size: 64, to: 2.4 },
-      { ids: WEAPON_EFFECT_ART.sparks, size: 40, to: 1.6 },
-      { ids: WEAPON_EFFECT_ART.debris, size: 40, to: 1.4 },
-    ];
-
-    for (const layer of layers) {
-      const sprite = this.fitEffect(
-        this.art.imageFrom(layer.ids, centre.x, centre.y, () =>
-          // One fallback per footprint: `flatTexture` is keyed by id, so a shared id would
-          // hand every layer the first size drawn.
-          flatTexture(this, `burst-${layer.size}`, 'amber', layer.size),
-        ),
-        layer.size,
-      ).setDepth(58);
-      this.tweens.add({
-        targets: sprite,
-        scale: layer.to,
-        alpha: { from: 1, to: 0 },
-        duration: 380,
-        onComplete: () => sprite.destroy(),
-      });
-    }
+    this.playExplosion(centre.x, centre.y, this.nextExplosionVariant());
   }
 
   /**
@@ -2055,11 +2349,16 @@ export class GameScene extends Phaser.Scene {
       for (const enemy of this.enemies) {
         if (Math.abs(bullet.sprite.x - enemy.sprite.x) < enemy.sprite.displayWidth * 0.45 &&
             Math.abs(bullet.sprite.y - enemy.sprite.y) < enemy.sprite.displayHeight * 0.45) {
+          const impactX = bullet.sprite.x;
+          const impactY = bullet.sprite.y;
           bullet.sprite.destroy();
           bullet.at = Number.NEGATIVE_INFINITY;
 
           if (enemy.hit(bullet.damage)) {
             this.killEnemy(enemy);
+          } else {
+            // A round that lands but does not finish the car still sparks off it.
+            this.spawnSparks(impactX, impactY);
           }
           break;
         }
@@ -2077,12 +2376,15 @@ export class GameScene extends Phaser.Scene {
           Math.abs(bullet.sprite.x - boss.sprite.x) < boss.sprite.displayWidth * 0.45 &&
           Math.abs(bullet.sprite.y - boss.sprite.y) < boss.sprite.displayHeight * 0.45
         ) {
+          const impactX = bullet.sprite.x;
+          const impactY = bullet.sprite.y;
           bullet.sprite.destroy();
           bullet.at = Number.NEGATIVE_INFINITY;
           if (boss.hit(bullet.damage)) {
             this.defeatBoss(time);
             break;
           }
+          this.spawnSparks(impactX, impactY);
         }
       }
     }
@@ -2100,6 +2402,7 @@ export class GameScene extends Phaser.Scene {
       );
       if (!civilian) continue;
 
+      this.spawnSparks(bullet.sprite.x, bullet.sprite.y);
       bullet.sprite.destroy();
       bullet.at = Number.NEGATIVE_INFINITY;
       // Traffic is durable now: a stray round marks the car, and only the round that takes
@@ -2116,6 +2419,7 @@ export class GameScene extends Phaser.Scene {
       if (bullet.from !== 'enemy') continue;
       if (!bullet.sprite.active || !Number.isFinite(bullet.at)) continue;
       if (this.overlapsPlayer(bullet.sprite.x, bullet.sprite.y, 6, 6)) {
+        this.spawnSparks(bullet.sprite.x, bullet.sprite.y);
         bullet.sprite.destroy();
         bullet.at = Number.NEGATIVE_INFINITY;
         this.damagePlayer(time);
@@ -2179,6 +2483,9 @@ export class GameScene extends Phaser.Scene {
 
       hazard.expiresAt = time;
       target.applySpin(time, WEAPON_FX.oilSpinMs);
+      // The slick is spent on the car that crossed it: a black splat on the tarmac is the
+      // visible end of the hazard, not an unannounced disappearance.
+      this.spawnOilSplat(target.sprite.x, target.sprite.y);
       this.score += SCORE.oilSpin;
     }
   }
@@ -2242,6 +2549,10 @@ export class GameScene extends Phaser.Scene {
         collision: prop.collision,
         damage: outcome.damage,
       };
+
+      // A clipped obstacle throws dust off the road and, when it costs armour, debris.
+      this.spawnDust(prop.sprite.x, prop.sprite.y);
+      if (outcome.damage) this.spawnDebris(prop.sprite.x, prop.sprite.y);
 
       if (outcome.shove) this.shoveProp(prop, this.player.x < prop.sprite.x ? -1 : 1);
 
@@ -2326,6 +2637,10 @@ export class GameScene extends Phaser.Scene {
     this.player.applyImpulse(hit.deltaAX);
     other.shift(hit.shiftBX, hit.shiftBY);
     other.applyImpulse(hit.deltaBX, hit.deltaBY);
+
+    // Two bumpers meeting throw sparks; a hard one also knocks debris off the car it hit.
+    this.spawnSparks((this.player.x + other.x) / 2, (this.player.groundY + other.y) / 2);
+    if (hit.hard) this.spawnDebris(other.x, other.y);
 
     const hostile = other instanceof EnemyVehicle;
     const weapon = other instanceof EnemyVehicle ? other.def.weapon : null;
@@ -2458,6 +2773,8 @@ export class GameScene extends Phaser.Scene {
 
     if (time < this.nextOffRoadHitAt) return;
     this.nextOffRoadHitAt = time + OFFROAD.damageIntervalMs;
+    // Rough ground kicks dust up at the wheels on every tick it costs.
+    this.spawnDust(this.player.x, PLAYER.y + 8);
     this.damagePlayer(time);
   }
 
@@ -2571,7 +2888,12 @@ export class GameScene extends Phaser.Scene {
    * `Math.random()` and break seed replay.
    */
   private wreckCivilian(civilian: CivilianVehicle, banner: string): void {
+    const { x, y } = civilian.sprite;
     civilian.wreck(this.distance);
+    // Traffic burns and throws debris when it comes apart — the same burn-then-burst beat a
+    // hostile gets, without the explosion package (a civilian is not an ammo hit).
+    this.burnVehicle(x, y);
+    this.spawnDebris(x, y);
     this.challenges.notifyCivilianHit();
     this.audio.play('hit');
     this.showBanner(banner);
@@ -2581,20 +2903,13 @@ export class GameScene extends Phaser.Scene {
     this.applyScore('enemyDestroyed');
     this.challenges.notifyKill();
     this.audio.play('explosion');
-    // No camera shake: the explosion sprite and its audio are the feedback, and the camera
+    // No camera shake: the explosion package and its audio are the feedback, and the camera
     // kick belongs to `kickCamera`, which only a hit on the player earns.
-    const boom = this.art
-      .imageFrom(EFFECT_ART.explosion, enemy.sprite.x, enemy.sprite.y, () =>
-        flatTexture(this, 'explosion', 'amber', 34, 'white'),
-      )
-      .setDepth(60);
-    this.tweens.add({
-      targets: boom,
-      scale: { from: 0.6, to: 1.6 },
-      alpha: { from: 1, to: 0 },
-      duration: 260,
-      onComplete: () => boom.destroy(),
-    });
+    const { x, y } = enemy.sprite;
+    // A car burns before it comes apart, then takes one of the four packages in turn.
+    this.burnVehicle(x, y);
+    this.playExplosion(x, y, this.nextExplosionVariant());
+    this.spawnSparks(x, y);
 
     enemy.destroy();
     this.enemies = this.enemies.filter((e) => e !== enemy);
@@ -2705,6 +3020,7 @@ export class GameScene extends Phaser.Scene {
     for (const prop of this.props) prop.sprite.destroy();
     for (const ramp of this.ramps) ramp.sprite.destroy();
     for (const item of this.decor) item.sprite.destroy();
+    for (const rotor of this.rotors) rotor.gfx.destroy();
 
     this.enemies = [];
     this.civilians = [];
@@ -2716,6 +3032,11 @@ export class GameScene extends Phaser.Scene {
     this.props = [];
     this.ramps = [];
     this.decor = [];
+    this.rotors = [];
+    // Decals are world-static, so a sector boundary — which restarts `distance` at zero —
+    // would replay the old sector's marks up the new road. Clear them with the world.
+    this.skidMarks = [];
+    this.skidGraphics.clear();
     this.lastLanding = null;
     this.lastPropContact = null;
   }

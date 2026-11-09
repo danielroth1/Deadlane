@@ -72,8 +72,31 @@ describe('pickup art ids', () => {
 
 describe('effect art ids', () => {
   it('has a candidate for every effect the scene draws', () => {
-    const kinds: EffectKind[] = ['explosion', 'muzzle', 'smoke', 'oil', 'dust', 'splash'];
+    const kinds: EffectKind[] = [
+      'explosion',
+      'muzzle',
+      'smoke',
+      'oil',
+      'dust',
+      'splash',
+      'fire',
+      'sparks',
+      'debris',
+      'shockwave',
+      'arc',
+    ];
     expect(Object.keys(EFFECT_ART).sort()).toEqual([...kinds].sort());
+  });
+
+  it('resolves every effect candidate in the shipped manifest', () => {
+    for (const ids of Object.values(EFFECT_ART)) {
+      for (const id of ids) {
+        expect(
+          sprites.has(id),
+          `effect → ${id} is not a key of .sprites in public/assets/assets.json`,
+        ).toBe(true);
+      }
+    }
   });
 });
 
