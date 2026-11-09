@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { CHALLENGE_TEMPLATES } from '@/content';
-import { DECOR, JUMP, SPAWN, WORLD } from '@/config';
+import { CHALLENGE_TEMPLATES, CIVILIAN_SURFACE, ENEMY_SURFACE } from '@/content';
+import { DECOR, JUMP, SPAWN, SURFACE, WORLD } from '@/config';
 import { LEVEL_TYPES, generateLevel, levelForSeed } from './index';
 import {
   LEVEL_PROFILES,
@@ -9,6 +9,8 @@ import {
   roadProfileFor,
   roadShapeFor,
   roadWidthAt,
+  surfaceAllows,
+  surfaceAt,
   type LevelBlueprint,
   type LevelEvent,
   type LevelType,
@@ -290,6 +292,7 @@ describe('road shape', () => {
       ],
       minWidth: 256,
       maxWidth: 320,
+      surfaces: [{ kind: 'land', from: 0, to: 6000, shoreIn: 0, shoreOut: 0 }],
     };
 
     expect(roadWidthAt(shape, 0)).toBe(256);
@@ -329,6 +332,179 @@ describe('road shape', () => {
         );
         expect(x).toBeGreaterThanOrEqual(0);
         expect(x).toBeLessThanOrEqual(WORLD.width);
+      }
+    }
+  });
+});
+
+/**
+ * Land and water.
+ *
+ * A sector's material is data, so these tests pin the data contract rather than a scene:
+ * every stretch is long enough to drive, every transition carries a shore blend, the
+ * water-heavy type really has both materials, and no content row is ever placed on a
+ * surface it cannot use. The 1,000-seed matrix above runs `validateBlueprint`, which
+ * includes all of it.
+ */
+describe('surfaces', () => {
+  /** A blueprint with a chosen road shape, used to stage the rejection cases. */
+  function withRoad(road: RoadShape, events: LevelEvent[] = []): LevelBlueprint {
+    return {
+      seed: 1,
+      type: 'highway',
+      index: 1,
+      length: 6000,
+      road,
+      events,
+      challenges: [
+        { id: 'c0', kind: 'reach', from: 0, to: 3000, target: 0, label: 'REACH', reward: 100 },
+      ],
+      scrollMultiplier: 1,
+      visibility: 1,
+    };
+  }
+
+  it('opens the water-heavy sector on water with a land causeway in the middle', () => {
+    for (let i = 0; i < 200; i += 1) {
+      const blueprint = generateLevel({ type: 'river', seed: 1000 + i, index: 1 });
+      const kinds = blueprint.road.surfaces.map((segment) => segment.kind);
+
+      expect(roadAt(blueprint.road, 0).surface).toBe('water');
+      expect(kinds).toContain('water');
+      expect(kinds).toContain('land');
+      // Water-heavy: the water stretches together outweigh the causeway.
+      const water = blueprint.road.surfaces
+        .filter((segment) => segment.kind === 'water')
+        .reduce((sum, segment) => sum + (segment.to - segment.from), 0);
+      expect(water).toBeGreaterThan(blueprint.length / 2);
+    }
+  });
+
+  it('keeps every other level type dry', () => {
+    for (const type of LEVEL_TYPES) {
+      if (LEVEL_PROFILES[type].waterShare > 0) continue;
+      const blueprint = generateLevel({ type, seed: 77, index: 1 });
+      expect(blueprint.road.surfaces.map((segment) => segment.kind)).toEqual(['land']);
+      expect(roadAt(blueprint.road, blueprint.length / 2).surface).toBe('land');
+    }
+  });
+
+  it('covers the whole sector with contiguous, driveable stretches and real shores', () => {
+    for (const type of LEVEL_TYPES) {
+      for (let i = 0; i < 100; i += 1) {
+        const blueprint = generateLevel({ type, seed: i * 31 + 7, index: 1 + (i % 4) });
+        const segments = blueprint.road.surfaces;
+
+        expect(segments[0]?.from).toBe(0);
+        expect(segments[segments.length - 1]?.to).toBe(blueprint.length);
+        expect(segments.length).toBeGreaterThan(0);
+
+        segments.forEach((segment, index) => {
+          expect(segment.to).toBeGreaterThan(segment.from);
+          expect(segment.to - segment.from).toBeGreaterThanOrEqual(SURFACE.minSegmentPixels);
+          expect(segment.to - segment.from).toBeGreaterThanOrEqual(
+            segment.shoreIn + segment.shoreOut + SURFACE.minPlayablePixels,
+          );
+          if (index > 0) {
+            expect(segment.from).toBe(segments[index - 1]?.to);
+            expect(segment.shoreIn).toBeGreaterThanOrEqual(SURFACE.shorePixels);
+            expect(segments[index - 1]?.shoreOut).toBeGreaterThanOrEqual(SURFACE.shorePixels);
+          }
+        });
+
+        // `surfaceAt` is total across the sector: every sample reports a material.
+        for (let at = 0; at <= blueprint.length; at += 257) {
+          expect(['land', 'water']).toContain(surfaceAt(blueprint.road, at));
+        }
+      }
+    }
+  });
+
+  it('rejects a one-pixel water seam between two land stretches', () => {
+    const road: RoadShape = {
+      ...roadShapeFor('highway'),
+      surfaces: [
+        { kind: 'land', from: 0, to: 3000, shoreIn: 0, shoreOut: SURFACE.shorePixels },
+        { kind: 'water', from: 3000, to: 3001, shoreIn: SURFACE.shorePixels, shoreOut: SURFACE.shorePixels },
+        { kind: 'land', from: 3001, to: 6000, shoreIn: SURFACE.shorePixels, shoreOut: 0 },
+      ],
+    };
+
+    const codes = validateBlueprint(withRoad(road)).map((issue) => issue.code);
+    expect(codes).toContain('surface-sliver');
+    expect(codes).toContain('surface-shore');
+  });
+
+  it('rejects a transition with no shore blend', () => {
+    const road: RoadShape = {
+      ...roadShapeFor('highway'),
+      surfaces: [
+        { kind: 'land', from: 0, to: 3000, shoreIn: 0, shoreOut: 0 },
+        { kind: 'water', from: 3000, to: 6000, shoreIn: 0, shoreOut: 0 },
+      ],
+    };
+
+    const codes = validateBlueprint(withRoad(road)).map((issue) => issue.code);
+    expect(codes).toContain('surface-transition');
+  });
+
+  it('rejects a surface that is all shore with no playable stretch left', () => {
+    const shore = 900;
+    const road: RoadShape = {
+      ...roadShapeFor('highway'),
+      surfaces: [
+        { kind: 'land', from: 0, to: 3000, shoreIn: 0, shoreOut: shore },
+        { kind: 'water', from: 3000, to: 4500, shoreIn: shore, shoreOut: shore },
+      ],
+    };
+
+    const codes = validateBlueprint(withRoad(road)).map((issue) => issue.code);
+    expect(codes).toContain('surface-shore');
+  });
+
+  it('rejects a boat on land and a land vehicle on water', () => {
+    const boatOnLand = validateBlueprint(
+      withRoad(roadShapeFor('highway'), [
+        { kind: 'enemy', at: 2000, lane: 0, enemy: 'gunboat' },
+      ]),
+    ).map((issue) => issue.code);
+
+    const waterRoad: RoadShape = {
+      ...roadShapeFor('river'),
+      surfaces: [{ kind: 'water', from: 0, to: 6000, shoreIn: 0, shoreOut: 0 }],
+    };
+    const carOnWater = validateBlueprint(
+      withRoad(waterRoad, [
+        { kind: 'traffic', at: 2000, lane: 0, vehicle: 'sedan', speed: 60 },
+      ]),
+    ).map((issue) => issue.code);
+
+    expect(boatOnLand).toContain('wrong-surface');
+    expect(carOnWater).toContain('wrong-surface');
+  });
+
+  it('never places a unit on the wrong surface, across the matrix', () => {
+    for (const type of LEVEL_TYPES) {
+      for (let i = 0; i < 200; i += 1) {
+        const blueprint = generateLevel({ type, seed: i * 7919 + 104729, index: 1 + (i % 5) });
+        const surface = (at: number) => surfaceAt(blueprint.road, at);
+
+        for (const event of blueprint.events) {
+          if (event.kind === 'enemy') {
+            const affinity = ENEMY_SURFACE.get(event.enemy) ?? 'any';
+            expect(
+              surfaceAllows(affinity, surface(event.at)),
+              `${type} seed ${i}: ${event.enemy} (${affinity}) on ${surface(event.at)} at ${event.at}`,
+            ).toBe(true);
+          }
+          if (event.kind === 'traffic') {
+            const affinity = CIVILIAN_SURFACE.get(event.vehicle) ?? 'any';
+            expect(
+              surfaceAllows(affinity, surface(event.at)),
+              `${type} seed ${i}: ${event.vehicle} (${affinity}) on ${surface(event.at)} at ${event.at}`,
+            ).toBe(true);
+          }
+        }
       }
     }
   });

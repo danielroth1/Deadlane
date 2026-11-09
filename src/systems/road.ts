@@ -1,17 +1,28 @@
 import Phaser from 'phaser';
 import type { Art, SpriteRef } from '@/art';
-import type { TileArtByKind, TileKind } from '@/art/ids';
-import { WORLD } from '@/config';
+import { SHORE_BANK_ART, SHORE_STRIPE_ART, type TileArtByKind, type TileKind } from '@/art/ids';
+import { PLAYER, SURFACE, WORLD } from '@/config';
 import { PALETTE } from '@/palette';
-import { roadAt, type LevelType, type RoadProfile, type RoadShape } from '@/levels/types';
+import {
+  roadAt,
+  type LevelType,
+  type RoadProfile,
+  type RoadShape,
+  type SurfaceKind,
+  type SurfaceSegment,
+} from '@/levels/types';
 import {
   ROAD_EDGE_SPECS,
-  ROAD_TILE_SPECS,
+  SHORE_BANK_WINDOW,
+  SHORE_STRIPE_WINDOW,
   planRoadEdges,
   planRoadTiles,
+  planSurfaceBands,
+  roadTileSpecFor,
   type EdgeBandPlan,
   type EdgeTileSpec,
   type RoadTileTheme,
+  type SurfaceBand,
   type TileBandPlan,
   type TileWindow,
 } from './road-tiles';
@@ -83,6 +94,12 @@ const THEMES: Readonly<Record<LevelType, RoadTheme>> = {
     dashLine: PALETTE.steelLight,
   },
 };
+
+/** A water stretch uses the river's palette; land in a river is a tarmac causeway. */
+function themeFor(type: LevelType, surface: SurfaceKind): RoadTheme {
+  if (surface === 'water') return THEMES.river;
+  return THEMES[type === 'river' ? 'highway' : type];
+}
 
 const DASH_LENGTH = 22;
 const DASH_GAP = 42;
@@ -235,6 +252,12 @@ class RoadTileLayer {
     return sprite;
   }
 
+  /** Clip this layer to the rows its own surface stretch occupies on screen. */
+  setMask(mask: Phaser.Display.Masks.GeometryMask): void {
+    for (const sprite of this.sprites) sprite.setMask(mask);
+    for (const sprite of this.edgeSprites) sprite.setMask(mask);
+  }
+
   /**
    * Follow the road's current cross-section.
    *
@@ -274,22 +297,37 @@ class RoadTileLayer {
   }
 }
 
+/** One surface stretch: its theme, its tile layer and the mask that clips it. */
+interface SurfaceLayer {
+  readonly segment: SurfaceSegment;
+  readonly theme: RoadTheme;
+  readonly tiles: RoadTileLayer | null;
+  /** Only exists when the sector holds more than one stretch; otherwise it is full screen. */
+  readonly maskGraphics: Phaser.GameObjects.Graphics | null;
+}
+
+/** The bank and its marker line at one internal surface boundary. */
+interface ShoreBand {
+  /** Sector distance of the boundary. */
+  readonly at: number;
+  readonly bank: Phaser.GameObjects.TileSprite;
+  readonly stripe: Phaser.GameObjects.TileSprite;
+}
+
 export class RoadSystem {
   private readonly base: Phaser.GameObjects.Graphics;
   private readonly markings: Phaser.GameObjects.Graphics;
-  private readonly tiles: RoadTileLayer | null;
-  private readonly theme: RoadTheme;
+  private readonly layers: readonly SurfaceLayer[];
   /** The sector's width plan. Every band is sampled out of it at render time. */
   private readonly shape: RoadShape;
   /**
-   * Whether the drawn markings are painted over the tiles.
+   * True when the sector holds more than one surface stretch.
    *
-   * Every road except tiled water keeps them: edge lines and guardrail ticks are road
-   * furniture. A river has no paint and no rails — the channel edge is the pier shoulder
-   * in the water sheet — so the tiled water theme drops them. Without tiles the drawn
-   * theme is all there is, so the fallback keeps them and still reads as a road.
+   * A single-stretch sector keeps the old path exactly: one unclipped tile layer covering
+   * the screen. Only a mixed sector pays for masks and a bank band.
    */
-  private readonly painted: boolean;
+  private readonly split: boolean;
+  private readonly shores: readonly ShoreBand[];
 
   constructor(
     scene: Phaser.Scene,
@@ -298,23 +336,104 @@ export class RoadSystem {
     art: Art,
   ) {
     this.shape = shape;
-    this.theme = THEMES[type];
+    this.split = shape.surfaces.length > 1;
 
     // Three layers, back to front: drawn fills, generated tiles, drawn markings. The
     // fills stay underneath so the road still reads when a sheet is missing or rejected,
     // and so a band that has no frame for one lane divider cannot leave a hole.
     this.base = scene.add.graphics().setDepth(0);
+    // Every stretch draws the same cross-section: the camera is one screen tall, so a
+    // stretch boundary moves the material, never the road's geometry under it.
     const profile = roadAt(shape, 0);
-    const spec = ROAD_TILE_SPECS[type];
-    const frames = spec ? tileFrames(art, spec.art) : null;
-    const edgeSpec = ROAD_EDGE_SPECS[type] ?? null;
-    const edgeFrame = edgeSpec ? firstFrame(art, edgeSpec.art) : null;
-    this.tiles =
-      spec && frames
-        ? new RoadTileLayer(scene, profile, frames, spec.windows, edgeSpec, edgeFrame)
-        : null;
-    this.painted = !(type === 'river' && this.tiles !== null);
+
+    this.layers = shape.surfaces.map((segment) => {
+      const spec = roadTileSpecFor(type, segment.kind);
+      const frames = spec ? tileFrames(art, spec.art) : null;
+      // A causeway keeps the level type's own shoulder blend; water's channel edge is the
+      // sheet's deck, so no transition strip belongs there.
+      const edgeSpec = segment.kind === 'land' ? ROAD_EDGE_SPECS[type] ?? null : null;
+      const edgeFrame = edgeSpec ? firstFrame(art, edgeSpec.art) : null;
+      const tiles =
+        spec && frames
+          ? new RoadTileLayer(scene, profile, frames, spec.windows, edgeSpec, edgeFrame)
+          : null;
+
+      const maskGraphics = this.split && tiles ? scene.make.graphics() : null;
+      if (tiles && maskGraphics) tiles.setMask(maskGraphics.createGeometryMask());
+
+      return { segment, theme: themeFor(type, segment.kind), tiles, maskGraphics };
+    });
+
     this.markings = scene.add.graphics().setDepth(2);
+    this.shores = this.createShores(scene, art);
+  }
+
+  /**
+   * The bank and marker at every internal boundary.
+   *
+   * Cosmetic and world-static: each band sits at the boundary's own sector distance and is
+   * repositioned from the scroll every frame, so it stays glued to the material change.
+   * Missing frames leave the boundary to the two surface themes, which already differ.
+   */
+  private createShores(scene: Phaser.Scene, art: Art): ShoreBand[] {
+    if (!this.split) return [];
+
+    const bankFrame = firstFrame(art, SHORE_BANK_ART);
+    const stripeFrame = firstFrame(art, SHORE_STRIPE_ART);
+    if (!bankFrame && !stripeFrame) return [];
+
+    const out: ShoreBand[] = [];
+    for (let i = 1; i < this.shape.surfaces.length; i += 1) {
+      const boundary = this.shape.surfaces[i];
+      if (!boundary) continue;
+
+      const bank = bankFrame
+        ? scene.add
+            .tileSprite(
+              0,
+              0,
+              WORLD.width,
+              SURFACE.shoreBandPixels,
+              bankFrame.key,
+              windowFrame(scene, bankFrame, SHORE_BANK_WINDOW),
+            )
+            .setOrigin(0, 0)
+            .setDepth(1.7)
+        : this.hiddenTile(scene, SURFACE.shoreBandPixels);
+
+      const stripe = stripeFrame
+        ? scene.add
+            .tileSprite(
+              0,
+              0,
+              WORLD.width,
+              SURFACE.shoreStripePixels,
+              stripeFrame.key,
+              windowFrame(scene, stripeFrame, SHORE_STRIPE_WINDOW),
+            )
+            .setOrigin(0, 0)
+            .setDepth(1.8)
+        : this.hiddenTile(scene, SURFACE.shoreStripePixels);
+
+      out.push({ at: boundary.from, bank, stripe });
+    }
+
+    return out;
+  }
+
+  /** An invisible placeholder so a half-drawn shore still has a stable pair of sprites. */
+  private hiddenTile(scene: Phaser.Scene, height: number): Phaser.GameObjects.TileSprite {
+    return scene.add
+      .tileSprite(0, 0, 1, height, '__DEFAULT')
+      .setOrigin(0, 0)
+      .setVisible(false);
+  }
+
+  /** The layer that draws one visible band, matched by the stretch it belongs to. */
+  private layerFor(band: SurfaceBand): SurfaceLayer | undefined {
+    return this.layers.find(
+      (layer) => layer.segment.from === band.from && layer.segment.kind === band.kind,
+    );
   }
 
   /**
@@ -326,90 +445,164 @@ export class RoadSystem {
    */
   render(distance: number): void {
     const profile = roadAt(this.shape, distance);
-    this.drawBase(profile);
-    this.tiles?.render(profile, distance);
-    this.drawMarkings(profile, distance);
+    const bands = planSurfaceBands(this.shape, distance);
+
+    this.drawBase(profile, bands);
+    this.renderLayers(profile, distance, bands);
+    this.drawMarkings(profile, distance, bands);
+    this.renderShores(distance);
   }
 
-  /** Terrain, shoulders and surface. Covers the screen; always drawn, tiled or not. */
-  private drawBase(road: RoadProfile): void {
+  /** Every tile layer, clipped to the rows its stretch covers. */
+  private renderLayers(
+    profile: RoadProfile,
+    distance: number,
+    bands: readonly SurfaceBand[],
+  ): void {
+    if (!this.split) {
+      this.layers[0]?.tiles?.render(profile, distance);
+      return;
+    }
+
+    for (const layer of this.layers) layer.tiles?.setVisible(false);
+
+    bands.forEach((band) => {
+      const layer = this.layerFor(band);
+      if (!layer) return;
+      layer.tiles?.render(profile, distance);
+      if (!layer.maskGraphics) return;
+
+      // Overlap the mask by a pixel at each edge: a fractional camera row would otherwise
+      // leave a hairline of the drawn base between two materials. The bank band covers it.
+      const top = Math.max(0, Math.floor(band.yTop));
+      const bottom = Math.min(WORLD.height, Math.ceil(band.yBottom) + 1);
+      if (bottom <= top) return;
+
+      layer.tiles?.setVisible(true);
+      layer.maskGraphics.clear();
+      layer.maskGraphics.fillStyle(0xffffff, 1);
+      layer.maskGraphics.fillRect(0, top, WORLD.width, bottom - top);
+    });
+  }
+
+  /** Terrain, shoulders and surface, one fill set per visible surface stretch. */
+  private drawBase(road: RoadProfile, bands: readonly SurfaceBand[]): void {
     const g = this.base;
-    const { theme } = this;
     const right = road.left + road.width;
 
     g.clear();
 
-    // Terrain bands.
-    g.fillStyle(theme.terrainLeft, 1);
-    g.fillRect(0, 0, road.left, WORLD.height);
-    g.fillStyle(theme.terrainRight, 1);
-    g.fillRect(right, 0, WORLD.width - right, WORLD.height);
+    bands.forEach((band) => {
+      const theme = this.layerFor(band)?.theme ?? THEMES.highway;
+      const top = Math.max(0, Math.floor(band.yTop));
+      const bottom = Math.min(WORLD.height, Math.ceil(band.yBottom));
+      const height = bottom - top;
+      if (height <= 0) return;
 
-    // Shoulder strips.
-    g.fillStyle(theme.shoulder, 1);
-    g.fillRect(road.left - 8, 0, 8, WORLD.height);
-    g.fillRect(right, 0, 8, WORLD.height);
+      g.fillStyle(theme.terrainLeft, 1);
+      g.fillRect(0, top, road.left, height);
+      g.fillStyle(theme.terrainRight, 1);
+      g.fillRect(right, top, WORLD.width - right, height);
 
-    // Road surface.
-    g.fillStyle(theme.roadFill, 1);
-    g.fillRect(road.left, 0, road.width, WORLD.height);
+      g.fillStyle(theme.shoulder, 1);
+      g.fillRect(road.left - 8, top, 8, height);
+      g.fillRect(right, top, 8, height);
+
+      g.fillStyle(theme.roadFill, 1);
+      g.fillRect(road.left, top, road.width, height);
+    });
   }
 
   /**
-   * Edge lines, lane dashes and guardrail ticks.
+   * Edge lines, lane dashes and guardrail ticks on land stretches only.
    *
-   * Edge lines and the rail always come from the profile, except on tiled water where the
-   * channel is marked by the sheet's shoulders. The lane dashes are skipped when tiles are
-   * drawing them, so the marking is not painted twice at two phases.
+   * The channel has no paint: its lane wakes come from the water sheet's foam band. Assumes
+   * every land stretch in a sector draws the same theme, which is true because the causeway
+   * is the only land a water-heavy sector has.
    */
-  private drawMarkings(road: RoadProfile, distance: number): void {
+  private drawMarkings(
+    road: RoadProfile,
+    distance: number,
+    bands: readonly SurfaceBand[],
+  ): void {
     const g = this.markings;
-    const { theme } = this;
     const right = road.left + road.width;
+    const landLayer = this.layers.find((layer) => layer.segment.kind === 'land');
+    const landTiled = Boolean(landLayer?.tiles);
+    const theme = landLayer?.theme ?? THEMES.highway;
 
     g.clear();
 
-    if (this.painted) {
+    for (const band of bands) {
+      if (band.kind !== 'land') continue;
+
+      const top = Math.max(0, Math.floor(band.yTop));
+      const bottom = Math.min(WORLD.height, Math.ceil(band.yBottom));
+      const height = bottom - top;
+      if (height <= 0) continue;
+
       // Solid edge lines.
       g.fillStyle(theme.edgeLine, 1);
-      g.fillRect(road.left + 3, 0, 3, WORLD.height);
-      g.fillRect(right - 6, 0, 3, WORLD.height);
-    }
+      g.fillRect(road.left + 3, top, 3, height);
+      g.fillRect(right - 6, top, 3, height);
 
-    // Dashed lane dividers, scrolled.
-    if (!this.tiles) {
-      const period = DASH_LENGTH + DASH_GAP;
-      const offset = ((distance % period) + period) % period;
-      g.fillStyle(theme.dashLine, 0.85);
+      // Dashed lane dividers, scrolled. The sheet draws them when it is present.
+      if (!landTiled) {
+        const period = DASH_LENGTH + DASH_GAP;
+        const offset = ((distance % period) + period) % period;
+        g.fillStyle(theme.dashLine, 0.85);
 
-      for (let lane = 1; lane < road.lanes; lane += 1) {
-        const x = road.left + lane * road.laneWidth - 2;
-        for (let y = -DASH_LENGTH; y < WORLD.height + DASH_LENGTH; y += period) {
-          g.fillRect(x, y + offset, 4, DASH_LENGTH);
+        for (let lane = 1; lane < road.lanes; lane += 1) {
+          const x = road.left + lane * road.laneWidth - 2;
+          for (let y = top - DASH_LENGTH; y < bottom + DASH_LENGTH; y += period) {
+            g.fillRect(x, y + offset, 4, DASH_LENGTH);
+          }
         }
       }
+
+      // Guardrail ticks on the shoulder, scrolling at the same rate: cheap speed cue.
+      g.fillStyle(theme.edgeLine, 0.35);
+      const railOffset = ((distance % 48) + 48) % 48;
+      for (let y = top - 48; y < bottom + 48; y += 48) {
+        g.fillRect(road.left - 7, y + railOffset, 5, 12);
+        g.fillRect(right + 2, y + railOffset, 5, 12);
+      }
     }
+  }
 
-    if (!this.painted) return;
-
-    // Guardrail ticks on the shoulder, scrolling at the same rate: cheap speed cue.
-    g.fillStyle(theme.edgeLine, 0.35);
-    const railOffset = ((distance % 48) + 48) % 48;
-    for (let y = -48; y < WORLD.height + 48; y += 48) {
-      g.fillRect(road.left - 7, y + railOffset, 5, 12);
-      g.fillRect(right + 2, y + railOffset, 5, 12);
+  /** Seat the shore bands on their own boundaries. */
+  private renderShores(distance: number): void {
+    for (const shore of this.shores) {
+      const y = PLAYER.y + distance - shore.at;
+      shore.bank.setPosition(0, Math.round(y - SURFACE.shoreBandPixels / 2));
+      shore.stripe.setPosition(0, Math.round(y - SURFACE.shoreStripePixels / 2));
+      const visible =
+        y > -SURFACE.shoreBandPixels && y < WORLD.height + SURFACE.shoreBandPixels;
+      shore.bank.setVisible(visible);
+      shore.stripe.setVisible(visible);
     }
   }
 
   setVisible(visible: boolean): void {
     this.base.setVisible(visible);
     this.markings.setVisible(visible);
-    this.tiles?.setVisible(visible);
+    for (const layer of this.layers) layer.tiles?.setVisible(visible);
+    for (const shore of this.shores) {
+      shore.bank.setVisible(visible);
+      shore.stripe.setVisible(visible);
+    }
   }
 
   destroy(): void {
     this.base.destroy();
     this.markings.destroy();
-    this.tiles?.destroy();
+    for (const layer of this.layers) {
+      layer.tiles?.destroy();
+      layer.maskGraphics?.destroy();
+    }
+    for (const shore of this.shores) {
+      shore.bank.destroy();
+      shore.stripe.destroy();
+    }
   }
 }

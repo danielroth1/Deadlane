@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { ROAD, WORLD } from '@/config';
+import { PLAYER, ROAD, SURFACE, WORLD } from '@/config';
 import {
   CANYON_TILE_ART,
   CITY_TILE_ART,
@@ -8,7 +8,7 @@ import {
   WATER_TILE_ART,
   type TileKind,
 } from '@/art/ids';
-import { LEVEL_PROFILES, type RoadProfile } from '@/levels/types';
+import { LEVEL_PROFILES, roadShapeFor, type RoadProfile, type RoadShape } from '@/levels/types';
 import {
   CANYON_EDGE_CHEVRON,
   CANYON_TILE_WINDOWS,
@@ -25,16 +25,24 @@ import {
   WATER_TILE_WINDOWS,
   planRoadEdges,
   planRoadTiles,
+  planSurfaceBands,
+  roadTileSpecFor,
   tileOffset,
   type EdgeTileSpec,
   type RoadTileTheme,
 } from './road-tiles';
 
 /** The shipped highway profile, with the one field `ROAD` does not carry. */
-const HIGHWAY: RoadProfile = { ...ROAD, obstructableLanes: [1, 2, 3, 4] };
+const HIGHWAY: RoadProfile = { ...ROAD, obstructableLanes: [1, 2, 3, 4], surface: 'land' };
 
 /** Canyon and river both use five 76 px lanes; borrow one for the narrower tests. */
-const CANYON: RoadProfile = { ...ROAD, lanes: 5, laneWidth: 76, obstructableLanes: [1, 2, 3] };
+const CANYON: RoadProfile = {
+  ...ROAD,
+  lanes: 5,
+  laneWidth: 76,
+  obstructableLanes: [1, 2, 3],
+  surface: 'land',
+};
 
 const DISTANCES = [0, 0.25, 1, 3.5, 7, 15.75, 31, 31.5, 31.999, 32, 64, 123.456, 999.5];
 
@@ -306,6 +314,7 @@ describe('planRoadTiles', () => {
       lanes: 3,
       laneWidth: 64,
       obstructableLanes: [1],
+      surface: 'land',
     };
     const bands = planRoadTiles(narrow, 5);
 
@@ -384,6 +393,7 @@ describe('road tile specs', () => {
         lanes: profile.lanes,
         laneWidth: 76,
         obstructableLanes: [1],
+        surface: 'land',
       };
       const right = narrow.left + narrow.width;
 
@@ -431,5 +441,71 @@ describe('road tile specs', () => {
     expect(surfaceOf(canyon)).toBe(CANYON_TILE_WINDOWS.surface.sourceWidth);
     expect(surfaceOf(water)).toBe(WATER_TILE_WINDOWS.surface.sourceWidth);
     expect(surfaceOf(canyon)).not.toBe(HIGHWAY_TILE_WINDOWS.surface.sourceWidth);
+  });
+});
+
+/**
+ * Land and water on one screen.
+ *
+ * `planSurfaceBands` is the only place screen rows are assigned to a material, and the
+ * renderer clips each material's tile layer with it. These tests pin the mapping — world y
+ * is `PLAYER.y + distance - at` — and the two ends, which must stay open so the screen
+ * never shows a hole past a sector's first or last stretch.
+ */
+describe('surface bands', () => {
+  const MIXED: RoadShape = {
+    ...roadShapeFor('river'),
+    surfaces: [
+      { kind: 'water', from: 0, to: 4000, shoreIn: 0, shoreOut: SURFACE.shorePixels },
+      { kind: 'land', from: 4000, to: 6000, shoreIn: SURFACE.shorePixels, shoreOut: SURFACE.shorePixels },
+      { kind: 'water', from: 6000, to: 9000, shoreIn: SURFACE.shorePixels, shoreOut: 0 },
+    ],
+  };
+
+  it('splits the screen exactly at a boundary under the car', () => {
+    const bands = planSurfaceBands(MIXED, 4000);
+
+    expect(bands.map((band) => band.kind)).toEqual(['land', 'water']);
+    // at = 4000 lands on PLAYER.y; the land stretch is above it, water below.
+    expect(bands[0]?.yTop).toBe(0);
+    expect(bands[0]?.yBottom).toBeCloseTo(PLAYER.y);
+    expect(bands[1]?.yTop).toBeCloseTo(PLAYER.y);
+    expect(bands[1]?.yBottom).toBeCloseTo(WORLD.height);
+  });
+
+  it('covers every screen row once, top to bottom', () => {
+    for (let distance = 0; distance <= 9000; distance += 137) {
+      const bands = planSurfaceBands(MIXED, distance);
+      expect(bands.length).toBeGreaterThan(0);
+      expect(bands[0]?.yTop).toBeCloseTo(0);
+      expect(bands[0]?.yBottom).toBeCloseTo(bands[1]?.yTop ?? WORLD.height);
+      expect(bands[bands.length - 1]?.yBottom).toBeCloseTo(WORLD.height);
+      expect(bands[bands.length - 1]?.yTop).toBeLessThan(WORLD.height);
+    }
+  });
+
+  it('keeps the ends open, so a sector edge is not a hole', () => {
+    const top = planSurfaceBands(MIXED, 0);
+    const bottom = planSurfaceBands(MIXED, 9000);
+
+    expect(top[0]?.kind).toBe('water');
+    expect(top[0]?.yTop).toBe(0);
+    expect(bottom[bottom.length - 1]?.kind).toBe('water');
+    expect(bottom[bottom.length - 1]?.yBottom).toBeCloseTo(WORLD.height);
+  });
+
+  it('draws a single stretch across the whole screen', () => {
+    const bands = planSurfaceBands(roadShapeFor('highway'), 500);
+
+    expect(bands).toHaveLength(1);
+    expect(bands[0]).toMatchObject({ kind: 'land', yTop: 0 });
+    expect(bands[0]?.yBottom).toBeCloseTo(WORLD.height);
+  });
+
+  it('gives water its own sheet and puts a causeway on the highway sheet', () => {
+    expect(roadTileSpecFor('river', 'water')?.art).toBe(WATER_TILE_ART);
+    expect(roadTileSpecFor('highway', 'water')?.art).toBe(WATER_TILE_ART);
+    expect(roadTileSpecFor('river', 'land')?.art).toBe(HIGHWAY_TILE_ART);
+    expect(roadTileSpecFor('city', 'land')?.art).toBe(CITY_TILE_ART);
   });
 });

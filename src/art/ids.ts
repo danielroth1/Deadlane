@@ -129,6 +129,40 @@ export const WEAPON_EFFECT_ART: Record<WeaponEffectKind, readonly string[]> = {
 };
 
 /**
+ * The wake a hull leaves while it is moving on water.
+ *
+ * art-25 cells 12–14 hold the sheet's three splashes (documented under
+ * `WEAPON_EFFECT_ART.splash`), so the wake is the small one with the large one behind it.
+ * No extra image is needed.
+ */
+export const SURFACE_WAKE_ART: readonly string[] = [
+  'fx-expanded/water-splash-small',
+  'fx-expanded/water-splash-large',
+];
+
+/**
+ * The bank band drawn at a land/water transition.
+ *
+ * art-15 cells 7 and 4 are the sheet's gravel shore and sand bank — full-bleed ground
+ * textures, so a short band of either reads as the shore rather than as water. The art-18
+ * `asphalt-to-water` cell is rejected in `TRANSITION_TILE_ART`: it carries a painted car,
+ * so it cannot be repeated.
+ */
+export const SHORE_BANK_ART: readonly string[] = [
+  'tiles-water/gravel-shore',
+  'tiles-water/sand-bank',
+];
+
+/**
+ * The boundary marker drawn on the bank band.
+ *
+ * The one clean cell on art-18 is `chevron-shoulder` (cell 5); the same cell already carries
+ * the canyon's hazard shoulder. Repeating a row of its chevrons across the aperture marks a
+ * shoreline that is about to change material.
+ */
+export const SHORE_STRIPE_ART: readonly string[] = ['tiles-transition/chevron-shoulder'];
+
+/**
  * The flame stream, in flicker order, drawn from art-10.
  *
  * art-25's three flame-stream cells carry the cell captions baked into the artwork, so the

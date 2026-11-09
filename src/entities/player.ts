@@ -1,7 +1,7 @@
 import type Phaser from 'phaser';
-import { COLLISION, JUMP, OFFROAD, PLAYER, WORLD } from '@/config';
+import { COLLISION, JUMP, OFFROAD, PLAYER, SURFACE, WORLD } from '@/config';
 import { PALETTE } from '@/palette';
-import type { RoadProfile } from '@/levels/types';
+import type { RoadProfile, SurfaceKind } from '@/levels/types';
 import type { Art, VehicleOptions } from '@/art';
 import { clamp, easeTowards } from '@/systems/motion';
 import { advanceJump, createJump, isAirborne, jumpHeight, type JumpState } from '@/systems/jump';
@@ -25,6 +25,18 @@ const ART_IDS_BY_STATE: Record<PlayerArtState, readonly string[]> = {
   damaged: ['player-vehicle/interceptor-damaged'],
   wrecked: ['player-vehicle/interceptor-wrecked'],
 };
+
+/**
+ * The hull the car becomes on water.
+ *
+ * `art-02` cell 3 ships the hover interceptor: same silhouette family, a hull with fins
+ * instead of wheels. The car's damage tiers do not carry over — a boat is only ever drawn
+ * one way — while the wrecked frame still wins, because a wreck is a wreck on any surface.
+ */
+const BOAT_ART: readonly string[] = ['player-vehicle/hover-interceptor'];
+
+/** Which body the run is currently drawing. */
+export type PlayerBody = 'car' | 'boat';
 
 /**
  * Pick the player's visual state from remaining armour.
@@ -98,6 +110,7 @@ export class PlayerVehicle {
   };
   private readonly baseX: number;
   private artState: PlayerArtState = 'clean';
+  private surfaceKind: SurfaceKind = 'land';
   /** Wrecked is terminal: the run is over, so no later repair may swap the frame back. */
   private wrecked = false;
 
@@ -135,6 +148,19 @@ export class PlayerVehicle {
     return displayScale(Math.max(this.sprite.width, this.sprite.height));
   }
 
+  /** Sprite ids for the current surface and damage tier. */
+  private currentArtIds(): readonly string[] {
+    if (this.surfaceKind === 'water' && this.artState !== 'wrecked') return BOAT_ART;
+    return ART_IDS_BY_STATE[this.artState];
+  }
+
+  /** Repaint from the current surface and damage tier. */
+  private applyArt(): void {
+    const ref = this.art.refAny(this.currentArtIds(), () => this.placeholder());
+    this.sprite.setTexture(ref.key, ref.frame);
+    this.sprite.setScale(this.footprintScale());
+  }
+
   /** Swap to the frame for `state`, keeping the sheet and placeholder paths equivalent. */
   private setArtState(state: PlayerArtState): void {
     if (state === 'wrecked') {
@@ -148,9 +174,30 @@ export class PlayerVehicle {
     }
     if (state === this.artState) return;
     this.artState = state;
-    const ref = this.art.refAny(ART_IDS_BY_STATE[state], () => this.placeholder());
-    this.sprite.setTexture(ref.key, ref.frame);
-    this.sprite.setScale(this.footprintScale());
+    this.applyArt();
+  }
+
+  /**
+   * Switch hulls when the road changes material.
+   *
+   * Called by the scene on the frame it crosses a boundary, before `update()`, so the boat
+   * is drawn and handled on the same frame the surface changes.
+   */
+  setSurface(surface: SurfaceKind): void {
+    if (surface === this.surfaceKind) return;
+    this.surfaceKind = surface;
+    // A hull swap must not clear the boat's lateral momentum; only the look changes.
+    this.applyArt();
+  }
+
+  /** The surface this hull is dressed for. Read by the HUD and the debug surface. */
+  get surface(): SurfaceKind {
+    return this.surfaceKind;
+  }
+
+  /** Which body the sprite currently shows. */
+  get body(): PlayerBody {
+    return this.surfaceKind === 'water' && this.artState !== 'wrecked' ? 'boat' : 'car';
   }
 
   /** Re-pick the frame after armour changes. */
@@ -329,7 +376,19 @@ export class PlayerVehicle {
     // still applies once the lock expires.
     const locked = time < this.steerLockUntil;
     const steering = locked ? 0 : clamp(steer + this.wobbleAt(time), -1, 1);
-    this.steerVelocity = steering * PLAYER.lateralSpeed;
+    // A car steers directly: the wheel is the velocity. A hull carries momentum, so the
+    // helm eases the lateral velocity toward the demand instead of snapping to it.
+    const onWater = road.surface === 'water';
+    const lateralSpeed = onWater ? SURFACE.waterLateralSpeed : PLAYER.lateralSpeed;
+    if (onWater) {
+      this.steerVelocity = easeTowards(
+        this.steerVelocity,
+        steering * lateralSpeed,
+        SURFACE.waterLateralAccel * dt,
+      );
+    } else {
+      this.steerVelocity = steering * lateralSpeed;
+    }
 
     const dx = (this.steerVelocity + this.impulseX) * dt;
     const minX = road.left - OFFROAD.apron;
@@ -340,7 +399,7 @@ export class PlayerVehicle {
 
     // Lean once the lateral velocity clears the shared threshold, not at an arbitrary
     // fraction of full tilt.
-    const lateralVelocity = Math.abs(steering) * PLAYER.lateralSpeed;
+    const lateralVelocity = Math.abs(steering) * lateralSpeed;
     const lean = lateralVelocity > PLAYER.leanThreshold ? Math.sign(steering) * 2.5 : 0;
     this.sprite.setRotation((lean * Math.PI) / 180);
     this.sprite.y = PLAYER.y - this.airHeight;

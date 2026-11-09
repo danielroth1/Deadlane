@@ -124,6 +124,35 @@ export const DECOR = {
   spacing: 260,
 } as const;
 
+/**
+ * Land and water surfaces inside one sector.
+ *
+ * A sector's drivable ground is a list of segments, not one material. These numbers are the
+ * contract between the generator, the validator and the renderer: a water stretch must be
+ * long enough to drive, a shore must be a real blend rather than a one-pixel seam, and the
+ * boat handles with its own inertia rather than the car's instant steering.
+ */
+export const SURFACE = {
+  /** Blend length on each side of a land/water boundary, px of sector length. */
+  shorePixels: 240,
+  /** Shortest surface stretch a sector may contain, px. */
+  minSegmentPixels: 1200,
+  /** Playable surface a stretch must keep once its shore blends are subtracted, px. */
+  minPlayablePixels: 600,
+  /** Height of the drawn bank band at a boundary, px. */
+  shoreBandPixels: 20,
+  /** Height of the drawn art-18 marker line centred on a boundary, px. */
+  shoreStripePixels: 6,
+  /** Lateral speed on water, px/s. A boat is faster across the channel than a car. */
+  waterLateralSpeed: 300,
+  /** How fast the hull's lateral velocity catches the helm on water, px/s². */
+  waterLateralAccel: 520,
+  /** Speed below which the hull lays no wake, px/s. */
+  wakeMinSpeed: 60,
+  /** Gap between two wake puffs, ms. */
+  wakeIntervalMs: 90,
+} as const;
+
 export const PLAYER = {
   /** Pixels per second of lateral movement at full tilt. */
   lateralSpeed: 260,

@@ -1,6 +1,15 @@
-import { DECOR, JUMP, ROAD, SPAWN, WORLD } from '@/config';
+import { DECOR, JUMP, ROAD, SPAWN, SURFACE, WORLD } from '@/config';
+import { CIVILIAN_SURFACE, ENEMY_SURFACE } from '@/content';
 import { blockingEvents, blocksEveryLane, BLOCK_WINDOW } from './blocking';
-import { LEVEL_PROFILES, decorX, laneCenterAt, roadAt, type LevelBlueprint } from './types';
+import {
+  LEVEL_PROFILES,
+  decorX,
+  laneCenterAt,
+  roadAt,
+  surfaceAllows,
+  surfaceAt,
+  type LevelBlueprint,
+} from './types';
 
 /**
  * Playability invariants for a generated level.
@@ -26,6 +35,8 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
   if (shape.lanes < 2) {
     issues.push({ code: 'lanes', message: `Only ${shape.lanes} lane(s); road is impassable` });
   }
+
+  issues.push(...surfaceIssues(blueprint));
 
   // The road is a shape now, not one cross-section, so the geometry is sampled across the
   // whole sector as well as at every keyframe: a keyframe can fall between two samples
@@ -105,6 +116,29 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
     const center = laneCenterAt(shape, event.at, lane);
     if (center < profile.left || center > profile.left + profile.width) {
       issues.push({ code: 'lane-center', message: `Lane ${event.lane} centre is off-road`, at: event.at });
+    }
+
+    // Surface affinity: a boat only on water, a land vehicle only on land. `any` rows are
+    // aircraft and pass everywhere. This is the invariant the 1,000-seed matrix proves.
+    const surface = surfaceAt(shape, event.at);
+    if (event.kind === 'enemy') {
+      const affinity = ENEMY_SURFACE.get(event.enemy);
+      if (affinity && !surfaceAllows(affinity, surface)) {
+        issues.push({
+          code: 'wrong-surface',
+          message: `${event.enemy} (${affinity}) placed on ${surface}`,
+          at: event.at,
+        });
+      }
+    } else if (event.kind === 'traffic') {
+      const affinity = CIVILIAN_SURFACE.get(event.vehicle);
+      if (affinity && !surfaceAllows(affinity, surface)) {
+        issues.push({
+          code: 'wrong-surface',
+          message: `${event.vehicle} (${affinity}) placed on ${surface}`,
+          at: event.at,
+        });
+      }
     }
   }
 
@@ -219,6 +253,86 @@ export function validateBlueprint(blueprint: LevelBlueprint): ValidationIssue[] 
   if (profile.enemyDensity <= 0) {
     issues.push({ code: 'no-enemies', message: `Level type "${type}" has no enemies configured` });
   }
+
+  return issues;
+}
+
+/**
+ * The surface contract.
+ *
+ * Segments must be sorted, contiguous and cover the whole sector; every stretch must be
+ * long enough to drive; every internal boundary must carry a shore blend on both sides and
+ * still leave playable surface after it. These checks are why a one-pixel water seam or a
+ * water stretch that is all shore cannot ship.
+ */
+function surfaceIssues(blueprint: LevelBlueprint): ValidationIssue[] {
+  const issues: ValidationIssue[] = [];
+  const segments = blueprint.road.surfaces;
+  const { length } = blueprint;
+
+  if (segments.length === 0) {
+    issues.push({ code: 'surface-missing', message: 'Sector declares no surface' });
+    return issues;
+  }
+
+  const first = segments[0];
+  const last = segments[segments.length - 1];
+  if (!first || first.from !== 0) {
+    issues.push({ code: 'surface-coverage', message: 'First surface does not start at 0' });
+  }
+  if (!last || last.to < length) {
+    issues.push({ code: 'surface-coverage', message: 'Surfaces do not reach the end of the sector' });
+  }
+
+  segments.forEach((segment, index) => {
+    const span = segment.to - segment.from;
+    if (span <= 0) {
+      issues.push({ code: 'surface-empty', message: `Empty ${segment.kind} stretch`, at: segment.from });
+      return;
+    }
+
+    if (span < SURFACE.minSegmentPixels) {
+      issues.push({
+        code: 'surface-sliver',
+        message: `${segment.kind} stretch at ${segment.from} is ${span}px, below the ${SURFACE.minSegmentPixels}px minimum`,
+        at: segment.from,
+      });
+    }
+
+    if (span < segment.shoreIn + segment.shoreOut + SURFACE.minPlayablePixels) {
+      issues.push({
+        code: 'surface-shore',
+        message: `${segment.kind} stretch at ${segment.from} is all shore, with no playable surface left`,
+        at: segment.from,
+      });
+    }
+
+    const previous = segments[index - 1];
+    if (previous && previous.to !== segment.from) {
+      issues.push({
+        code: 'surface-gap',
+        message: `Surface gap between ${previous.to} and ${segment.from}`,
+        at: segment.from,
+      });
+    }
+
+    if (previous) {
+      if (previous.shoreOut < SURFACE.shorePixels || segment.shoreIn < SURFACE.shorePixels) {
+        issues.push({
+          code: 'surface-transition',
+          message: `Transition at ${segment.from} has no ${SURFACE.shorePixels}px shore blend on both sides`,
+          at: segment.from,
+        });
+      }
+      if (previous.kind === segment.kind) {
+        issues.push({
+          code: 'surface-duplicate',
+          message: `Two adjacent ${segment.kind} stretches are not merged`,
+          at: segment.from,
+        });
+      }
+    }
+  });
 
   return issues;
 }

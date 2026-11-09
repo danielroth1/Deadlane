@@ -14,7 +14,8 @@
       "accent": "amber",
       "size": 52,
       "weaveAmplitude": 46,
-      "weavePeriod": 1.6
+      "weavePeriod": 1.6,
+      "surface": "land"
     },
     {
       "id": "switchblade",
@@ -28,7 +29,8 @@
       "color": "signal-red",
       "accent": "signal-red",
       "size": 64,
-      "chargeSpeed": 220
+      "chargeSpeed": 220,
+      "surface": "land"
     },
     {
       "id": "roadlord",
@@ -42,7 +44,8 @@
       "color": "rust",
       "accent": "signal-red",
       "size": 64,
-      "ramRange": 220
+      "ramRange": 220,
+      "surface": "land"
     },
     {
       "id": "hauler",
@@ -55,7 +58,8 @@
       "shape": "truck",
       "color": "steel",
       "accent": "signal-red",
-      "size": 64
+      "size": 64,
+      "surface": "land"
     },
     {
       "id": "turret",
@@ -70,7 +74,8 @@
       "accent": "violet",
       "size": 64,
       "fireRate": 1400,
-      "projectileSpeed": 260
+      "projectileSpeed": 260,
+      "surface": "land"
     },
     {
       "id": "helicopter",
@@ -85,7 +90,8 @@
       "accent": "signal-red",
       "size": 64,
       "weaveAmplitude": 54,
-      "weavePeriod": 1.9
+      "weavePeriod": 1.9,
+      "surface": "any"
     },
     {
       "id": "drone",
@@ -99,7 +105,8 @@
       "color": "asphalt-light",
       "accent": "signal-red",
       "size": 52,
-      "chargeSpeed": 230
+      "chargeSpeed": 230,
+      "surface": "any"
     },
     {
       "id": "gunboat",
@@ -112,7 +119,8 @@
       "shape": "boat",
       "color": "olive",
       "accent": "signal-red",
-      "size": 64
+      "size": 64,
+      "surface": "water"
     },
     {
       "id": "speedboat",
@@ -127,7 +135,8 @@
       "accent": "amber",
       "size": 64,
       "weaveAmplitude": 60,
-      "weavePeriod": 1.2
+      "weavePeriod": 1.2,
+      "surface": "water"
     },
     {
       "id": "jetski",
@@ -141,7 +150,8 @@
       "color": "teal",
       "accent": "signal-red",
       "size": 52,
-      "chargeSpeed": 240
+      "chargeSpeed": 240,
+      "surface": "water"
     },
     {
       "id": "dredger",
@@ -155,7 +165,8 @@
       "color": "asphalt-light",
       "accent": "amber",
       "size": 64,
-      "ramRange": 180
+      "ramRange": 180,
+      "surface": "water"
     }
   ]
 }

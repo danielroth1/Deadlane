@@ -41,6 +41,8 @@ export interface DebugControl {
   stageFlameTarget(): void;
   /** Advance the run by `pixels` of world distance instead of waiting out the clock. */
   fastForward(pixels: number): void;
+  /** Jump to a water stretch, so the hull swap and its splash resolve on the real path. */
+  fastForwardToWater(): void;
   /** Spend one life through the real wreck path, respawning or ending the run. */
   loseLife(): void;
   /** Spend one life through the real wreck path. Kept for specs written before lives. */
@@ -77,6 +79,8 @@ export class HudScene extends Phaser.Scene {
   private challengeText!: PixelText;
   private muteText!: PixelText;
   private offRoadText!: PixelText;
+  private surfaceText!: PixelText;
+  private boatIcon?: Phaser.GameObjects.Image;
   private bossText!: PixelText;
   private bossBar!: Phaser.GameObjects.Graphics;
   private pips!: Phaser.GameObjects.Graphics;
@@ -154,6 +158,19 @@ export class HudScene extends Phaser.Scene {
       align: 'center',
     });
 
+    // Surface indicator, in the top strip beside the score: the boat badge on water and a
+    // one-word label on both materials. The score is six 2× glyphs, so x=82 clears it.
+    this.boatIcon = this.art
+      .sprite(HUD_ICON_ART.boat[0] ?? '', 82, pad)
+      ?.setOrigin(0, 0)
+      .setVisible(false);
+    this.surfaceText = new PixelText(this, {
+      x: 102,
+      y: pad,
+      color: PALETTE.steelLight,
+      scale: 1,
+    }).setText('LAND');
+
     // Boss name plate and health bar, directly under the top strip. Empty until an act
     // boss is on the road.
     this.bossText = new PixelText(this, {
@@ -212,6 +229,13 @@ export class HudScene extends Phaser.Scene {
     // weapon counters and the speed bar, so it never covers a readout the player needs
     // while steering back onto the road.
     this.offRoadText.setText(state.offRoad ? 'OFF ROAD' : '');
+
+    // Water is a material, not a warning: the indicator stays visible on both surfaces and
+    // only gains the hull badge when the player is actually on water.
+    const onWater = state.surface === 'water';
+    this.surfaceText.setText(onWater ? 'WATER' : 'LAND');
+    this.surfaceText.setColor(onWater ? PALETTE.teal : PALETTE.steelLight);
+    this.boatIcon?.setVisible(onWater);
 
     this.drawPips(state);
     this.drawSpeed(state);
@@ -504,6 +528,7 @@ export class HudScene extends Phaser.Scene {
       stageRocketTarget: () => this.gameScene.debugStageRocketTarget(),
       stageFlameTarget: () => this.gameScene.debugStageFlameTarget(),
       fastForward: (pixels: number) => this.gameScene.debugFastForward(pixels),
+      fastForwardToWater: () => this.gameScene.debugFastForwardToWater(),
       loseLife: () => this.gameScene.debugLoseLife(),
       destroyPlayer: () => this.gameScene.debugDestroyPlayer(),
       destroyBoss: () => this.gameScene.debugDestroyBoss(),

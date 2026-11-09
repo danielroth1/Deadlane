@@ -170,8 +170,84 @@ describe('enemy art ids', () => {
   });
 });
 
-describe('civilian content', () => {
-  it('has unique ids and positive weights', () => {
+/**
+ * Surface affinity.
+ *
+ * The surface field is what the generator filters on and what the level validator checks.
+ * These tests keep the data honest: an open-water hull cannot be declared land, every level
+ * type's pools must resolve to real rows, and every surface a sector can carry has units to
+ * populate it.
+ */
+describe('surface content', () => {
+  const AFFINITIES = new Set(['land', 'water', 'any']);
+
+  it('gives every enemy and civilian a valid surface affinity', () => {
+    for (const enemy of ENEMIES) {
+      expect(AFFINITIES.has(enemy.surface), `${enemy.id}.surface=${enemy.surface}`).toBe(true);
+    }
+    for (const civilian of CIVILIANS) {
+      expect(AFFINITIES.has(civilian.surface), `${civilian.id}.surface=${civilian.surface}`).toBe(
+        true,
+      );
+    }
+  });
+
+  it('keeps every boat hull on water and every wheeled hull off it', () => {
+    // A `boat` silhouette is the hull the placeholder draws; no boat row may be land.
+    for (const enemy of ENEMIES) {
+      if (enemy.shape === 'boat') {
+        expect(enemy.surface, `${enemy.id} is a boat but declares ${enemy.surface}`).toBe('water');
+      }
+    }
+
+    for (const civilian of CIVILIANS) {
+      if (civilian.shape === 'boat') {
+        expect(civilian.surface, `${civilian.id} is a boat but declares ${civilian.surface}`).toBe(
+          'water',
+        );
+      } else {
+        expect(civilian.surface, `${civilian.id} is road traffic but declares ${civilian.surface}`).toBe(
+          'land',
+        );
+      }
+    }
+
+    // The dredger is waterborne work plant: it is drawn on the ground-vehicle silhouette
+    // because the sea sheet has no dredger cell, so its surface cannot be inferred from
+    // `shape`. Pin the water set as content instead of guessing.
+    expect(
+      ENEMIES.filter((enemy) => enemy.surface === 'water')
+        .map((enemy) => enemy.id)
+        .sort(),
+    ).toEqual(['dredger', 'gunboat', 'jetski', 'speedboat']);
+  });
+
+  it('populates every surface a level profile can contain', () => {
+    for (const type of LEVEL_TYPES) {
+      const profile = LEVEL_PROFILES[type];
+      const surfaces = new Set(
+        [...profile.vehiclePool, ...Object.keys(profile.enemyWeights)].map((id) => {
+          const row = ENEMIES.find((enemy) => enemy.id === id) ?? CIVILIANS.find((c) => c.id === id);
+          return row?.surface ?? 'land';
+        }),
+      );
+
+      // A pool id with no content row is a generator bug the schema must catch.
+      for (const id of [...profile.vehiclePool, ...Object.keys(profile.enemyWeights)]) {
+        const known =
+          ENEMIES.some((enemy) => enemy.id === id) || CIVILIANS.some((row) => row.id === id);
+        expect(known, `${type} pools unknown id ${id}`).toBe(true);
+      }
+
+      if (profile.waterShare > 0) {
+        expect(surfaces.has('water'), `${type} fields no water unit`).toBe(true);
+        expect(surfaces.has('land'), `${type} fields no land unit for its causeway`).toBe(true);
+      }
+    }
+  });
+});
+
+describe('civilian content', () => {  it('has unique ids and positive weights', () => {
     const ids = CIVILIANS.map((c) => c.id);
     expect(new Set(ids).size).toBe(ids.length);
     for (const civilian of CIVILIANS) {

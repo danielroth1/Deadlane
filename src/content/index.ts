@@ -7,7 +7,7 @@ import propsRaw from './props.json';
 import type { PaletteKey } from '@/palette';
 import { PALETTE } from '@/palette';
 import type { VehicleShape } from '@/art/placeholders';
-import type { LevelType } from '@/levels/types';
+import type { LevelType, SurfaceAffinity } from '@/levels/types';
 
 /**
  * Content tables.
@@ -60,6 +60,14 @@ export interface EnemyDef {
   behavior: BehaviorId;
   /** The signature contact weapon this unit carries. Unique per enemy id. */
   weapon: EnemyWeaponId;
+  /**
+   * Which surface this unit may be placed on.
+   *
+   * The generator filters the level type's enemy weights by the surface at the spawn
+   * distance, and the validator rejects a boat on land or a car on water. Aircraft carry
+   * `any` because they never touch the ground.
+   */
+  readonly surface: SurfaceAffinity;
   speed: number;
   hp: number;
   shape: VehicleShape;
@@ -88,6 +96,8 @@ export interface CivilianDef {
   size: number;
   speed: number;
   weight: number;
+  /** Which surface this vehicle may be placed on. See `EnemyDef.surface`. */
+  readonly surface: SurfaceAffinity;
   /**
    * Shots this car survives before it is wrecked.
    *
@@ -253,6 +263,16 @@ export const BOSSES: readonly BossDef[] = (bossesRaw.bosses as unknown as BossDe
   normalizeBoss,
 );
 export const PROPS: readonly PropDef[] = propsRaw.props as PropDef[];
+
+/** Enemy id → the surface it may spawn on. Shared with the generator and the validator. */
+export const ENEMY_SURFACE: ReadonlyMap<string, SurfaceAffinity> = new Map(
+  ENEMIES.map((enemy) => [enemy.id, enemy.surface]),
+);
+
+/** Civilian id → the surface it may spawn on. Shared with the generator and the validator. */
+export const CIVILIAN_SURFACE: ReadonlyMap<string, SurfaceAffinity> = new Map(
+  CIVILIANS.map((civilian) => [civilian.id, civilian.surface]),
+);
 
 /**
  * Content JSON uses kebab-case colour names (`signal-red`) because they read better in a

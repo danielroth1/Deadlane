@@ -1,7 +1,34 @@
-import { ROAD, WORLD } from '@/config';
+import { LEVEL, ROAD, WORLD } from '@/config';
 import type { ScenerySurface } from '@/art/ids';
 
 export type { ScenerySurface };
+
+/** The material the car is driving on at one world distance. */
+export type SurfaceKind = 'land' | 'water';
+
+/** Which surface a content row may appear on. Air units are `any`. */
+export type SurfaceAffinity = SurfaceKind | 'any';
+
+/** True when a content row with `affinity` may be placed on `surface`. */
+export function surfaceAllows(affinity: SurfaceAffinity, surface: SurfaceKind): boolean {
+  return affinity === 'any' || affinity === surface;
+}
+
+/**
+ * One complete stretch of one surface inside a sector.
+ *
+ * `shoreIn` and `shoreOut` are the blend lengths at each end, in sector pixels. They are
+ * zero at the sector's outer edges and non-zero at every internal boundary, which is what
+ * makes a transition a stretch rather than a one-pixel seam. Segments are sorted,
+ * contiguous and cover the whole sector; `validateBlueprint` enforces all three.
+ */
+export interface SurfaceSegment {
+  readonly kind: SurfaceKind;
+  readonly from: number;
+  readonly to: number;
+  readonly shoreIn: number;
+  readonly shoreOut: number;
+}
 
 /**
  * Level data model.
@@ -23,6 +50,8 @@ export interface RoadProfile {
   readonly laneWidth: number;
   /** Lane indices that are periodically obstructed in this level type. */
   readonly obstructableLanes: readonly number[];
+  /** What the car is driving on at this cross-section. */
+  readonly surface: SurfaceKind;
 }
 
 /** One width keyframe: from `at` the drivable surface is `width` px wide. */
@@ -52,6 +81,13 @@ export interface RoadShape {
   readonly keyframes: readonly RoadWidthKey[];
   readonly minWidth: number;
   readonly maxWidth: number;
+  /**
+   * Sorted, contiguous land and water stretches covering the sector.
+   *
+   * Part of the shape rather than the blueprint so `roadAt(shape, at).surface` is the one
+   * way every subsystem reads the surface, exactly as it reads the width.
+   */
+  readonly surfaces: readonly SurfaceSegment[];
 }
 
 /** Which scenery sheet a decor prop is drawn from. */
@@ -128,6 +164,14 @@ export interface LevelProfile {
   readonly scenerySurface: ScenerySurface;
   /** Scenery prop ids placed outside the shoulder. Empty when there is nowhere to put them. */
   readonly sceneryPool: readonly string[];
+  /**
+   * Share of the sector taken by the opening water stretch, 0–1.
+   *
+   * Zero is one dry stretch for the whole sector. A positive share opens the sector on
+   * water, splits it with one land causeway and returns to water for the remainder, so a
+   * water-heavy type still has land on which the car transforms back.
+   */
+  readonly waterShare: number;
 }
 
 export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
@@ -165,6 +209,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
       'wrecked-car',
       'pylon',
     ],
+    waterShare: 0,
   },
   canyon: {
     type: 'canyon',
@@ -193,6 +238,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
       'pylon',
       'billboard',
     ],
+    waterShare: 0,
   },
   river: {
     type: 'river',
@@ -204,8 +250,10 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     enemyDensity: 1.2,
     propDensity: 1,
     pickupDensity: 0.9,
-    enemyWeights: { gunboat: 4, speedboat: 3, jetski: 2, dredger: 0.7 },
-    vehiclePool: ['skiff', 'barge', 'boat'],
+    enemyWeights: { gunboat: 4, speedboat: 3, jetski: 2, dredger: 0.7, enforcer: 1.2, switchblade: 1 },
+    // Both surfaces are populated: the generator filters this pool by the surface at each
+    // candidate station, so the boats only ever appear on water and the cars on the causeway.
+    vehiclePool: ['skiff', 'barge', 'boat', 'pickup', 'sedan', 'van'],
     propPool: ['buoy', 'reed-bed', 'pier', 'rock-pile'],
     rampDensity: 0.5,
     scenerySurface: 'water',
@@ -223,6 +271,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
       'mooring-post',
       'pontoon',
     ],
+    waterShare: 0.46,
   },
   city: {
     type: 'city',
@@ -261,6 +310,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
       'water-tank',
       'satellite-dish',
     ],
+    waterShare: 0,
   },
   tunnel: {
     type: 'tunnel',
@@ -279,6 +329,7 @@ export const LEVEL_PROFILES: Readonly<Record<LevelType, LevelProfile>> = {
     scenerySurface: 'roadside',
     // A tunnel is wall on both sides: there is no verge to stand a prop on.
     sceneryPool: [],
+    waterShare: 0,
   },
 };
 
@@ -301,7 +352,14 @@ export function roadProfileFor(type: LevelType): RoadProfile {
   const middle = Math.floor(profile.lanes / 2);
   const obstructable = [middle - 1, middle].filter((l) => l >= 0 && l < profile.lanes);
 
-  return { left, width, lanes: profile.lanes, laneWidth, obstructableLanes: obstructable };
+  return {
+    left,
+    width,
+    lanes: profile.lanes,
+    laneWidth,
+    obstructableLanes: obstructable,
+    surface: 'land',
+  };
 }
 
 /** Centre X of a lane, in world coordinates. */
@@ -329,6 +387,7 @@ export function roadShapeFor(type: LevelType): RoadShape {
     keyframes: [{ at: 0, width: profile.width }],
     minWidth: profile.width,
     maxWidth: profile.width,
+    surfaces: [{ kind: 'land', from: 0, to: LEVEL.lengthPixels, shoreIn: 0, shoreOut: 0 }],
   };
 }
 
@@ -361,6 +420,27 @@ export function roadWidthAt(shape: RoadShape, at: number): number {
 }
 
 /**
+ * The surface at one world distance.
+ *
+ * Total and side-open: before the first segment reports its kind and after the last
+ * reports the last kind, so a streamed entity that has slipped a pixel past either end can
+ * never read `undefined`. A boundary reports the incoming segment, which is the frame the
+ * car is already on the new surface.
+ */
+export function surfaceAt(shape: RoadShape, at: number): SurfaceKind {
+  const segments = shape.surfaces;
+  const first = segments[0];
+  if (!first) return 'land';
+  if (at < first.from) return first.kind;
+
+  for (const segment of segments) {
+    if (at >= segment.from && at < segment.to) return segment.kind;
+  }
+
+  return segments[segments.length - 1]?.kind ?? first.kind;
+}
+
+/**
  * The road cross-section at one world distance.
  *
  * The surface is always centred on the world aperture, so widening and narrowing moves both
@@ -377,6 +457,7 @@ export function roadAt(shape: RoadShape, at: number): RoadProfile {
     lanes: shape.lanes,
     laneWidth: width / lanes,
     obstructableLanes: shape.obstructableLanes,
+    surface: surfaceAt(shape, at),
   };
 }
 

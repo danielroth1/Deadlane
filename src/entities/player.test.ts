@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type Phaser from 'phaser';
 import type { Art } from '@/art';
-import { OFFROAD, JUMP, PLAYER } from '@/config';
+import { OFFROAD, JUMP, PLAYER, SURFACE } from '@/config';
 import { roadProfileFor } from '@/levels/types';
 import {
   displayScale,
@@ -497,5 +497,79 @@ describe('weapon cooldowns', () => {
     }
     expect(player.smoke).toBe(0);
     expect(player.useSmoke(PLAYER.startSmoke * 1400, 1400)).toBe(false);
+  });
+});
+
+/**
+ * Land and water hulls.
+ *
+ * The car and the hover interceptor are one entity with two looks and two handling
+ * models: the same controls, but the hull carries lateral momentum instead of steering
+ * directly. These tests pin the switch and the inertia; the art id is asserted so the boat
+ * frame cannot quietly fall back to the car.
+ */
+describe('surface hull', () => {
+  function hullPlayer(): { player: PlayerVehicle; image: StubImage; ids: string[] } {
+    const image = new StubImage(64, 64);
+    const ids: string[] = [];
+    const art = {
+      imageAny: () => image,
+      has: () => true,
+      refAny: (candidates: readonly string[]) => {
+        const id = candidates[0] ?? 'fallback';
+        ids.push(id);
+        return { key: id, frame: 0 };
+      },
+    } as unknown as Art;
+    const scene = { time: { now: 0 } } as unknown as Phaser.Scene;
+    return { player: new PlayerVehicle(scene, art), image, ids };
+  }
+
+  const WATER = { ...roadProfileFor('river'), surface: 'water' } as const;
+  const LAND = roadProfileFor('highway');
+
+  it('starts as the car on land and swaps to the shipped hull on water', () => {
+    const { player, ids } = hullPlayer();
+
+    expect(player.body).toBe('car');
+    player.setSurface('water');
+
+    expect(player.surface).toBe('water');
+    expect(player.body).toBe('boat');
+    expect(ids.at(-1)).toBe('player-vehicle/hover-interceptor');
+  });
+
+  it('swaps back to the car on land', () => {
+    const { player } = hullPlayer();
+    player.setSurface('water');
+    player.setSurface('land');
+
+    expect(player.body).toBe('car');
+    expect(player.surface).toBe('land');
+  });
+
+  it('carries lateral momentum on water instead of snapping to the helm', () => {
+    const { player, image } = hullPlayer();
+    image.x = WATER.left + WATER.width / 2;
+    player.setSurface('water');
+
+    // One 16 ms frame cannot reach the hull's full lateral speed.
+    player.update(0.016, 1, 0, WATER);
+    const first = Math.abs(player.vx);
+    expect(first).toBeGreaterThan(0);
+    expect(first).toBeLessThan(SURFACE.waterLateralSpeed);
+
+    // Held helm keeps accelerating toward it.
+    for (let i = 0; i < 120; i += 1) player.update(1 / 60, 1, 0, WATER);
+    expect(player.vx).toBeCloseTo(SURFACE.waterLateralSpeed);
+  });
+
+  it('keeps direct steering on land', () => {
+    const { player, image } = hullPlayer();
+    image.x = LAND.left + LAND.width / 2;
+
+    player.update(0.016, 1, 0, LAND);
+
+    expect(player.vx).toBe(PLAYER.lateralSpeed);
   });
 });

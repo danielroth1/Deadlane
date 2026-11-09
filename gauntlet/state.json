@@ -711,14 +711,16 @@
       "title": "Water sections, boat transformation, water splashes",
       "file": "gauntlet/work-orders/WO-61-water.md",
       "status": "pending",
-      "round": 0,
+      "round": 1,
       "dependsOn": [
         "WO-52",
         "WO-54",
         "WO-56",
         "WO-59",
         "WO-60"
-      ]
+      ],
+      "lastVerdict": "fail",
+      "note": "surfaces/boats/FX right; landing puff still art-10 rubble, water e2e asserts a rule the game lacks"
     },
     {
       "id": "WO-62",

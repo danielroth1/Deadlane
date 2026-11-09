@@ -14,6 +14,7 @@ import {
   PROP_IMPACT,
   SCORE,
   SPAWN,
+  SURFACE,
   TOUCH,
   WEAPON_FX,
   WORLD,
@@ -24,6 +25,8 @@ import {
   EFFECT_ART,
   FLAME_STREAM_ART,
   ROCKET_ART,
+  SURFACE_WAKE_ART,
+  WEAPON_EFFECT_ART,
   pickSceneryVariant,
   pickupArtIds,
   propArtIds,
@@ -50,7 +53,15 @@ import {
   worldAtFromScreenY,
 } from '@/systems/weapons';
 import { levelForSeed, levelLabelFor, type LevelBlueprint } from '@/levels';
-import { decorX, laneCenter, laneCenterAt, roadAt, type LevelEvent, type RoadProfile } from '@/levels/types';
+import {
+  decorX,
+  laneCenter,
+  laneCenterAt,
+  roadAt,
+  type LevelEvent,
+  type RoadProfile,
+  type SurfaceKind,
+} from '@/levels/types';
 import { RoadSystem } from '@/systems/road';
 import { acquireAudio, disposeAudio } from '@/systems/audio-registry';
 import { weaponCue, bossCue, type AudioSystem } from '@/systems/audio';
@@ -206,6 +217,8 @@ export interface HudState {
   muted: boolean;
   /** True while the car is off the drivable surface. Drives the HUD's off-road warning. */
   offRoad: boolean;
+  /** What the run is currently driving on. Drives the HUD's surface indicator. */
+  surface: SurfaceKind;
   /** The live boss, while one is on the road. Drives the name plate and the health bar. */
   boss: BossHudState | null;
 }
@@ -311,6 +324,15 @@ export interface PropContactDebugState {
   readonly damage: boolean;
 }
 
+/** One land/water crossing the run has resolved. Observation for the debug surface. */
+export interface SurfaceEventDebugState {
+  readonly from: SurfaceKind;
+  readonly to: SurfaceKind;
+  readonly kind: 'splash';
+  /** Splash sprites the crossing emitted. Always positive; the scene emits two. */
+  readonly splashes: number;
+}
+
 /** Read-only run view served to Playwright through `window.__deadlane` at `?debug=1`. */
 export interface RunDebugState {
   readonly paused: boolean;
@@ -339,6 +361,14 @@ export interface RunDebugState {
   readonly input: InputDebugState;
   /** True while the car is off the drivable surface. */
   readonly offRoad: boolean;
+  /** What the run is driving on right now. */
+  readonly surface: SurfaceKind;
+  /** Which body the player sprite shows: the car on land, the hover hull on water. */
+  readonly surfaceFrame: 'car' | 'boat';
+  /** Most recent land/water crossing this run, or null before the first. */
+  readonly lastSurfaceEvent: SurfaceEventDebugState | null;
+  /** Land/water crossings resolved this run. */
+  readonly surfaceEvents: number;
   /** The player car as the contact pass sees it. */
   readonly car: VehicleDebugState;
   /** Every other car on the road, in the order the contact pass walks them. */
@@ -377,6 +407,14 @@ export interface RoadDebugState {
   readonly minWidth: number;
   readonly maxWidth: number;
   readonly keyframes: readonly { readonly at: number; readonly width: number }[];
+  /** Surface under the car at its current `at`. */
+  readonly surface: SurfaceKind;
+  /** The sector's land and water stretches, in order. */
+  readonly surfaces: readonly {
+    readonly from: number;
+    readonly to: number;
+    readonly kind: SurfaceKind;
+  }[];
 }
 
 /**
@@ -531,6 +569,13 @@ export class GameScene extends Phaser.Scene {
   private fxCount = 0;
   /** The last explosion package played. Observation for the debug surface. */
   private lastFx: FxVariant | null = null;
+  /** What the car is driving on, and the crossing state the debug surface reports. */
+  private surface: SurfaceKind = 'land';
+  private surfaceEvents = 0;
+  private lastSurfaceEvent: SurfaceEventDebugState | null = null;
+  /** Deterministic wake side and the clock of the last puff. No RNG. */
+  private wakeCount = 0;
+  private lastWakeAt = Number.NEGATIVE_INFINITY;
 
   constructor() {
     super('Game');
@@ -593,6 +638,11 @@ export class GameScene extends Phaser.Scene {
     this.rotorTicks = 0;
     this.fxCount = 0;
     this.lastFx = null;
+    this.surface = 'land';
+    this.surfaceEvents = 0;
+    this.lastSurfaceEvent = null;
+    this.wakeCount = 0;
+    this.lastWakeAt = Number.NEGATIVE_INFINITY;
   }
 
   create(): void {
@@ -603,6 +653,10 @@ export class GameScene extends Phaser.Scene {
 
     this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type, this.art);
     this.player = new PlayerVehicle(this, this.art);
+    // A water-heavy sector opens on water, so the run can start on the hull rather than on
+    // the car. The hull is a look and a handling model, never a different entity.
+    this.surface = roadAt(this.blueprint.road, 0).surface;
+    this.player.setSurface(this.surface);
     // The height cue: a flat ellipse on the road under an airborne car. Owned by the scene
     // rather than the vehicle, so the car entity never has to build Phaser objects.
     this.shadow = this.add
@@ -689,6 +743,7 @@ export class GameScene extends Phaser.Scene {
       challengeTarget: this.challengeTarget,
       muted: this.audio?.isMuted ?? false,
       offRoad: this.offRoad,
+      surface: this.surface,
       boss: this.boss
         ? { label: this.boss.def.label, hp: Math.max(0, this.boss.hp), maxHp: this.boss.maxHp }
         : null,
@@ -721,6 +776,10 @@ export class GameScene extends Phaser.Scene {
         fire: this.fireHeld,
       },
       offRoad: this.offRoad,
+      surface: this.surface,
+      surfaceFrame: this.player.body,
+      lastSurfaceEvent: this.lastSurfaceEvent,
+      surfaceEvents: this.surfaceEvents,
       car: {
         kind: 'player',
         id: 'player',
@@ -791,6 +850,12 @@ export class GameScene extends Phaser.Scene {
       minWidth: this.blueprint.road.minWidth,
       maxWidth: this.blueprint.road.maxWidth,
       keyframes: this.blueprint.road.keyframes.map((key) => ({ at: key.at, width: key.width })),
+      surface: profile.surface,
+      surfaces: this.blueprint.road.surfaces.map((segment) => ({
+        from: segment.from,
+        to: segment.to,
+        kind: segment.kind,
+      })),
     };
   }
 
@@ -841,6 +906,61 @@ export class GameScene extends Phaser.Scene {
   debugFastForward(pixels: number): void {
     if (!Number.isFinite(pixels) || pixels <= 0) return;
     this.distance += pixels;
+  }
+
+  /**
+   * Debug-only: jump the run onto a water stretch.
+   *
+   * Finds the nearest sector whose blueprint contains a water stretch long enough to drive,
+   * swaps the sector in place and drops the car well inside that stretch. The next frame
+   * runs the ordinary `applySurface` crossing, so the hull swap and the splash are the
+   * shipped path, not a staged one. Playwright reaches this through `window.__deadlaneControl`
+   * at `?debug=1`; nothing in the run calls it.
+   */
+  debugFastForwardToWater(): void {
+    if (!this.player || this.paused || this.introActive || this.runEnded) return;
+
+    for (let index = this.levelIndex; index < this.levelIndex + 12; index += 1) {
+      const blueprint = levelForSeed(this.seed, index);
+      const water = blueprint.road.surfaces.find(
+        (segment) =>
+          segment.kind === 'water' && segment.to - segment.from >= SURFACE.minSegmentPixels,
+      );
+      if (!water) continue;
+
+      // Sit inside the stretch, past its shore, so the car is on open water next frame.
+      const at = Math.min(
+        water.to - SURFACE.shorePixels,
+        Math.max(water.from + SURFACE.shorePixels, water.from + 1200),
+      );
+      this.debugLoadSector(index, at);
+      return;
+    }
+  }
+
+  /**
+   * Debug-only: rebuild the run on another sector at a chosen distance, with no card.
+   *
+   * The world is emptied through the same `clearWorld()` a sector boundary uses, the
+   * spawner is reset and the road is rebuilt from the new blueprint. `this.surface` is
+   * deliberately left alone: the next frame's `applySurface` then reports the crossing.
+   */
+  private debugLoadSector(index: number, at: number): void {
+    this.clearWorld();
+    this.levelIndex = index;
+    this.blueprint = levelForSeed(this.seed, index);
+    this.distance = at;
+    resetSpawner(this.spawner);
+
+    this.challengeLabel = '';
+    this.challengeProgress = 0;
+    this.challengeTarget = 0;
+    this.challenges = this.createChallengeSystem();
+
+    this.road.destroy();
+    this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type, this.art);
+    this.applyVisibility();
+    this.road.render(this.distance);
   }
 
   /**
@@ -1167,6 +1287,7 @@ export class GameScene extends Phaser.Scene {
     this.distance += speed * dt;
 
     const road = roadAt(this.blueprint.road, this.distance);
+    this.applySurface(road.surface);
     const landed = this.player.update(dt, this.steer, time, road);
     if (landed) this.handleLanding();
     this.updateShadow();
@@ -1187,6 +1308,7 @@ export class GameScene extends Phaser.Scene {
     this.updateProps();
     this.updateDecor();
     this.updateSkids(time);
+    this.updateSurfaceWake(time);
     this.updateRotors(time);
 
     this.resolveCollisions(time);
@@ -1700,18 +1822,83 @@ export class GameScene extends Phaser.Scene {
   }
 
   /**
-   * The landing beat: dust on a road, a splash on the river.
+   * Follow the road's material.
+   *
+   * Called once per frame with the surface under the car. Entering or leaving water swaps
+   * the hull and emits the crossing splash through the ordinary FX layer — no random draw,
+   * no new system. The event is recorded for the debug surface the e2e spec reads.
+   */
+  private applySurface(surface: SurfaceKind): void {
+    if (surface === this.surface) return;
+
+    const from = this.surface;
+    this.surface = surface;
+    this.player.setSurface(surface);
+
+    this.surfaceEvents += 1;
+    this.lastSurfaceEvent = { from, to: surface, kind: 'splash', splashes: 2 };
+
+    // Both directions throw water: the car arrives and the hull leaves a wash behind it.
+    this.spawnSurfaceSplash(this.player.x, PLAYER.y + JUMP.shadowOffsetY);
+    this.spawnSurfaceSplash(this.player.x, PLAYER.y + 12);
+    this.showBanner(surface === 'water' ? 'HULL DEPLOYED' : 'WHEELS DOWN');
+  }
+
+  /**
+   * The wake a moving hull drags behind it.
+   *
+   * One puff per `SURFACE.wakeIntervalMs` on alternating sides; the side is a counter, not
+   * a random draw, so a seeded run lays the same wake. Airborne or stopped means no wake.
+   */
+  private updateSurfaceWake(time: number): void {
+    if (this.surface !== 'water' || this.player.isAirborne) return;
+    if (this.speed < SURFACE.wakeMinSpeed) return;
+    if (time - this.lastWakeAt < SURFACE.wakeIntervalMs) return;
+
+    this.lastWakeAt = time;
+    const side = this.wakeCount % 2 === 0 ? -1 : 1;
+    this.wakeCount += 1;
+    this.spawnOneShot(
+      SURFACE_WAKE_ART,
+      this.player.x + side * FX.skidTrackHalfWidth,
+      PLAYER.y + 22,
+      26,
+      1.6,
+      320,
+      0.45,
+      22,
+    );
+  }
+
+  /** One art-25 water splash at a world point. Cosmetic; never touches gameplay. */
+  private spawnSurfaceSplash(x: number, y: number): void {
+    this.spawnOneShot(
+      WEAPON_EFFECT_ART.splash,
+      x,
+      y,
+      44,
+      1.8,
+      380,
+      0.9,
+      30,
+    );
+  }
+
+  /**
+   * The landing beat: dust on a road, a splash on the water.
    *
    * Purely cosmetic, but it is the event the order asks for, and it is reported on the
    * debug surface so a spec can prove the arc ended rather than infer it from height.
    */
   private handleLanding(): void {
-    const splash = this.blueprint.type === 'river';
+    const splash = this.surface === 'water';
+    // The splash rides the WO-59 FX layer's art-25 water cells; dust keeps its own table.
+    const ids = splash ? WEAPON_EFFECT_ART.splash : EFFECT_ART.dust;
     this.lastLanding = splash ? 'splash' : 'dust';
 
     const cloud = this.fitEffect(
       this.art.imageFrom(
-        splash ? EFFECT_ART.splash : EFFECT_ART.dust,
+        ids,
         this.player.x,
         PLAYER.y + JUMP.shadowOffsetY,
         () => flatTexture(this, splash ? 'land-splash' : 'land-dust', splash ? 'teal' : 'bone', 20),
@@ -1869,8 +2056,12 @@ export class GameScene extends Phaser.Scene {
    */
   private updateSkids(time: number): void {
     const lateral = Math.abs(this.player.vx);
-    // An airborne car has no tyres on the road: a ramp jump must not paint lines under it.
-    const lighting = !this.player.isAirborne && skidTriggered(lateral, this.speed, this.brakeHeld);
+    // An airborne car has no tyres on the road, and a hull has no tyres at all, so neither
+    // a ramp jump nor a water stretch may paint lines under the sprite.
+    const lighting =
+      this.surface === 'land' &&
+      !this.player.isAirborne &&
+      skidTriggered(lateral, this.speed, this.brakeHeld);
 
     if (lighting && time - this.lastSkidAt >= FX.skidIntervalMs) {
       this.lastSkidAt = time;
@@ -3002,6 +3193,11 @@ export class GameScene extends Phaser.Scene {
     this.road.destroy();
     this.road = new RoadSystem(this, this.blueprint.road, this.blueprint.type, this.art);
     this.applyVisibility();
+
+    // A sector boundary is not a shore: the new sector opens on its own material and the
+    // hull is swapped without splashing as if the car had driven into the water.
+    this.surface = roadAt(this.blueprint.road, 0).surface;
+    this.player.setSurface(this.surface);
 
     this.presentSector();
   }

@@ -1,5 +1,5 @@
-import { WORLD } from '@/config';
-import type { LevelType, RoadProfile } from '@/levels/types';
+import { PLAYER, SURFACE, WORLD } from '@/config';
+import type { LevelType, RoadProfile, RoadShape, SurfaceKind } from '@/levels/types';
 import {
   CANYON_TILE_ART,
   CITY_TILE_ART,
@@ -232,6 +232,27 @@ export const ROAD_TILE_SPECS: Readonly<Partial<Record<LevelType, RoadTileSpec>>>
   tunnel: { windows: TUNNEL_TILE_WINDOWS, art: TUNNEL_TILE_ART },
 };
 
+/** The sheet a water stretch draws regardless of the level type it sits in. */
+export const WATER_TILE_SPEC: RoadTileSpec = {
+  windows: WATER_TILE_WINDOWS,
+  art: WATER_TILE_ART,
+};
+
+/**
+ * The sheet one surface of one level type draws from.
+ *
+ * Water always uses the art-15 sheet, because the material — not the sector's theme — is
+ * what the water tiles depict. Land in a water-heavy sector is a causeway, so it borrows
+ * the highway's asphalt sheet; every other type keeps its own theme on land.
+ */
+export function roadTileSpecFor(
+  type: LevelType,
+  surface: SurfaceKind,
+): RoadTileSpec | undefined {
+  if (surface === 'water') return WATER_TILE_SPEC;
+  return ROAD_TILE_SPECS[type === 'river' ? 'highway' : type];
+}
+
 /**
  * A transition cell drawn as an 8 px strip over a theme's shoulder.
  *
@@ -287,6 +308,27 @@ export const CANYON_EDGE_CHEVRON: EdgeTileSpec = {
 export const ROAD_EDGE_SPECS: Readonly<Partial<Record<LevelType, EdgeTileSpec>>> = {
   highway: HIGHWAY_EDGE_BLEND,
   canyon: CANYON_EDGE_CHEVRON,
+};
+/**
+ * Windows for the shore band and its marker line, measured on the shipped cells.
+ *
+ * The bank is a 20-row band inside art-15's gravel shore (cell 7): rows 2–21 of that cell
+ * are uniform gravel with no dark model border, and the band repeats across the aperture
+ * at its native width. The marker samples art-18's chevron cell (5) from column 10 to 22
+ * and rows 8–14, one chevron row, so repeating it draws an unbroken hazard line.
+ */
+export const SHORE_BANK_WINDOW: TileWindow = {
+  sourceX: 1,
+  sourceWidth: 30,
+  sourceY: 2,
+  sourceHeight: SURFACE.shoreBandPixels,
+};
+
+export const SHORE_STRIPE_WINDOW: TileWindow = {
+  sourceX: 10,
+  sourceWidth: 12,
+  sourceY: 8,
+  sourceHeight: SURFACE.shoreStripePixels,
 };
 
 /** One strip, at the same x and width as the shoulder band it covers. */
@@ -403,4 +445,54 @@ export function planRoadTiles(
   }
 
   return bands.filter((plan) => plan.width > 0);
+}
+
+/** One surface stretch as it appears on screen at one scroll distance. */
+export interface SurfaceBand {
+  readonly kind: SurfaceKind;
+  /** Sector distance the stretch covers. */
+  readonly from: number;
+  readonly to: number;
+  /** Screen y of the stretch's top edge, px. */
+  readonly yTop: number;
+  /** Screen y of its bottom edge, px. */
+  readonly yBottom: number;
+}
+
+/**
+ * The surface stretches visible on screen, top to bottom.
+ *
+ * World y is `PLAYER.y + distance - at`, so the screen shows `at` from
+ * `distance + PLAYER.y - WORLD.height` (top) to `distance + PLAYER.y` (bottom). The first
+ * and last stretches are extended to the horizon because `surfaceAt` is open-ended: the
+ * world is authored beyond a sector's ends, and the screen must never show a hole there.
+ *
+ * Pure and testable without Phaser; `RoadSystem` uses it to clip each material's base fill
+ * and tile layer, and to seat the shore bands.
+ */
+export function planSurfaceBands(shape: RoadShape, distance: number): readonly SurfaceBand[] {
+  const topAt = distance + PLAYER.y;
+  const bottomAt = distance + PLAYER.y - WORLD.height;
+  const bands: SurfaceBand[] = [];
+  const count = shape.surfaces.length;
+
+  shape.surfaces.forEach((segment, index) => {
+    const from = index === 0 ? Number.NEGATIVE_INFINITY : segment.from;
+    const to = index === count - 1 ? Number.POSITIVE_INFINITY : segment.to;
+    const visibleFrom = Math.max(from, bottomAt);
+    const visibleTo = Math.min(to, topAt);
+    if (visibleTo <= visibleFrom) return;
+
+    bands.push({
+      kind: segment.kind,
+      from: segment.from,
+      to: segment.to,
+      yTop: PLAYER.y + distance - visibleTo,
+      yBottom: PLAYER.y + distance - visibleFrom,
+    });
+  });
+
+  // Top to bottom, so a caller can walk the screen once and a masked layer is always
+  // created after the layer it sits above.
+  return bands.sort((a, b) => a.yTop - b.yTop);
 }

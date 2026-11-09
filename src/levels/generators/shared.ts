@@ -1,10 +1,12 @@
-import { DECOR, JUMP, LEVEL, MOTION, ROAD, SPAWN, WORLD } from '@/config';
-import { CHALLENGE_TEMPLATES, type ChallengeDef } from '@/content';
+import { DECOR, JUMP, LEVEL, MOTION, ROAD, SPAWN, SURFACE, WORLD } from '@/config';
+import { CHALLENGE_TEMPLATES, CIVILIAN_SURFACE, ENEMY_SURFACE, type ChallengeDef } from '@/content';
 import { blockingEvents, blocksEveryLane } from '../blocking';
 import { createRng, type Rng } from '@/rng';
 import {
   LEVEL_PROFILES,
   roadShapeFor,
+  surfaceAllows,
+  surfaceAt,
   type ChallengePlan,
   type DecorSide,
   type LevelBlueprint,
@@ -13,6 +15,8 @@ import {
   type RoadShape,
   type RoadWidthKey,
   type ScenerySurface,
+  type SurfaceAffinity,
+  type SurfaceSegment,
 } from '../types';
 
 /**
@@ -58,7 +62,10 @@ export function generateLevel({ type, seed, index }: GenerateOptions): LevelBlue
   // single car, and a change to traffic density must not change the road.
   const roadRng = createRng((seed ^ 0x85ebca6b) >>> 0);
   const decorRng = createRng((seed ^ 0xc2b2ae35) >>> 0);
-  const road = buildRoadShape(type, roadRng, length);
+  // Surfaces have a third stream: laying a causeway must not shift a width keyframe or a
+  // single vehicle.
+  const surfaceRng = createRng((seed ^ 0x7f4a7c15) >>> 0);
+  const road = buildRoadShape(type, roadRng, length, surfaceRng);
 
   const events: LevelEvent[] = [];
 
@@ -70,7 +77,7 @@ export function generateLevel({ type, seed, index }: GenerateOptions): LevelBlue
   // the road so a ramp is never dropped in front of a wall it cannot clear.
   events.push(...placeRamps(propRng, road, length, profile.rampDensity, [...events]));
   events.push(...placePickups(pickupRng, road, length, profile.pickupDensity));
-  events.push(...placeDecor(decorRng, length, profile.scenerySurface, profile.sceneryPool));
+  events.push(...placeDecor(decorRng, road, length, profile.scenerySurface, profile.sceneryPool));
 
   // Clamp: the placement loops deliberately overshoot the end so the last stretch is not
   // empty, but an event beyond `length` can never be reached and breaks the streamer.
@@ -103,7 +110,7 @@ export function generateLevel({ type, seed, index }: GenerateOptions): LevelBlue
  * than `ROAD.minLaneWidth` or wider than `ROAD.maxLaneWidth`, which is what keeps a wave
  * placed against a lane index solvable at every distance in the sector.
  */
-function buildRoadShape(type: LevelType, rng: Rng, length: number): RoadShape {
+function buildRoadShape(type: LevelType, rng: Rng, length: number, surfaceRng: Rng): RoadShape {
   const base = roadShapeFor(type);
   const nominal = base.keyframes[0]?.width ?? base.minWidth;
   const minWidth = base.lanes * ROAD.minLaneWidth;
@@ -127,7 +134,47 @@ function buildRoadShape(type: LevelType, rng: Rng, length: number): RoadShape {
     keyframes,
     minWidth: Math.min(...widths),
     maxWidth: Math.max(...widths),
+    surfaces: buildSurfaces(type, surfaceRng, length),
   };
+}
+
+/**
+ * The sector's land and water stretches.
+ *
+ * A dry level type is one land segment. A water-heavy type opens on water, crosses one land
+ * causeway and returns to water; both sides of every internal boundary carry a shore blend
+ * of `SURFACE.shorePixels`, so a transition is a driveable stretch rather than a seam. The
+ * causeway is jittered so two sectors do not change material on the same beat.
+ */
+function buildSurfaces(type: LevelType, rng: Rng, length: number): SurfaceSegment[] {
+  const share = LEVEL_PROFILES[type].waterShare;
+  if (share <= 0) {
+    return [{ kind: 'land', from: 0, to: length, shoreIn: 0, shoreOut: 0 }];
+  }
+
+  const waterEnd = Math.round(length * share);
+  const causeway = Math.round(rng.range(2000, 3000));
+  const landTo = Math.min(length - SURFACE.minSegmentPixels, waterEnd + causeway);
+
+  return [
+    { kind: 'water', from: 0, to: waterEnd, shoreIn: 0, shoreOut: SURFACE.shorePixels },
+    {
+      kind: 'land',
+      from: waterEnd,
+      to: landTo,
+      shoreIn: SURFACE.shorePixels,
+      shoreOut: SURFACE.shorePixels,
+    },
+    { kind: 'water', from: landTo, to: length, shoreIn: SURFACE.shorePixels, shoreOut: 0 },
+  ];
+}
+
+/** Content affinity for an id, defaulting to `any` so an unknown id is never hidden. */
+function affinityOf(
+  table: ReadonlyMap<string, SurfaceAffinity>,
+  id: string,
+): SurfaceAffinity {
+  return table.get(id) ?? 'any';
 }
 
 /**
@@ -140,6 +187,7 @@ function buildRoadShape(type: LevelType, rng: Rng, length: number): RoadShape {
  */
 function placeDecor(
   rng: Rng,
+  road: RoadShape,
   length: number,
   surface: ScenerySurface,
   pool: readonly string[],
@@ -150,10 +198,17 @@ function placeDecor(
   let at = SPAWN.safeStartPixels;
 
   while (at < length) {
+    const station = Math.round(at);
+    // Water scenery is only scenery on water: a jetty on the causeway reads as a bug.
+    if (surface === 'water' && surfaceAt(road, station) !== 'water') {
+      at += DECOR.spacing * rng.range(0.6, 1.6);
+      continue;
+    }
+
     const side: DecorSide = rng.chance(0.5) ? 'left' : 'right';
     out.push({
       kind: 'decor',
-      at: Math.round(at),
+      at: station,
       side,
       offset: Math.round(rng.range(DECOR.minOffset, DECOR.maxOffset)),
       prop: rng.pick(pool),
@@ -193,11 +248,19 @@ function placeTraffic(
       if (usedLanes.has(lane)) continue;
       usedLanes.add(lane);
 
+      const station = Math.max(SPAWN.safeStartPixels, Math.round(at + rng.range(-40, 40)));
+      // Only traffic whose content row allows this surface. A skiff in the causeway's
+      // fast lane, or a lorry on open water, is never emitted in the first place.
+      const eligible = pool.filter((id) =>
+        surfaceAllows(affinityOf(CIVILIAN_SURFACE, id), surfaceAt(road, station)),
+      );
+      if (eligible.length === 0) continue;
+
       out.push({
         kind: 'traffic',
-        at: Math.max(SPAWN.safeStartPixels, Math.round(at + rng.range(-40, 40))),
+        at: station,
         lane,
-        vehicle: rng.pick(pool),
+        vehicle: rng.pick(eligible),
         // Absolute world speed in px/s, not a share of the player's scroll: traffic drives at
         // its own pace whether the player is flat out or stopped. The band is the old
         // 0.18–0.42 share of cruise, so a lane of traffic still slides past the car rather
@@ -221,7 +284,6 @@ function placeEnemies(
 ): LevelEvent[] {
   const out: LevelEvent[] = [];
   const names = Object.keys(weights);
-  const values = names.map((n) => weights[n] ?? 1);
   // Waking a durable car is worth more than waking six light ones, so hostiles arrive on a
   // wider beat and rarely in pairs.
   const spacing = Math.max(360, Math.round(620 / Math.max(0.2, density)));
@@ -230,11 +292,21 @@ function placeEnemies(
   while (at < length) {
     const wave = rng.chance(0.2) ? 2 : 1;
     for (let i = 0; i < wave; i += 1) {
+      const station = Math.round(at + i * 120);
+      const surface = surfaceAt(road, station);
+      // Filter the weights, not the roll: a boat cannot appear over the causeway and a land
+      // car cannot appear on open water, and a surface with no eligible row is skipped.
+      const eligible = names.filter((name) =>
+        surfaceAllows(affinityOf(ENEMY_SURFACE, name), surface),
+      );
+      if (eligible.length === 0) continue;
+      const eligibleWeights = eligible.map((name) => weights[name] ?? 1);
+
       out.push({
         kind: 'enemy',
-        at: Math.round(at + i * 120),
+        at: station,
         lane: laneRange(rng, road),
-        enemy: rng.weighted(names, values),
+        enemy: rng.weighted(eligible, eligibleWeights),
       });
     }
     at += spacing * rng.range(0.8, 1.5);
